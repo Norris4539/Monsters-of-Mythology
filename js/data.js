@@ -128,11 +128,11 @@ defLine('hoplite', 'greek', 2, 'heavy', { icon: '🛡️', weapon: 'lance', move
   { name: 'Hoplite',     att: 5, def: 8,  dmg: [2, 4], hp: 14, mov: 4, res: 10 },
   { name: 'Sacred Band', att: 6, def: 10, dmg: [3, 5], hp: 16, mov: 5, res: 15, abil: ['bond'] },
 ], 'Citizen spearmen in bronze behind the great round aspis: the backbone of the phalanx.');
-defLine('hamippoi', 'greek', 3, 'light', { icon: '🏃', weapon: 'sword', move: 'foot', abil: ['withHorse'], grow: 8, cost: { gold: 250 } }, [
+defLine('hamippoi', 'greek', 3, 'light', { icon: '🏃', weapon: 'javelin', move: 'foot', range: [1, 2], abil: ['withHorse', 'halfRange'], grow: 8, cost: { gold: 250 } }, [
   { name: 'Hamippoi',           att: 7,  def: 5, dmg: [3, 5], hp: 14, mov: 6, res: 5 },
   { name: 'Boeotian Hamippoi',  att: 9,  def: 6, dmg: [3, 6], hp: 16, mov: 7, res: 10 },
   { name: 'Epilektoi Hamippoi', att: 11, def: 8, dmg: [4, 7], hp: 18, mov: 8, res: 15 },
-], 'Runners who fought among the cavalry, keeping pace by holding the horses\' manes.');
+], 'Light runners who fought among the cavalry, keeping pace by holding the horses\' manes: they throw javelins, then close in to stab horses and riders.');
 defLine('minotaur', 'greek', 4, 'heavy', { icon: '🐂', weapon: 'axe', move: 'foot', abil: ['cleave'], grow: 4, cost: { gold: 550 } }, [
   { name: 'Minotaur',     att: 13, def: 12, dmg: [10, 18], hp: 45, mov: 5, res: 15 },
   { name: 'Labrys Guard', att: 16, def: 15, dmg: [12, 20], hp: 50, mov: 5, res: 20 },
