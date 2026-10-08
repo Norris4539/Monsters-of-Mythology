@@ -44,26 +44,29 @@ function refreshPanel() {
   document.getElementById('btn-end').disabled = !!G.busy || G.over;
   const hb = document.getElementById('hero-box');
   hb.innerHTML = '';
-  const T = UNITS[h.unit.type], F = FACTIONS[me.faction];
+  const HD = HEROES[h.type], F = FACTIONS[me.faction];
   const maxMp = BASE_MP + h.artifacts.reduce((s, a) => s + (ARTIFACTS[a].mp || 0), 0);
+  const x0 = h.lvl > 1 ? xpForLevel(h.lvl - 1) : 0, x1 = xpForLevel(h.lvl);
   hb.append(
     el('div', { className: 'hero-head', onClick: () => heroModal(h) },
-      el('span', { className: 'portrait', style: { background: F.color } }, T.icon),
+      el('span', { className: 'portrait', style: { background: F.color } }, HD.icon),
       el('div', null,
-        el('div', { className: 'hname' }, `${T.name} `, el('small', null, `Lv ${h.unit.lvl}`)),
-        el('div', { className: 'hsub' }, h.alive ? `${F.name} · patron ${F.god}` : `Recovering… returns in ${h.respawn} day(s)`))),
+        el('div', { className: 'hname' }, `${HD.name} `, el('small', null, `Lv ${h.lvl}`)),
+        el('div', { className: 'hsub' }, h.alive ? `⚔️${heroStat(h, 'att')} 🛡️${heroStat(h, 'def')} ✨${heroStat(h, 'power')} · ${F.god}` : `Recovering… returns in ${h.respawn} day(s)`))),
     el('div', { className: 'bar', title: 'Movement points' }, el('i', { style: { width: `${h.alive ? h.mp / maxMp * 100 : 0}%` } }), el('span', null, `Move ${h.alive ? Math.round(h.mp / 10) : 0}/${maxMp / 10}`)),
-    el('div', { className: 'bar xp', title: 'Experience' }, el('i', { style: { width: `${h.unit.xp}%` } }), el('span', null, `XP ${h.unit.xp}/100`)),
+    el('div', { className: 'bar xp', title: 'Experience' }, el('i', { style: { width: `${clamp((h.xp - x0) / (x1 - x0) * 100, 0, 100)}%` } }), el('span', null, `XP ${h.xp}/${x1}`)),
   );
   const ab = document.getElementById('army-box');
   ab.innerHTML = '';
-  ab.append(el('div', { className: 'sl' }, `Army (${h.army.length}/${ARMY_CAP})`));
+  ab.append(el('div', { className: 'sl' }, `Army (${h.army.length}/${ARMY_SLOTS} stacks)`));
   const grid = el('div', { className: 'army' });
-  for (let k = 0; k < ARMY_CAP; k++) {
+  for (let k = 0; k < ARMY_SLOTS; k++) {
     const u = h.army[k];
-    grid.append(u ? unitChip(u, () => unitModal(u, { dismiss: () => { h.army = h.army.filter(x => x !== u); refreshPanel(); } })) : el('div', { className: 'chip empty' }));
+    grid.append(u ? unitChip(u, () => stackModal(u, { dismiss: () => { h.army = h.army.filter(x => x !== u); refreshPanel(); } })) : el('div', { className: 'chip empty' }));
   }
   ab.append(grid);
+  const fallen = Object.entries(h.fallen || {});
+  if (fallen.length) ab.append(el('div', { className: 'fallen', title: 'Can be raised at a temple' }, '⚰️ Fallen: ', fallen.map(([t, n]) => `${n} ${UNITS[t].icon}`).join(' ')));
   const arts = document.getElementById('arts-box');
   arts.innerHTML = '';
   if (h.artifacts.length) arts.append(el('div', { className: 'sl' }, 'Artifacts'), el('div', { className: 'arts' }, h.artifacts.map(a => el('span', { title: `${ARTIFACTS[a].name}: ${ARTIFACTS[a].desc}` }, ARTIFACTS[a].icon))));
@@ -74,10 +77,11 @@ function refreshPanel() {
     el('button', { className: 'btn small', onClick: () => openTown(t) }, `${FACTIONS[t.faction].townIcon} ${t.name}`))) : el('div', { className: 'warn' }, `No towns! ${7 - me.noTownDays} days left.`));
   refreshLog();
 }
-function unitChip(u, onClick) {
-  const T = UNITS[u.type];
-  return el('button', { className: 'chip', onClick, title: `${T.name} Lv ${u.lvl}` },
-    el('span', { className: 'ci' }, T.icon), el('span', { className: 'cl' }, `${u.lvl}`));
+function unitChip(s, onClick) {
+  const T = UNITS[s.type], hurt = s.hp < T.hp;
+  return el('button', { className: 'chip' + (hurt ? ' hurt' : ''), onClick, title: `${s.n} × ${T.name}${hurt ? ` (top creature ${s.hp}/${T.hp} HP)` : ''}` },
+    el('span', { className: 'ci' }, T.icon), el('span', { className: 'cl' }, `${s.n}`),
+    T.lvl > 1 ? el('span', { className: 'cs' }, '★'.repeat(T.lvl - 1)) : null);
 }
 function refreshHover() {
   const box = document.getElementById('hover-box');
@@ -93,29 +97,32 @@ function refreshLog() {
   if (l && G) l.innerHTML = G.log.map(m => `<div>${m}</div>`).join('');
 }
 
-function unitModal(u, opts = {}) {
-  const T = UNITS[u.type];
-  const body = el('div', null, unitCard(u, 'p', T.hero),
-    el('p', { className: 'desc' }, T.desc),
-    T.abil.length ? el('ul', { className: 'abil' }, T.abil.map(a => el('li', null, ABILITIES[a]))) : null,
-    el('p', { className: 'dim' }, `Growths: ${STATS.map(s => `${STAT_NAMES[s]} ${T.growth[s]}%`).join(' · ')}`));
+function stackModal(s, opts = {}) {
+  const T = UNITS[s.type], L = LINES[T.line];
+  const body = el('div', null, stackCard(s, 'p'),
+    el('p', { className: 'desc' }, T.desc || L.desc),
+    T.abil.length ? el('ul', { className: 'abil' }, T.abil.map(a => el('li', null, el('b', null, ABILITIES[a][0] + ': '), ABILITIES[a][1]))) : null,
+    el('p', { className: 'dim' }, `Line: ${L.levels.map((id, i) => `${i + 1 === T.lvl ? '▶ ' : ''}${UNITS[id].name}`).join(' → ')} · ${costText(T.cost)} each`));
   const btns = [['Close', null]];
-  if (opts.dismiss) btns.push(['Dismiss unit', () => confirmModal('Dismiss?', `${T.name} will leave your army forever.`, opts.dismiss)]);
+  if (opts.dismiss) btns.push(['Dismiss stack', () => confirmModal('Dismiss?', `${s.n} ${T.name} will leave your army forever.`, opts.dismiss)]);
   modal(`${T.icon} ${T.name}`, body, btns);
 }
+const unitModalOf = type => stackModal(makeStack(type, 1));
 function heroModal(h) {
-  const F = FACTIONS[playerOf(h.owner).faction];
-  h.unit.bonus = armyBonus(h, true);
-  const card = unitCard(h.unit, 'p', true);
-  delete h.unit.bonus;
-  const body = el('div', null, card,
-    el('p', { className: 'desc' }, UNITS[h.unit.type].desc),
+  const F = FACTIONS[playerOf(h.owner).faction], HD = HEROES[h.type];
+  const stat = k => { const b = h[k], v = heroStat(h, k); return v !== b ? `${v} (${b}+${v - b})` : `${v}`; };
+  const body = el('div', null,
+    el('div', { className: 'ucard p' },
+      el('div', { className: 'uc-head' }, el('span', { className: 'uc-icon' }, HD.icon),
+        el('div', null, el('div', { className: 'uc-name' }, HD.name), el('div', { className: 'uc-sub' }, `Level ${h.lvl} · ${h.xp}/${xpForLevel(h.lvl)} XP`))),
+      el('div', { className: 'uc-stats', html: [['Attack', stat('att')], ['Defence', stat('def')], ['Power', stat('power')]].map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join('') })),
+    el('p', { className: 'desc' }, HD.desc, ' The hero commands from behind the lines: Attack and Defence are added to every stack, Power strengthens the god power.'),
     el('div', { className: 'sl' }, `God power — ${F.god}`),
     el('p', null, el('b', null, F.power.name + ': '), F.power.desc, ' Once per battle (twice if you own a Temple).'),
     el('div', { className: 'sl' }, 'Artifacts'),
     h.artifacts.length ? el('ul', null, h.artifacts.map(a => el('li', null, `${ARTIFACTS[a].icon} ${ARTIFACTS[a].name} — ${ARTIFACTS[a].desc}`))) : el('p', { className: 'dim' }, 'None yet. Seek them out across the map.'),
-    Object.keys(h.shrineBonus).length ? el('p', null, el('b', null, 'Shrine blessings: '), Object.entries(h.shrineBonus).map(([k, v]) => `${STAT_NAMES[k]} +${v}`).join(', ')) : null);
-  modal(`${UNITS[h.unit.type].icon} ${UNITS[h.unit.type].name}`, body, [['Close', null]]);
+    Object.keys(h.shrineBonus).length ? el('p', null, el('b', null, 'Shrine blessings: '), Object.entries(h.shrineBonus).map(([k, v]) => `${HERO_STAT[k]} +${v}`).join(', ')) : null);
+  modal(`${HD.icon} ${HD.name}`, body, [['Close', null]]);
 }
 
 // ── Town screen ─────────────────────────────────────────────────────────────
@@ -130,36 +137,71 @@ function openTown(t) {
     body.append(el('div', { className: 'town-sub' },
       `${F.adj} town · income ${RES_INFO.gold.icon}${townIncome(t)}/day · `,
       ...RES.map(r => el('span', { className: 'rs' }, `${RES_INFO[r].icon}${p.res[r]} `))));
-    // Recruitment
+    // Recruitment: one row per tier, a button per unlocked level.
+    const dest = heroHere ? h.army : t.garrison;
     const rec = el('div', { className: 'recruit' });
     for (let tier = 1; tier <= 7; tier++) {
-      const type = F.units[tier - 1], U = UNITS[type], key = 'd' + tier, built = t.built.includes(key);
-      const dest = heroHere && h.army.length < ARMY_CAP ? h.army : t.garrison;
-      const destCap = dest === t.garrison ? GARRISON_CAP : ARMY_CAP;
-      const avail = t.pool[key] || 0;
-      const can = built && avail > 0 && canAfford(p.res, TIER_COST[tier]) && dest.length < destCap;
-      rec.append(el('div', { className: 'rrow' + (built ? '' : ' locked') },
-        el('button', { className: 'ricon', onClick: () => unitModal(makeUnit(type)), title: 'Unit details' }, U.icon),
-        el('div', { className: 'rname' }, el('b', null, U.name), el('small', null, `Tier ${tier} · ${WEAPONS[U.weapon].name} · ${MOVE_TYPES[U.move]}`)),
-        el('div', { className: 'ravail' }, built ? `${avail} available` : `Build ${F.dwellings[tier - 1]}`),
-        el('div', { className: 'rcost' }, costText(TIER_COST[tier])),
-        el('button', { className: 'btn small primary', disabled: !can, onClick: () => { recruit(t, tier, dest); render(); refreshPanel(); } }, 'Hire')));
+      const L = lineOf(t, tier), key = 'd' + tier, lvl = townLevel(t, tier), avail = t.pool[key] || 0;
+      const top = UNITS[L.levels[Math.max(0, lvl - 1)]];
+      const row = el('div', { className: 'rrow' + (lvl ? '' : ' locked') },
+        el('button', { className: 'ricon', onClick: () => unitModalOf(top.id), title: 'Unit details' }, top.icon),
+        el('div', { className: 'rname' }, el('b', null, top.name), el('small', null, `Tier ${tier} · ${CLASSES[top.cls]} · ${WEAPONS[top.weapon].name}${top.size > 1 ? ' · Large' : ''}`)),
+        el('div', { className: 'ravail' }, lvl ? `${avail} available · +${growthOf(t, tier)}/week` : `Build ${F.dwellings[tier - 1]}`));
+      const buys = el('div', { className: 'rbuy' });
+      if (lvl) for (let l = 1; l <= lvl; l++) {
+        const U = UNITS[L.levels[l - 1]], most = Math.min(avail, maxAffordable(p.res, U.cost));
+        const fits = dest.some(s => s.type === U.id) || dest.length < (dest === t.garrison ? GARRISON_SLOTS : ARMY_SLOTS);
+        const hire = n => { recruit(t, tier, l, n, dest); render(); refreshPanel(); };
+        buys.append(el('div', { className: 'rlvl' },
+          el('span', { title: U.name }, `${'★'.repeat(l)} ${costText(U.cost)}`),
+          el('button', { className: 'btn small', disabled: !fits || most < 1, onClick: () => hire(1) }, '+1'),
+          el('button', { className: 'btn small primary', disabled: !fits || most < 1, onClick: () => hire(most) }, `All ${most > 0 ? most : ''}`)));
+      }
+      row.append(buys);
+      rec.append(row);
     }
     body.append(el('div', { className: 'sl' }, heroHere ? 'Recruit (joins your hero)' : 'Recruit (joins the garrison)'), rec);
-    // Armies
-    const swap = (u, from, to, cap) => { if (to.length >= cap) return; from.splice(from.indexOf(u), 1); to.push(u); render(); refreshPanel(); };
+    // Armies: click a stack to move it, ⬆ to upgrade it.
+    const move = (s, from, to, cap) => {
+      const same = to.find(x => x.type === s.type);
+      if (!same && to.length >= cap) return;
+      from.splice(from.indexOf(s), 1);
+      if (same) same.n += s.n; else to.push(s);
+      render(); refreshPanel();
+    };
+    const stackRow = (list, s, onClick) => {
+      const to = canUpgrade(t, s), wrap = el('div', { className: 'srow' }, unitChip(s, onClick));
+      if (to) {
+        const cost = upgradeCost(s, to), N = UNITS[LINES[UNITS[s.type].line].levels[to - 1]];
+        wrap.append(el('button', { className: 'btn small up', disabled: !canAfford(p.res, cost), title: `Upgrade to ${N.name} for ${costText(cost)}`,
+          onClick: () => { upgradeStack(t, s, list); render(); refreshPanel(); } }, `⬆ ${costText(cost)}`));
+      }
+      return wrap;
+    };
     const armies = el('div', { className: 'armies' });
-    if (heroHere) armies.append(el('div', null, el('div', { className: 'sl' }, `${UNITS[h.unit.type].name}'s army (${h.army.length}/${ARMY_CAP}) — click to station`),
-      el('div', { className: 'army' }, h.army.map(u => unitChip(u, () => swap(u, h.army, t.garrison, GARRISON_CAP))))));
-    armies.append(el('div', null, el('div', { className: 'sl' }, `Garrison (${t.garrison.length}/${GARRISON_CAP})${heroHere ? ' — click to join hero' : ''}`),
-      el('div', { className: 'army' }, t.garrison.length ? t.garrison.map(u => unitChip(u, () => heroHere ? swap(u, t.garrison, h.army, ARMY_CAP) : unitModal(u))) : el('span', { className: 'dim' }, 'empty'))));
+    if (heroHere) armies.append(el('div', null, el('div', { className: 'sl' }, `${heroName(h)}'s army (${h.army.length}/${ARMY_SLOTS}) — click to station`),
+      el('div', { className: 'army' }, h.army.map(s => stackRow(h.army, s, () => move(s, h.army, t.garrison, GARRISON_SLOTS))))));
+    armies.append(el('div', null, el('div', { className: 'sl' }, `Garrison (${t.garrison.length}/${GARRISON_SLOTS})${heroHere ? ' — click to join hero' : ''}`),
+      el('div', { className: 'army' }, t.garrison.length ? t.garrison.map(s => stackRow(t.garrison, s, () => heroHere ? move(s, t.garrison, h.army, ARMY_SLOTS) : stackModal(s))) : el('span', { className: 'dim' }, 'empty'))));
     body.append(armies);
+    // Temple: raise the fallen.
+    if (heroHere && t.built.includes('temple')) {
+      const fallen = Object.entries(h.fallen);
+      body.append(el('div', { className: 'sl' }, `${buildingName(t, 'temple')} — raise the fallen`),
+        fallen.length ? el('div', { className: 'temple' }, fallen.map(([type, n]) => {
+          const U = UNITS[type], most = Math.min(n, maxAffordable(p.res, U.cost));
+          return el('div', { className: 'mrow' }, `${n} ${U.icon} ${U.name}`,
+            el('span', { className: 'dim' }, `${costText(U.cost)} each`),
+            el('button', { className: 'btn small primary', disabled: most < 1, onClick: () => { resurrect(h, t, type, most); render(); refreshPanel(); } }, `Raise ${most}`));
+        })) : el('p', { className: 'dim' }, 'None of your soldiers lie fallen. Wounded stacks are healed whenever your hero visits.'));
+    }
     // Buildings
     const grid = el('div', { className: 'bgrid' });
-    const all = ['d2', 'd3', 'd4', 'd5', 'd6', 'd7', 'hall2', 'hall3', 'market', 'citadel', 'walls', 'temple'];
+    const all = ['hall2', 'hall3', 'market', 'citadel', 'walls', 'temple', ...[1, 2, 3, 4, 5, 6, 7].flatMap(k => ['d' + k, 'u' + k, 'e' + k])].filter(b => b !== 'd1');
     for (const b of all) {
       const done = t.built.includes(b), why = canBuild(t, b), B_ = BUILDINGS[b];
-      const desc = b[0] === 'd' ? `Recruits ${UNITS[F.units[dwellingTier(b) - 1]].icon} ${UNITS[F.units[dwellingTier(b) - 1]].name} (${growthOf(t, dwellingTier(b))}/week)` : B_.desc;
+      const U = 'due'.includes(b[0]) && !B_.name ? UNITS[lineOf(t, dwellingTier(b)).levels['due'.indexOf(b[0])]] : null;
+      const desc = U ? (b[0] === 'd' ? `Recruits ${U.icon} ${U.name} (${growthOf(t, dwellingTier(b))}/week)` : `Recruit and upgrade to ${U.icon} ${U.name}: Attack ${U.att}, Defence ${U.def}, Move ${U.mov}`) : B_.desc;
       grid.append(el('div', { className: 'bcard' + (done ? ' done' : why ? ' no' : ' ok') },
         el('b', null, buildingName(t, b)), el('small', null, desc),
         done ? el('span', { className: 'tag' }, '✓ Built') : el('div', { className: 'bfoot' },
@@ -191,9 +233,9 @@ function showMainMenu() {
     return el('button', { className: 'fcard' + (MENU.faction === k ? ' sel' : ''), style: { '--fc': F.color }, onClick: () => { MENU.faction = k; showMainMenu(); } },
       el('div', { className: 'fhead' }, el('span', { className: 'ficon' }, F.townIcon), el('div', null, el('b', null, F.name), el('small', null, `Patron: ${F.god}`))),
       el('p', null, F.blurb),
-      el('div', { className: 'roster' }, F.units.map(id => el('span', { title: `T${UNITS[id].tier} ${UNITS[id].name}` }, UNITS[id].icon))),
+      el('div', { className: 'roster' }, F.units.map(id => el('span', { title: `T${LINES[id].tier} ${LINES[id].levels.map(u => UNITS[u].name).join(' → ')}` }, LINES[id].icon))),
       el('small', { className: 'power' }, `✨ ${F.power.name}: ${F.power.desc}`),
-      el('small', null, `Hero: ${UNITS[F.hero].icon} ${UNITS[F.hero].name}`));
+      el('small', null, `Hero: ${HEROES[F.hero].icon} ${HEROES[F.hero].name}`));
   }));
   const seg = (label, opts, key) => el('div', { className: 'seg' }, el('span', null, label), opts.map(([v, l]) =>
     el('button', { className: 'btn small' + (MENU[key] === v ? ' primary' : ''), onClick: () => { MENU[key] = v; showMainMenu(); } }, l)));
@@ -220,14 +262,19 @@ function helpModal() {
       el('li', null, 'Wandering monsters guard the tiles around them (shown in red on hover). Stepping into that zone starts a battle.'),
       el('li', null, 'Your town builds one structure per day. Dwellings produce new recruits every week. Visit town to merge the garrison into your army.'),
       el('li', null, 'Win by eliminating every rival pantheon: take their towns and defeat their heroes. Shortcuts: E end turn, C center hero, T town.')),
+    el('h3', null, 'Towns'),
+    el('ul', null,
+      el('li', null, 'Every creature line has three levels. Build the dwelling to recruit level 1, then its upgrade (II) and elite (III) buildings to recruit stronger levels.'),
+      el('li', null, 'With an upgrade built, a hero in town can convert a whole stack by paying the price difference per creature (⬆ button).'),
+      el('li', null, 'The Temple heals every wounded stack when your hero visits, and raises the fallen for their full price.')),
     el('h3', null, 'Battles'),
     el('ul', null,
-      el('li', null, 'Each side moves all its units in turn. Select a unit, move it, then Attack, Heal or Wait.'),
-      el('li', null, 'Weapon triangle: Sword beats Axe, Axe beats Lance, Lance beats Sword (+15 hit, +1 damage). Bows deal triple might to fliers. Tomes hit Res.'),
-      el('li', null, 'Units 4+ Spd faster than their foe strike twice. Forests, mountains and forts grant avoid and defence.'),
-      el('li', null, 'Adjacent allies give +10 Hit/Avoid and may join in with a Dual Strike.'),
-      el('li', null, 'Your hero is the commander: if they fall, the battle is lost. Slay the enemy commander and their army routs.'),
-      el('li', null, 'Once per battle, call on your god for a divine power. Fallen units are gone for good — survivors level up and heal fully afterwards.'))),
+      el('li', null, 'Armies are stacks of creatures. Select a stack, move it, then Attack, Heal or Wait. Each stack acts once per round.'),
+      el('li', null, 'Damage = creatures × damage roll, +5% per point of Attack above the target\'s Defence (−2.5% per point below). Health carries over: the top creature may be wounded.'),
+      el('li', null, 'Weapon triangle: Sword beats Axe, Axe beats Lance (and javelins), Lance beats Sword: +2 Attack for the winner, −2 for the loser.'),
+      el('li', null, 'A stack strikes back once per round. Javelin skirmishers can throw at range; Hit and Run units fall back after attacking; cavalry with Charge hit harder the further they ride.'),
+      el('li', null, 'Large creatures such as the Hydra and Talos fill 2×2 tiles. Forests, mountains and forts give Defence and cut damage taken.'),
+      el('li', null, 'Your hero stays off the field: their Attack and Defence add to every stack, and Power fuels your god\'s divine power. Losses persist after battle.'))),
     [['Got it', null]]);
 }
 function enterCampaign() {
@@ -258,7 +305,7 @@ function loadGame(key = 'pantheon_save') {
   G.busy = false; G.path = null;
   let max = 0;
   const scan = u => { if (u && u.uid > max) max = u.uid; };
-  for (const h of G.heroes) { scan(h.unit); h.army.forEach(scan); }
+  for (const h of G.heroes) h.army.forEach(scan);
   for (const o of G.objs) (o.units || o.garrison || []).forEach(scan);
   UID = max + 1;
   rebuildIndex();

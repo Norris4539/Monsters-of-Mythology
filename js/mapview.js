@@ -82,8 +82,8 @@ function drawObj(g, o, X, Y) {
     g.beginPath(); g.arc(cx, cy, 16, 0, Math.PI * 2); g.fillStyle = 'rgba(120,20,20,.55)'; g.fill();
     g.font = '26px serif'; g.fillText(UNITS[o.units[0].type].icon, cx, cy + 1);
     g.font = 'bold 11px system-ui, sans-serif'; g.fillStyle = '#fff';
-    g.beginPath(); g.arc(X + TS - 6, Y + TS - 6, 8, 0, Math.PI * 2); g.fillStyle = '#7a1b1b'; g.fill();
-    g.fillStyle = '#fff'; g.fillText(o.units.length, X + TS - 6, Y + TS - 5);
+    g.beginPath(); g.arc(X + TS - 6, Y + TS - 6, 10, 0, Math.PI * 2); g.fillStyle = '#7a1b1b'; g.fill();
+    g.fillStyle = '#fff'; g.fillText(o.units.reduce((t, s) => t + s.n, 0), X + TS - 6, Y + TS - 5);
     return;
   }
   let icon = '?';
@@ -109,7 +109,7 @@ function drawHero(g, h, X, Y) {
   g.fillStyle = colorOf(h.owner); g.fill();
   g.lineWidth = 3; g.strokeStyle = h.owner === 0 ? '#ffe27a' : '#1a1a1a'; g.stroke();
   g.font = '20px serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(UNITS[h.unit.type].icon, cx, cy + 1);
+  g.fillText(HEROES[h.type].icon, cx, cy + 1);
   if (inTown) return;
   // banner pole
   g.fillStyle = '#3a2a1a'; g.fillRect(X + TS - 9, Y - 8, 2, 20);
@@ -203,27 +203,27 @@ function describeTile(x, y) {
   const i = idx(x, y);
   if (!G.fog[i]) return { title: 'Unexplored', body: 'Send your hero to explore.' };
   const o = G.objAt.get(i), h = heroAtIdx(i), me = heroOf(human());
-  const myPow = me && me.alive ? armyPower(me.army) + unitPower(me.unit) : 1;
+  const myPow = me && me.alive ? armyPower(me.army, me) : 1;
   const terr = `${TERRAIN[G.terr[i]].name}${G.road[i] ? ' (road)' : ''}${G.obst[i] ? ' — impassable' : ''}`;
   if (h) {
-    const [lbl, col] = threatLabel(myPow, armyPower(h.army) + unitPower(h.unit));
-    return { title: `${UNITS[h.unit.type].icon} ${heroName(h)} (${FACTIONS[playerOf(h.owner).faction].name})`, body: h.owner === 0 ? 'Your hero.' : `Lv ${h.unit.lvl} hero with ${h.army.length} units.`, threat: h.owner === 0 ? null : [lbl, col] };
+    const [lbl, col] = threatLabel(myPow, armyPower(h.army, h));
+    return { title: `${HEROES[h.type].icon} ${heroName(h)} (${FACTIONS[playerOf(h.owner).faction].name})`, body: h.owner === 0 ? 'Your hero.' : `Level ${h.lvl} hero leading ${h.army.map(s => `${countLabel(s.n).toLowerCase()} ${UNITS[s.type].name}`).join(', ')}.`, threat: h.owner === 0 ? null : [lbl, col] };
   }
   if (o) {
     switch (o.kind) {
       case 'town': {
         const owner = o.owner == null ? 'Neutral' : FACTIONS[playerOf(o.owner).faction].name;
-        const f = townForce(o), pw = armyPower(f.units) + (f.lead ? unitPower(f.lead) : 0);
-        return { title: `${FACTIONS[o.faction].townIcon} ${o.name}`, body: `${FACTIONS[o.faction].adj} town · ${owner}${o.built.includes('walls') ? ' · walled' : ''}${o.owner !== 0 ? ` · garrison ${f.units.length}` : ''}`, threat: o.owner !== 0 && pw ? threatLabel(myPow, pw) : null };
+        const f = townForce(o), pw = armyPower(f.units, f.hero);
+        return { title: `${FACTIONS[o.faction].townIcon} ${o.name}`, body: `${FACTIONS[o.faction].adj} town · ${owner}${o.built.includes('walls') ? ' · walled' : ''}${o.owner !== 0 ? ` · garrison of ${f.units.length} stack${f.units.length === 1 ? '' : 's'}` : ''}`, threat: o.owner !== 0 && pw ? threatLabel(myPow, pw) : null };
       }
       case 'monster': {
-        const T = UNITS[o.units[0].type];
-        return { title: `${T.icon} ${o.name}`, body: `${countLabel(o.units.length)} ${o.units.length === 1 ? T.name : 'creatures'} (Lv ${o.units[0].lvl}). Entering the red zone starts a battle.`, threat: threatLabel(myPow, armyPower(o.units)) };
+        const T = UNITS[o.units[0].type], n = o.units.reduce((t, s) => t + s.n, 0);
+        return { title: `${T.icon} ${o.name}`, body: `${countLabel(n)} ${T.name} (${CLASSES[T.cls]}, tier ${T.tier}). Entering the red zone starts a battle.`, threat: threatLabel(myPow, armyPower(o.units)) };
       }
       case 'mine': return { title: `${MINE_INFO[o.res].icon} ${MINE_INFO[o.res].name}`, body: `+${MINE_INFO[o.res].amt} ${RES_INFO[o.res].name}/day · ${o.owner == null ? 'unclaimed' : o.owner === 0 ? 'yours' : FACTIONS[playerOf(o.owner).faction].name}` };
       case 'pile': return { title: `${RES_INFO[o.res].icon} ${RES_INFO[o.res].name}`, body: 'A pile of resources ripe for the taking.' };
       case 'chest': return { title: '💰 Treasure Chest', body: 'Gold, or experience for your army.' };
-      case 'shrine': { const S = SHRINES[o.si]; return { title: `🛐 ${S.name}`, body: `Blesses a visiting hero with +${S.val} ${STAT_NAMES[S.stat]} (once).${me && me.shrines.includes(o.id) ? ' Already visited.' : ''}` }; }
+      case 'shrine': { const S = SHRINES[o.si]; return { title: `🛐 ${S.name}`, body: `Blesses a visiting hero with +${S.val} ${HERO_STAT[S.stat]} (once).${me && me.shrines.includes(o.id) ? ' Already visited.' : ''}` }; }
       case 'artifact': { const A = ARTIFACTS[o.art]; return { title: `${A.icon} ${A.name}`, body: A.desc + (G.guard.has(i) ? ' · guarded!' : '') }; }
     }
   }

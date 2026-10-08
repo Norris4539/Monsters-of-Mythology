@@ -125,8 +125,10 @@ function genMap(fs) {
     if (s.faction) {
       const p = G.players[i];
       const F = FACTIONS[p.faction];
-      const h = { id: i, owner: p.id, unit: makeUnit(F.hero, 1), army: [], x: s.x, y: s.y, mp: BASE_MP, artifacts: [], shrines: [], shrineBonus: {}, alive: true, respawn: 0 };
-      h.army.push(makeUnit(F.units[0], 2), makeUnit(F.units[0]), makeUnit(F.units[1], 2), makeUnit(F.units[1]), makeUnit(F.units[2]));
+      const HD = HEROES[F.hero];
+      const h = { id: i, owner: p.id, type: F.hero, lvl: 1, xp: 0, att: HD.att, def: HD.def, power: HD.power, army: [], fallen: {}, x: s.x, y: s.y, mp: BASE_MP, artifacts: [], shrines: [], shrineBonus: {}, alive: true, respawn: 0 };
+      const L = F.units.map(l => LINES[l]);
+      h.army.push(makeStack(L[0].levels[0], L[0].grow * 2), makeStack(L[1].levels[0], L[1].grow * 1.5), makeStack(L[2].levels[0], Math.max(2, L[2].grow)));
       G.heroes.push(h);
     }
   });
@@ -182,7 +184,7 @@ function genMap(fs) {
   }
   for (const o of G.objs) {
     if (o.kind === 'pile') o.amt = o.res === 'gold' ? rint(5, 10) * 100 : o.res === 'ichor' ? rint(1, 3) : rint(4, 8);
-    if (o.kind === 'chest') { o.gold = rint(10, 20) * 100; o.xp = rint(4, 8) * 10; }
+    if (o.kind === 'chest') { o.gold = rint(10, 20) * 100; o.xp = o.gold - 500; }
   }
 }
 function carveRoad(a, b) {
@@ -209,21 +211,25 @@ function carveRoad(a, b) {
 
 function makeTown(x, y, faction, owner) {
   const t = { id: G.nextId++, kind: 'town', x, y, faction, owner, name: owner != null ? FACTIONS[faction].town : NEUTRAL_TOWNS.splice(rnd(NEUTRAL_TOWNS.length), 1)[0] || 'Free City', built: ['d1'], pool: {}, garrison: [], builtToday: false };
-  t.pool.d1 = TIER_GROWTH[1] * 2;
+  t.pool.d1 = growthOf(t, 1) * 2;
   return t;
 }
-// A neutral creature stack for a given danger (0 = near a capital, 1 = far).
+// Neutral creatures for a given danger (0 = near a capital, 1 = far): one to
+// three stacks of the same line, levelled up by danger and difficulty.
 function monsterGroup(danger, size = 1) {
   const tiers = danger < 0.3 ? [1, 2] : danger < 0.5 ? [2, 3, 4] : danger < 0.75 ? [3, 4, 5] : [5, 6, 7];
   const mercs = danger >= 0.3 && Math.random() < 0.2;
-  const pool = mercs ? FACTION_KEYS.flatMap(f => FACTIONS[f].units).filter(id => tiers.includes(UNITS[id].tier) && UNITS[id].weapon !== 'staff')
-    : NEUTRAL_UNITS.filter(id => tiers.includes(UNITS[id].tier));
-  const lead = pick(pool), T = UNITS[lead];
-  const lvl = 1 + Math.round(danger * danger * 6) + (G ? Math.max(0, G.difficulty - 1) : 0);
-  const n = clamp(Math.round((5.5 - T.tier * 0.6) * (0.5 + Math.random() * 0.5) * (0.8 + size * 0.25)), 1, 8);
+  const pool = (mercs ? FACTION_KEYS.flatMap(f => FACTIONS[f].units) : NEUTRAL_LINES).filter(id => tiers.includes(LINES[id].tier));
+  const L = LINES[pick(pool)];
+  const diff = G ? G.difficulty : 1;
+  const lvl = clamp(1 + (danger > 0.55 ? 1 : 0) + (danger > 0.85 || diff >= 3 ? 1 : 0), 1, 3);
+  const type = L.levels[lvl - 1];
+  // Roughly a week or two of growth, more further out.
+  const total = Math.max(1, Math.round(L.grow * (1 + danger * 3) * (0.7 + Math.random() * 0.6) * (0.75 + size * 0.25) * (0.85 + diff * 0.15)));
+  const parts = UNITS[type].size > 1 || total < 6 ? 1 : rint(1, 3);
   const units = [];
-  for (let k = 0; k < n; k++) units.push(makeUnit(k > 0 && Math.random() < 0.3 ? pick(pool) : lead, lvl));
-  return { kind: 'monster', units, name: mercs ? `${T.name} Mercenaries` : (T.group || T.name) };
+  for (let k = 0; k < parts; k++) units.push(makeStack(type, Math.max(1, Math.round(total / parts))));
+  return { kind: 'monster', units, name: mercs ? `${UNITS[type].name} Mercenaries` : (GROUP_NAMES[L.id] || UNITS[type].name) };
 }
 
 // ── Fog of war ──────────────────────────────────────────────────────────────
@@ -311,9 +317,9 @@ async function interact(h, o) {
       break;
     case 'chest':
       if (me) {
-        const choice = await choiceModal('Treasure Chest', `You find a chest full of treasure. Keep the gold, or share the spoils with your troops for experience?`,
-          [[`${RES_INFO.gold.icon} ${o.gold} gold`, 'gold'], [`⭐ +${o.xp} XP to every unit`, 'xp']]);
-        if (choice === 'xp') giveArmyXp(h, o.xp); else p.res.gold += o.gold;
+        const choice = await choiceModal('Treasure Chest', `You find a chest full of treasure. Keep the gold, or give it away for your hero's renown?`,
+          [[`${RES_INFO.gold.icon} ${o.gold} gold`, 'gold'], [`⭐ +${o.xp} hero experience`, 'xp']]);
+        if (choice === 'xp') gainHeroXp(h, o.xp); else p.res.gold += o.gold;
       } else p.res.gold += o.gold;
       removeObj(o);
       break;
@@ -330,7 +336,7 @@ async function interact(h, o) {
       if (h.shrines.includes(o.id)) { if (me) toast(`${S.name}: you have already been blessed here.`); break; }
       h.shrines.push(o.id);
       h.shrineBonus[S.stat] = (h.shrineBonus[S.stat] || 0) + S.val;
-      if (me) modal(S.name, el('p', null, `The gods bless your hero: `, el('b', null, `+${S.val} ${STAT_NAMES[S.stat]}`), ' (permanent).'), [['Praise be', null]]);
+      if (me) modal(S.name, el('p', null, `The gods bless your hero: `, el('b', null, `+${S.val} ${HERO_STAT[S.stat]}`), ' (permanent).'), [['Praise be', null]]);
       break;
     }
     case 'mine':
@@ -343,6 +349,7 @@ async function interact(h, o) {
       break;
     case 'town':
       if (o.owner === h.owner) {
+        templeVisit(h, o);
         absorbGarrison(h, o, !me);
         if (me) openTown(o);
       } else await siegeTown(h, o);
@@ -350,91 +357,134 @@ async function interact(h, o) {
   }
   requestDraw(); refreshPanel();
 }
-function giveArmyXp(h, xp) {
-  const lines = [];
-  for (const u of [h.unit, ...h.army]) for (const g of gainXp(u, xp))
-    lines.push(`${UNITS[u.type].icon} ${UNITS[u.type].name} → Lv ${u.lvl} (${Object.keys(g).map(s => STAT_NAMES[s] + '+1').join(' ')})`);
-  if (h.owner === 0) toast(lines.length ? lines.join('<br>') : `+${xp} XP to the army`);
+// Hero experience: each level gives +1 Attack or Defence, and Power every third.
+function gainHeroXp(h, xp) {
+  h.xp += Math.round(xp);
+  const ups = [];
+  while (h.xp >= xpForLevel(h.lvl)) {
+    h.lvl++;
+    const k = h.lvl % 3 === 0 ? 'power' : (h.att + h.def) % 2 === 0 ? 'att' : 'def';
+    h[k]++; ups.push(`Level ${h.lvl}: +1 ${HERO_STAT[k]}`);
+  }
+  if (h.owner === 0) toast(ups.length ? `⭐ ${heroName(h)} — ${ups.join(', ')}` : `⭐ +${Math.round(xp)} experience`);
+  return ups;
 }
 function absorbGarrison(h, t, auto) {
   if (!auto) return;
-  t.garrison.sort((a, b) => unitPower(b) - unitPower(a));
-  while (t.garrison.length && h.army.length < ARMY_CAP) h.army.push(t.garrison.shift());
+  t.garrison.sort((a, b) => stackPower(b) - stackPower(a));
+  for (const s of t.garrison.slice()) {
+    if (addToArmy(h.army, s.type, s.n, ARMY_SLOTS)) t.garrison = t.garrison.filter(x => x !== s);
+  }
+}
+// The temple heals every wounded stack of a visiting hero and the garrison.
+function templeVisit(h, t) {
+  if (!t.built.includes('temple')) return;
+  let healed = false;
+  for (const s of [...h.army, ...t.garrison]) if (s.hp < UNITS[s.type].hp) { s.hp = UNITS[s.type].hp; healed = true; }
+  if (healed && h.owner === 0) toast(`${buildingName(t, 'temple')}: your wounded are healed.`);
+}
+// Raising the fallen costs their full price (ichor for beasts included).
+function resurrectCost(type, n) {
+  const c = {}; for (const [k, v] of Object.entries(UNITS[type].cost)) c[k] = v * n;
+  return c;
+}
+function resurrect(h, t, type, n) {
+  const p = playerOf(h.owner), have = h.fallen[type] || 0;
+  n = Math.min(n, have);
+  if (n <= 0 || !t.built.includes('temple')) return false;
+  const cost = resurrectCost(type, n);
+  if (!canAfford(p.res, cost)) return false;
+  if (!addToArmy(h.army, type, n, ARMY_SLOTS)) return false;
+  pay(p.res, cost);
+  h.fallen[type] = have - n; if (!h.fallen[type]) delete h.fallen[type];
+  return true;
+}
+function recordFallen(h, lost) {
+  if (!h) return;
+  for (const [t, n] of Object.entries(lost)) h.fallen[t] = (h.fallen[t] || 0) + n;
 }
 
 // ── Battles on the adventure map ────────────────────────────────────────────
-// A "force" is { units, lead, hero, owner, theme }.
-function heroForce(h) { return { units: h.army, lead: h.unit, hero: h, owner: h.owner }; }
+// A "force" is { units, hero, owner, town?, obj? }.
+function heroForce(h) { return { units: h.army, hero: h, owner: h.owner }; }
 function townForce(t) {
   const h = heroAtIdx(idx(t.x, t.y));
   const defender = h && h.owner === t.owner ? h : null;
-  return { units: defender ? [...defender.army, ...t.garrison].slice(0, 12) : t.garrison, lead: defender ? defender.unit : null, hero: defender, owner: t.owner, town: t };
+  return { units: defender ? [...defender.army, ...t.garrison] : t.garrison, hero: defender, owner: t.owner, town: t };
 }
 const themeAt = (x, y) => G.terr[idx(x, y)] === 'water' ? 'grass' : G.terr[idx(x, y)];
+const living = list => list.filter(s => s.n > 0);
+const snapshot = list => new Map(list.map(s => [s, s.n]));
+function lossesSince(snap) {
+  const lost = {};
+  for (const [s, n0] of snap) { const d = n0 - Math.max(0, s.n); if (d > 0) lost[s.type] = (lost[s.type] || 0) + d; }
+  return lost;
+}
 
 // Resolve a fight between attacker force a and defender force d.
-// Returns true if the attacker won.
+// Returns true if the attacker won. Wounds persist; the dead go to the hero's
+// fallen list, from which a temple can raise them.
 async function resolveFight(a, d, { title, theme, siege }) {
   const aHuman = a.owner === 0, dHuman = d.owner === 0;
-  const aUnits = a.units.filter(u => u.hp > 0), dUnits = d.units.filter(u => u.hp > 0);
-  let attackerWon;
-  if (!dUnits.length && !d.lead) attackerWon = true;
-  else if (!aUnits.length && !a.lead) attackerWon = false;
+  const snapA = snapshot(a.units), snapD = snapshot(d.units);
+  const powA = armyPower(living(a.units), a.hero), powD = armyPower(living(d.units), d.hero);
+  let attackerWon, xp = 0;
+  if (!living(d.units).length) attackerWon = true;
+  else if (!living(a.units).length) attackerWon = false;
   else if (aHuman || dHuman) {
     const P = aHuman ? a : d, E = aHuman ? d : a;
-    const pTowns = townsOf(human());
     const power = P.hero ? FACTIONS[playerOf(P.owner).faction].power : null;
-    const uses = power ? (pTowns.some(t => t.built.includes('temple')) ? 2 : 1) : 0;
+    const uses = power ? (townsOf(human()).some(t => t.built.includes('temple')) ? 2 : 1) : 0;
     const res = await startBattle({
       title, theme,
       siege: siege ? (dHuman ? 'player' : 'enemy') : null,
-      player: { units: P.units.filter(u => u.hp > 0), lead: P.lead, hero: P.hero, power, powerUses: uses },
-      enemy: { units: E.units.filter(u => u.hp > 0), lead: E.lead, hero: E.hero },
+      player: { units: living(P.units), hero: P.hero, power, powerUses: uses },
+      enemy: { units: living(E.units), hero: E.hero },
     });
     showScreen('campaign');
     attackerWon = aHuman ? res.win : !res.win;
+    xp = res.xp;
   } else {
     attackerWon = autoResolve(a, d);
   }
-  // Clean up the dead and patch up the living.
+  const winner = attackerWon ? a : d, loser = attackerWon ? d : a;
+  for (const s of loser.units) { s.n = 0; s.hp = 0; }
+  if (winner.hero) {
+    recordFallen(winner.hero, lossesSince(attackerWon ? snapA : snapD));
+    gainHeroXp(winner.hero, xp || (attackerWon ? powD : powA) * 0.5);
+  }
   for (const f of [a, d]) {
-    const winner = (f === a) === attackerWon;
-    if (!winner) { for (const u of f.units) u.hp = 0; }
-    if (f.hero) f.hero.army = f.hero.army.filter(u => u.hp > 0);
-    if (f.town) f.town.garrison = f.town.garrison.filter(u => u.hp > 0);
-    if (f.obj) f.obj.units = f.obj.units.filter(u => u.hp > 0);
-    for (const u of f.units) if (u.hp > 0) u.hp = u.stats.hp;
-    if (f.lead) f.lead.hp = f.lead.stats.hp;
+    if (f.hero) f.hero.army = living(f.hero.army);
+    if (f.town) f.town.garrison = living(f.town.garrison);
+    if (f.obj) f.obj.units = living(f.obj.units);
   }
   if (!attackerWon && a.hero) defeatHero(a.hero);
   if (attackerWon && d.hero) defeatHero(d.hero);
   requestDraw(); refreshPanel();
   return attackerWon;
 }
+// Computer vs computer: by the square law the winner keeps sqrt(1 − (L/W)²)
+// of its strength; each stack loses that share of its creatures.
 function autoResolve(a, d) {
-  const A = [...a.units.filter(u => u.hp > 0), ...(a.lead ? [a.lead] : [])];
-  const D = [...d.units.filter(u => u.hp > 0), ...(d.lead ? [d.lead] : [])];
-  const pa = armyPower(A) * (1 + (a.hero ? a.hero.artifacts.length * 0.05 : 0));
-  const pd = armyPower(D) * (1 + (d.hero ? d.hero.artifacts.length * 0.05 : 0)) * (d.town && d.town.built.includes('walls') ? 1.25 : 1);
-  const aWins = Math.random() < pa * pa / (pa * pa + pd * pd);
+  const pa = armyPower(living(a.units), a.hero);
+  const pd = armyPower(living(d.units), d.hero) * (d.town && d.town.built.includes('walls') ? 1.25 : 1);
+  const aWins = Math.random() < Math.pow(pa, 4) / (Math.pow(pa, 4) + Math.pow(pd, 4));
   const [W, Wp, Lp] = aWins ? [a, pa, pd] : [d, pd, pa];
-  const loss = clamp(Lp / Wp * 0.6, 0, 0.9) * Wp;
-  let removed = 0;
-  for (const u of shuffle(W.units.filter(u => u.hp > 0))) {
-    if (removed >= loss) break;
-    if (Math.random() < 0.6) { removed += unitPower(u); u.hp = 0; }
+  const lost = 1 - Math.sqrt(Math.max(0.05, 1 - Math.pow(Math.min(Lp / Wp, 1), 2)));
+  for (const s of living(W.units)) {
+    const k = Math.min(s.n, Math.round(s.n * lost * (0.8 + Math.random() * 0.4)));
+    s.n -= k; if (s.n <= 0) s.hp = 0;
   }
-  for (const u of [...W.units, ...(W.lead ? [W.lead] : [])]) if (u.hp > 0) gainXp(u, 25);
   return aWins;
 }
 async function fightMonster(h, m) {
-  const won = await resolveFight(heroForce(h), { units: m.units, lead: null, hero: null, owner: null, obj: m },
+  const won = await resolveFight(heroForce(h), { units: m.units, hero: null, owner: null, obj: m },
     { title: `${heroName(h)} vs ${m.name}`, theme: themeAt(m.x, m.y) });
   if (won) {
     removeObj(m);
     if (h.owner === 0) log(`Your army defeated the ${m.name}.`);
   } else {
-    m.units = m.units.filter(u => u.hp > 0);
+    m.units = living(m.units);
     if (!m.units.length) removeObj(m);
   }
   return won;
@@ -466,18 +516,24 @@ async function siegeTown(h, t) {
   }
 }
 function defeatHero(h) {
-  h.alive = false; h.army = []; h.respawn = 2; h.mp = 0;
+  h.alive = false; h.army = []; h.fallen = {}; h.respawn = 2; h.mp = 0;
   if (h.owner === 0) {
     log(`💀 ${heroName(h)} was defeated and fled the field.`);
     toast(`${heroName(h)} has been defeated! They will return to one of your towns in 2 days.`);
   } else log(`${heroName(h)} has been defeated.`);
 }
-const heroName = h => UNITS[h.unit.type].name;
+const heroName = h => HEROES[h.type].name;
 
 // ── Towns: building & recruiting (shared by player and AI) ──────────────────
 const dwellingTier = b => +b.slice(1);
+const LEVEL_NAMES = ['', 'Upgraded', 'Elite'];
 function buildingName(t, b) {
-  if (b[0] === 'd') return FACTIONS[t.faction].dwellings[dwellingTier(b) - 1];
+  if ('due'.includes(b[0]) && BUILDINGS[b] && !BUILDINGS[b].name) {
+    const tier = dwellingTier(b), d = FACTIONS[t.faction].dwellings[tier - 1];
+    if (b[0] === 'd') return d;
+    const L = LINES[FACTIONS[t.faction].units[tier - 1]];
+    return `${d} ${b[0] === 'u' ? 'II' : 'III'} (${UNITS[L.levels[b[0] === 'u' ? 1 : 2]].name})`;
+  }
   if (b === 'temple') return FACTIONS[t.faction].temple;
   return BUILDINGS[b].name;
 }
@@ -498,15 +554,44 @@ function build(t, b) {
   if (b[0] === 'd') t.pool[b] = (t.pool[b] || 0) + growthOf(t, dwellingTier(b));
   return true;
 }
-const growthOf = (t, tier) => Math.ceil(TIER_GROWTH[tier] * (t.built.includes('citadel') ? 1.5 : 1));
-function recruit(t, tier, dest) {
-  const p = playerOf(t.owner), type = FACTIONS[t.faction].units[tier - 1], key = 'd' + tier;
-  const cost = TIER_COST[tier];
-  if (!t.built.includes(key) || !(t.pool[key] > 0) || !canAfford(p.res, cost) || dest.length >= (dest === t.garrison ? GARRISON_CAP : ARMY_CAP)) return null;
-  pay(p.res, cost); t.pool[key]--;
-  const u = makeUnit(type, 1);
-  dest.push(u);
-  return u;
+const lineOf = (t, tier) => LINES[FACTIONS[t.faction].units[tier - 1]];
+const growthOf = (t, tier) => Math.ceil(lineOf(t, tier).grow * (t.built.includes('citadel') ? 1.5 : 1));
+// Highest level a town can recruit or upgrade to for a tier (0 = no dwelling).
+const townLevel = (t, tier) => t.built.includes('e' + tier) ? 3 : t.built.includes('u' + tier) ? 2 : t.built.includes('d' + tier) ? 1 : 0;
+const maxAffordable = (res, cost) => Math.min(...Object.entries(cost).filter(([, v]) => v > 0).map(([k, v]) => Math.floor((res[k] || 0) / v)), 1e9);
+// Recruit n creatures of a tier at a level into dest (hero army or garrison).
+function recruit(t, tier, lvl, n, dest) {
+  const p = playerOf(t.owner), key = 'd' + tier, type = lineOf(t, tier).levels[lvl - 1];
+  if (lvl > townLevel(t, tier)) return null;
+  n = Math.min(n, t.pool[key] || 0, maxAffordable(p.res, UNITS[type].cost));
+  if (n <= 0) return null;
+  const s = addToArmy(dest, type, n, dest === t.garrison ? GARRISON_SLOTS : ARMY_SLOTS);
+  if (!s) return null;
+  pay(p.res, resurrectCost(type, n)); t.pool[key] -= n;
+  return s;
+}
+// Upgrading a stack costs the price difference per creature.
+function upgradeCost(s, toLvl) {
+  const T = UNITS[s.type], N = UNITS[LINES[T.line].levels[toLvl - 1]], c = {};
+  for (const k of RES) { const v = ((N.cost[k] || 0) - (T.cost[k] || 0)) * s.n; if (v > 0) c[k] = v; }
+  return c;
+}
+function canUpgrade(t, s) {
+  const T = UNITS[s.type], L = LINES[T.line];
+  if (L.faction !== t.faction || !t.built.includes('d' + L.tier)) return 0;
+  return townLevel(t, L.tier) > T.lvl ? townLevel(t, L.tier) : 0;
+}
+function upgradeStack(t, s, list) {
+  const to = canUpgrade(t, s), p = playerOf(t.owner);
+  if (!to) return false;
+  const cost = upgradeCost(s, to);
+  if (!canAfford(p.res, cost)) return false;
+  pay(p.res, cost);
+  const nt = LINES[UNITS[s.type].line].levels[to - 1], same = list.find(x => x !== s && x.type === nt);
+  const frac = s.hp / UNITS[s.type].hp;
+  if (same) { same.n += s.n; list.splice(list.indexOf(s), 1); }
+  else { s.type = nt; s.hp = Math.max(1, Math.round(UNITS[nt].hp * frac)); }
+  return true;
 }
 function townIncome(t) { return t.built.includes('hall3') ? 2000 : t.built.includes('hall2') ? 1000 : 500; }
 
@@ -541,7 +626,7 @@ function newDay() {
     o.builtToday = false;
     if (week) for (const b of o.built) if (b[0] === 'd') o.pool[b] = (o.pool[b] || 0) + growthOf(o, dwellingTier(b));
   }
-  if (week) for (const o of G.objs) if (o.kind === 'monster' && o.units.length < 10 && Math.random() < 0.5) o.units.push(makeUnit(o.units[0].type, o.units[0].lvl));
+  if (week) for (const o of G.objs) if (o.kind === 'monster') for (const s of o.units) s.n += Math.ceil(LINES[UNITS[s.type].line].grow * 0.5 / o.units.length);
   for (const h of G.heroes) {
     h.mp = BASE_MP + h.artifacts.reduce((s, a) => s + (ARTIFACTS[a].mp || 0), 0);
     if (!h.alive) {
@@ -549,7 +634,7 @@ function newDay() {
       const towns = townsOf(playerOf(h.owner));
       const home = towns.find(t => !heroAtIdx(idx(t.x, t.y)));
       if (h.respawn <= 0 && home) {
-        h.alive = true; h.x = home.x; h.y = home.y; h.unit.hp = h.unit.stats.hp;
+        h.alive = true; h.x = home.x; h.y = home.y;
         absorbGarrison(h, home, h.owner !== 0);
         if (h.owner === 0) { log(`${heroName(h)} returns to ${home.name}.`); revealAround(h); followHero(h, true); }
       }
@@ -605,11 +690,14 @@ function aiTown(p, t) {
     if (!canBuild(t, b)) { build(t, b); break; }
   }
   const h = heroOf(p), heroHere = h && h.alive && h.x === t.x && h.y === t.y;
+  if (heroHere) {
+    for (const s of h.army.slice()) upgradeStack(t, s, h.army);
+    for (const [type, n] of Object.entries(h.fallen)) if (p.res.gold > 3000) resurrect(h, t, type, n);
+  }
   for (let tier = 7; tier >= 1; tier--) {
-    for (let guard = 0; guard < 10; guard++) {
-      const dest = heroHere && h.army.length < ARMY_CAP ? h.army : t.garrison;
-      if (!recruit(t, tier, dest)) break;
-    }
+    const lvl = townLevel(t, tier); if (!lvl) continue;
+    if (tier >= 6 && p.res.gold < 2500) continue;  // save up rather than buy one beast
+    recruit(t, tier, lvl, 999, heroHere ? h.army : t.garrison) || recruit(t, tier, lvl, 999, t.garrison);
   }
   if (heroHere) absorbGarrison(h, t, true);
 }
@@ -621,35 +709,35 @@ function aiTargetValue(h, o, myPow) {
     case 'artifact': return 9;
     case 'shrine': return h.shrines.includes(o.id) ? 0 : 4;
     case 'mine': return o.owner === p.id ? 0 : o.res === 'ichor' ? 7 : o.res === 'gold' ? 7 : 4;
-    case 'monster': return myPow > armyPower(o.units) * 1.6 ? 3 + UNITS[o.units[0].type].tier : 0;
+    case 'monster': return myPow > armyPower(o.units) * 1.3 ? 3 + UNITS[o.units[0].type].tier : 0;
     case 'town': {
       if (o.owner === p.id) {
         const gp = armyPower(o.garrison);
-        return h.army.length < ARMY_CAP && gp > 0 ? 3 + gp / 40 : 0;
+        return gp > 0 ? 3 + gp / Math.max(200, myPow * 0.1) : 0;
       }
-      const f = townForce(o), dp = armyPower(f.units) + (f.lead ? unitPower(f.lead) : 0);
-      return myPow > dp * 1.4 ? (o.owner == null ? 14 : 22) : 0;
+      const f = townForce(o), dp = armyPower(living(f.units), f.hero);
+      return myPow > dp * 1.25 ? (o.owner == null ? 14 : 22) : 0;
     }
   }
   return 0;
 }
 async function aiHero(h) {
   for (let iter = 0; iter < 5 && h.alive && h.mp > 0; iter++) {
-    const myPow = armyPower(h.army) + unitPower(h.unit);
+    const myPow = armyPower(h.army, h);
     const dj = heroDijkstra(h);
     let best = null;
     const consider = (i, v) => {
       if (v <= 0 || !isFinite(dj.dist[i]) || i === dj.start) return;
       const z = G.guard.get(i), o = G.objAt.get(i);
-      if (z && z !== o && myPow < armyPower(z.units) * 1.6) return; // guarded and too strong
+      if (z && z !== o && myPow < armyPower(z.units) * 1.3) return; // guarded and too strong
       const score = v / (dj.dist[i] / 100 + 1.5);
       if (!best || score > best.score) best = { i, score };
     };
     for (const o of G.objs) consider(idx(o.x, o.y), aiTargetValue(h, o, myPow));
     for (const e of G.heroes) {
       if (e === h || !e.alive || e.owner === h.owner) continue;
-      const ep = armyPower(e.army) + unitPower(e.unit);
-      if (myPow > ep * 1.35) consider(idx(e.x, e.y), 16);
+      const ep = armyPower(e.army, e);
+      if (myPow > ep * 1.25) consider(idx(e.x, e.y), 16);
     }
     if (!best) break;
     const path = pathFrom(dj, best.i);

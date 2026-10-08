@@ -1,15 +1,14 @@
 'use strict';
 // ─────────────────────────────────────────────────────────────────────────────
-// Static game data: stats, weapons, terrain, factions, unit rosters, buildings.
-// Everything here is plain data so new factions/units can be added by editing
-// this file alone.
+// Static game data: unit lines, stats, terrain, factions, buildings.
+//
+// Armies are Heroes 3-style stacks: a stack is { type, n (count), hp (HP of the
+// top creature) }. Every creature type belongs to a line with three levels
+// (base → upgraded → elite); a town's dwelling upgrades unlock the higher ones.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STATS = ['hp', 'str', 'mag', 'skl', 'spd', 'lck', 'def', 'res'];
-const STAT_NAMES = { hp: 'HP', str: 'Str', mag: 'Mag', skl: 'Skl', spd: 'Spd', lck: 'Lck', def: 'Def', res: 'Res', mov: 'Mov' };
-const MAX_LEVEL = 20;
-const ARMY_CAP = 8;      // units a hero can lead, not counting the hero
-const GARRISON_CAP = 8;
+const ARMY_SLOTS = 7;     // stacks a hero can lead
+const GARRISON_SLOTS = 7;
 
 const RES = ['gold', 'wood', 'stone', 'ichor'];
 const RES_INFO = {
@@ -19,130 +18,189 @@ const RES_INFO = {
   ichor: { name: 'Ichor', icon: '💧' },
 };
 
-// Weapon triangle (Fire Emblem): sword > axe > lance > sword.
-// Bows are effective (×3 might) against fliers. Tomes hit Res instead of Def.
+// Weapon triangle: sword > axe > lance (and javelin) > sword, worth ±2 Attack.
 const WEAPONS = {
-  sword: { name: 'Sword',        mt: 4, hit: 90, crit: 5,  range: [1, 1] },
-  lance: { name: 'Lance',        mt: 6, hit: 80, crit: 0,  range: [1, 1] },
-  axe:   { name: 'Axe',          mt: 8, hit: 70, crit: 5,  range: [1, 1] },
-  bow:   { name: 'Bow',          mt: 6, hit: 85, crit: 0,  range: [2, 2], effective: 'fly' },
-  tome:  { name: 'Tome',         mt: 5, hit: 85, crit: 0,  range: [1, 2], magic: true },
-  claw:  { name: 'Fang & Claw',  mt: 5, hit: 85, crit: 5,  range: [1, 1] },
-  staff: { name: 'Staff',        mt: 0, hit: 0,  crit: 0,  range: [1, 1], heal: true },
+  sword:   { name: 'Sword' },
+  lance:   { name: 'Spear' },
+  javelin: { name: 'Javelins', tri: 'lance' },
+  axe:     { name: 'Axe' },
+  bow:     { name: 'Bow' },
+  tome:    { name: 'Sorcery' },
+  claw:    { name: 'Fang & Claw' },
+  fist:    { name: 'Bronze fists' },
+  staff:   { name: 'Staff' },
 };
 const TRIANGLE = { sword: 'axe', axe: 'lance', lance: 'sword' }; // key beats value
+const triGroup = w => (WEAPONS[w] && WEAPONS[w].tri) || w;
 
-const MOVE_TYPES = { foot: 'Infantry', armor: 'Armored', horse: 'Cavalry', fly: 'Flier' };
+const MOVE_TYPES = { foot: 'Infantry', armor: 'Armoured', horse: 'Cavalry', fly: 'Flier' };
+const CLASSES = { heavy: 'Heavy', light: 'Light' };
 
 const ABILITIES = {
-  heal:      'Heal — restores an adjacent ally (Mag + 10 HP).',
-  regen:     'Regeneration — recovers 20% HP at the start of each turn.',
-  lifesteal: 'Lifesteal — heals for half the damage dealt.',
-  pierce:    'Pierce — ignores half of the target\'s Def/Res.',
-  brave:     'Brave — strikes twice each time it attacks.',
-  crit:      'Deadly — +20 critical rate.',
+  hitAndRun:   ['Hit and run', 'May move again with any movement left after attacking.'],
+  phalanx:     ['Phalanx', '+2 Defence while next to another friendly Heavy stack.'],
+  bond:        ['Sacred bond', '+1 Attack and Defence for each adjacent stack of the same kind.'],
+  withHorse:   ['Run with the horse', '+2 Move and +2 Attack on turns it starts next to friendly cavalry.'],
+  cleave:      ['Cleave', 'Also strikes another enemy beside the target for half damage.'],
+  charge:      ['Charge', '+5% melee damage for every tile moved this turn.'],
+  halfRange:   ['Javelin volley', 'Can attack at range 2 for half damage, without retaliation.'],
+  manyHeads:   ['Many heads', 'Strikes every adjacent enemy at once; none can retaliate.'],
+  regrow:      ['Regrowth', 'Its wounded top creature heals fully at the start of each turn.'],
+  siege:       ['Siege engine', '+25% damage in siege battles.'],
+  ichor:       ['Bleeding ichor', 'Below half strength, loses 2 Defence each turn.'],
+  heal:        ['Heal', 'Instead of attacking, restores an adjacent ally and can raise its fallen.'],
+  lifesteal:   ['Lifesteal', 'Heals for half the damage dealt and can raise its own fallen.'],
+  pierce:      ['Pierce', 'Ignores half of the target\'s Defence.'],
+  doubleStrike:['Double strike', 'Attacks twice.'],
+  luck:        ['Fortune', '20% chance to deal double damage.'],
+  large:       ['Large', 'Occupies 2×2 tiles.'],
 };
 
-// Recruit cost & weekly growth by tier (Heroes 3 style dwellings).
-const TIER_COST = {
-  1: { gold: 150 }, 2: { gold: 250 }, 3: { gold: 400 }, 4: { gold: 600 },
-  5: { gold: 900 }, 6: { gold: 1400, ichor: 1 }, 7: { gold: 2400, ichor: 2 },
+// Tier templates for lines that are not hand-tuned, plus recruitment economy.
+const TIER = {
+  1: { att: 4,  def: 4,  dmg: [1, 3],   hp: 7,   mov: 5, res: 0,  grow: 14, cost: { gold: 70 } },
+  2: { att: 6,  def: 6,  dmg: [2, 4],   hp: 13,  mov: 5, res: 5,  grow: 10, cost: { gold: 150 } },
+  3: { att: 8,  def: 7,  dmg: [3, 6],   hp: 18,  mov: 6, res: 5,  grow: 8,  cost: { gold: 250 } },
+  4: { att: 12, def: 11, dmg: [8, 14],  hp: 38,  mov: 6, res: 15, grow: 4,  cost: { gold: 550 } },
+  5: { att: 15, def: 12, dmg: [12, 20], hp: 55,  mov: 7, res: 10, grow: 4,  cost: { gold: 800 } },
+  6: { att: 18, def: 17, dmg: [25, 40], hp: 170, mov: 6, res: 25, grow: 2,  cost: { gold: 1800, ichor: 1 } },
+  7: { att: 25, def: 26, dmg: [40, 60], hp: 380, mov: 6, res: 40, grow: 1,  cost: { gold: 3500, ichor: 3 } },
 };
-const TIER_GROWTH = { 1: 3, 2: 3, 3: 2, 4: 2, 5: 1, 6: 1, 7: 1 };
+const LEVEL_COST = [1, 1.25, 1.6];   // price multiplier per level
 
-const UNITS = {};
-function defUnit(id, faction, tier, name, icon, weapon, move, b, abil = [], desc = '', w = {}) {
-  const [hp, str, mag, skl, spd, lck, def, res, mov] = b;
-  const base = { hp, str, mag, skl, spd, lck, def, res, mov };
-  const hero = !!w.hero;
-  const growth = {};
-  for (const s of STATS) {
-    growth[s] = s === 'hp' ? 55 + (hero ? 25 : tier * 4) : Math.max(5, Math.min(75, 10 + base[s] * 3 + (hero ? 15 : 0)));
-  }
-  const W = WEAPONS[weapon];
-  const t = hero ? 4 : tier;
-  UNITS[id] = {
-    id, faction, tier, name, icon, weapon, move, base, growth, abil, desc, hero,
-    mt: w.mt ?? (W.mt + Math.round(t * 1.2)),
-    hit: w.hit ?? W.hit,
-    crit: (w.crit ?? W.crit) + (abil.includes('crit') ? 20 : 0),
-    range: w.range ?? W.range,
-    group: w.group,
-  };
+const UNITS = {}, LINES = {};
+const unitId = (line, lvl) => lvl === 1 ? line : `${line}_${lvl}`;
+// lv: three level specs { name, att, def, dmg, hp, mov, res, abil? }
+function defLine(id, faction, tier, cls, base, lv, desc) {
+  const T = TIER[tier], L = { id, faction, tier, cls, desc, icon: base.icon, levels: [], grow: base.grow || T.grow };
+  lv.forEach((s, i) => {
+    const uid = unitId(id, i + 1);
+    const cost = {}; for (const [k, v] of Object.entries(base.cost || T.cost)) cost[k] = Math.round(v * LEVEL_COST[i] / (k === 'gold' ? 5 : 1)) * (k === 'gold' ? 5 : 1);
+    UNITS[uid] = {
+      id: uid, line: id, lvl: i + 1, faction, tier, cls, desc,
+      name: s.name, icon: base.icon, weapon: base.weapon, move: base.move,
+      att: s.att, def: s.def, dmg: s.dmg, hp: s.hp, mov: s.mov, res: s.res,
+      range: base.range || [1, 1], size: base.size || 1,
+      abil: [...(base.abil || []), ...(s.abil || [])], cost,
+    };
+    L.levels.push(uid);
+  });
+  LINES[id] = L;
+}
+// Generic three-level line built from the tier template with small tweaks.
+function autoLine(id, faction, tier, name, icon, weapon, move, cls, opts = {}) {
+  const T = TIER[tier], h = cls === 'heavy';
+  const att = T.att + (h ? -1 : 1) + (opts.att || 0), def = T.def + (h ? 2 : -1) + (opts.def || 0);
+  const mov = T.mov + (h ? -1 : 0) + (move === 'horse' || move === 'fly' ? 2 : 0) + (opts.mov || 0);
+  const names = opts.names || [name, `Veteran ${name}`, `Elite ${name}`];
+  const lv = [0, 1, 2].map(i => ({
+    name: names[i],
+    att: Math.round(att * [1, 1.25, 1.5][i]), def: Math.round(def * [1, 1.25, 1.5][i]),
+    dmg: T.dmg.map(d => Math.round(d * [1, 1.12, 1.25][i] * (opts.dmgMul || 1))),
+    hp: Math.round(T.hp * [1, 1.12, 1.25][i] * (opts.hpMul || 1)),
+    mov: mov + (h ? (i === 2 ? 1 : 0) : i), res: T.res + [0, 5, 10][i] + (opts.res || 0),
+  }));
+  defLine(id, faction, tier, cls, { icon, weapon, move, range: opts.range, size: opts.size, abil: opts.abil }, lv, opts.desc || '');
 }
 
-// ── Hellenes ────────────────────────────────────────────────────────────────
-//                                                       hp str mag skl spd lck def res mov
-defUnit('hoplite',  'greek', 1, 'Hoplite',          '🛡️', 'lance', 'armor', [22, 7, 0, 5, 3, 3, 9, 1, 4], [], 'Bronze-clad spearmen of the phalanx.');
-defUnit('toxotes',  'greek', 2, 'Toxotes',          '🏹', 'bow',   'foot',  [18, 6, 0, 8, 6, 4, 3, 2, 5], [], 'Cretan archers — deadly against winged foes.');
-defUnit('oracle',   'greek', 3, 'Oracle of Delphi', '🔮', 'staff', 'foot',  [17, 0, 7, 5, 6, 8, 2, 8, 5], ['heal'], 'Pythian seers who mend wounds with Apollo\'s light.');
-defUnit('centaur',  'greek', 4, 'Centaur',          '🐎', 'lance', 'horse', [26, 9, 0, 7, 7, 4, 6, 3, 7], [], 'Wild horse-folk hurling javelins.', { range: [1, 2] });
-defUnit('pegasus',  'greek', 5, 'Pegasus Rider',    '🦄', 'lance', 'fly',   [24, 8, 2, 9, 11, 7, 5, 8, 7], [], 'Riders of the winged steeds of Olympus.');
-defUnit('minotaur', 'greek', 6, 'Minotaur',         '🐂', 'axe',   'foot',  [38, 14, 0, 6, 6, 2, 10, 2, 5], ['brave'], 'Bull-headed terror of the Labyrinth.');
-defUnit('cyclops',  'greek', 7, 'Cyclops',          '👁️', 'axe',   'foot',  [50, 18, 0, 7, 4, 2, 13, 4, 4], ['pierce'], 'Hephaestus\' one-eyed smiths, flinging boulders.', { range: [1, 2] });
+// ── Hellenes (hand-tuned) ───────────────────────────────────────────────────
+defLine('peltast', 'greek', 1, 'light', { icon: '🎯', weapon: 'javelin', move: 'foot', range: [1, 2], abil: ['hitAndRun'], grow: 14, cost: { gold: 70 } }, [
+  { name: 'Peltast',          att: 4, def: 3, dmg: [1, 3], hp: 6, mov: 6, res: 0 },
+  { name: 'Thracian Peltast', att: 5, def: 4, dmg: [1, 4], hp: 7, mov: 7, res: 5 },
+  { name: 'Agrianian',        att: 6, def: 5, dmg: [2, 4], hp: 8, mov: 8, res: 10 },
+], 'Javelin skirmishers with a crescent wicker shield (pelte). They throw, then slip away.');
+defLine('hoplite', 'greek', 2, 'heavy', { icon: '🛡️', weapon: 'lance', move: 'foot', abil: ['phalanx'], grow: 10, cost: { gold: 150 } }, [
+  { name: 'Ephebe',      att: 4, def: 6,  dmg: [2, 3], hp: 12, mov: 4, res: 5 },
+  { name: 'Hoplite',     att: 5, def: 8,  dmg: [2, 4], hp: 14, mov: 4, res: 10 },
+  { name: 'Sacred Band', att: 6, def: 10, dmg: [3, 5], hp: 16, mov: 5, res: 15, abil: ['bond'] },
+], 'Citizen spearmen in bronze behind the great round aspis: the backbone of the phalanx.');
+defLine('hamippoi', 'greek', 3, 'light', { icon: '🏃', weapon: 'sword', move: 'foot', abil: ['withHorse'], grow: 8, cost: { gold: 250 } }, [
+  { name: 'Hamippoi',           att: 7,  def: 5, dmg: [3, 5], hp: 14, mov: 6, res: 5 },
+  { name: 'Boeotian Hamippoi',  att: 9,  def: 6, dmg: [3, 6], hp: 16, mov: 7, res: 10 },
+  { name: 'Epilektoi Hamippoi', att: 11, def: 8, dmg: [4, 7], hp: 18, mov: 8, res: 15 },
+], 'Runners who fought among the cavalry, keeping pace by holding the horses\' manes.');
+defLine('minotaur', 'greek', 4, 'heavy', { icon: '🐂', weapon: 'axe', move: 'foot', abil: ['cleave'], grow: 4, cost: { gold: 550 } }, [
+  { name: 'Minotaur',     att: 13, def: 12, dmg: [10, 18], hp: 45, mov: 5, res: 15 },
+  { name: 'Labrys Guard', att: 16, def: 15, dmg: [12, 20], hp: 50, mov: 5, res: 20 },
+  { name: 'Asterion',     att: 20, def: 19, dmg: [14, 24], hp: 60, mov: 6, res: 30 },
+], 'The bull of Minos, swinging the Cretan double axe (labrys).');
+defLine('hippeis', 'greek', 5, 'light', { icon: '🐎', weapon: 'lance', move: 'horse', range: [1, 2], abil: ['charge', 'halfRange'], grow: 4, cost: { gold: 800 } }, [
+  { name: 'Prodromoi', att: 15, def: 10, dmg: [12, 20], hp: 55, mov: 8,  res: 5 },
+  { name: 'Hippeis',   att: 19, def: 13, dmg: [14, 22], hp: 62, mov: 9,  res: 10 },
+  { name: 'Hetairoi',  att: 24, def: 16, dmg: [16, 26], hp: 70, mov: 10, res: 15 },
+], 'Greek horsemen who throw javelins, then charge home with the spear.');
+defLine('hydra', 'greek', 6, 'heavy', { icon: '🐍', weapon: 'claw', move: 'foot', size: 2, abil: ['large', 'manyHeads', 'regrow'], grow: 2, cost: { gold: 1800, ichor: 1 } }, [
+  { name: 'Marsh Hydra',     att: 18, def: 18, dmg: [25, 45], hp: 180, mov: 5, res: 25 },
+  { name: 'Lernaean Hydra',  att: 23, def: 23, dmg: [30, 50], hp: 210, mov: 5, res: 30 },
+  { name: 'Hydra Matriarch', att: 28, def: 28, dmg: [35, 60], hp: 250, mov: 6, res: 40 },
+], 'The many-headed serpent of Lerna. Cut one head off and two grow back.');
+defLine('talos', 'greek', 7, 'heavy', { icon: '🗿', weapon: 'fist', move: 'armor', size: 2, abil: ['large', 'siege', 'ichor'], grow: 1, cost: { gold: 3500, ichor: 3 } }, [
+  { name: 'Bronze Automaton', att: 26, def: 30, dmg: [45, 60], hp: 400, mov: 4, res: 50 },
+  { name: 'Talos',            att: 32, def: 37, dmg: [50, 70], hp: 450, mov: 4, res: 55 },
+  { name: 'Colossus',         att: 40, def: 46, dmg: [60, 80], hp: 520, mov: 5, res: 65 },
+], 'The bronze giant forged by Hephaestus to guard Crete. A single vein of ichor runs to a nail at his ankle.');
 
-// ── Egyptians ───────────────────────────────────────────────────────────────
-defUnit('medjay',   'egypt', 1, 'Medjay Spearman',  '🔱', 'lance', 'foot',  [20, 7, 0, 6, 5, 4, 6, 2, 5], [], 'Desert guardians of the Pharaoh\'s cities.');
-defUnit('scorpion', 'egypt', 2, 'Serket Scorpion',  '🦂', 'claw',  'foot',  [20, 8, 0, 6, 6, 2, 8, 1, 5], ['pierce'], 'Giant scorpions sacred to the goddess Serket.');
-defUnit('chariot',  'egypt', 3, 'Chariot Archer',   '🏇', 'bow',   'horse', [22, 8, 0, 8, 7, 4, 5, 3, 7], [], 'Swift war-chariots raining arrows.');
-defUnit('priest',   'egypt', 4, 'Priest of Thoth',  '☥',  'staff', 'foot',  [20, 0, 9, 6, 6, 7, 3, 10, 5], ['heal'], 'Ibis-masked scholars who know the words of healing.');
-defUnit('anubite',  'egypt', 5, 'Anubite Warden',   '🐕', 'sword', 'foot',  [30, 11, 2, 11, 10, 5, 8, 6, 5], ['lifesteal'], 'Jackal-headed guardians of the Duat.');
-defUnit('bennu',    'egypt', 6, 'Bennu Firebird',   '🔥', 'tome',  'fly',   [32, 3, 13, 10, 11, 8, 6, 12, 7], ['regen'], 'The undying heron of Heliopolis, reborn in flame.');
-defUnit('sphinx',   'egypt', 7, 'Sphinx',           '🦁', 'claw',  'horse', [50, 15, 10, 10, 8, 10, 11, 12, 6], ['crit'], 'Riddle-keeper of Giza, lion-bodied and wise.');
+// ── Kemet (Egyptians) ───────────────────────────────────────────────────────
+autoLine('medjay', 'egypt', 1, 'Medjay', '🔱', 'lance', 'foot', 'light', { desc: 'Desert guardians of the Pharaoh\'s cities.' });
+autoLine('scorpion', 'egypt', 2, 'Serket Scorpion', '🦂', 'claw', 'foot', 'heavy', { abil: ['pierce'], desc: 'Giant scorpions sacred to Serket.' });
+autoLine('chariot', 'egypt', 3, 'Chariot Archer', '🏇', 'bow', 'horse', 'light', { range: [2, 4], desc: 'Swift war-chariots raining arrows.' });
+autoLine('priest', 'egypt', 4, 'Priest of Thoth', '☥', 'staff', 'foot', 'light', { abil: ['heal'], dmgMul: .4, desc: 'Scholars who know the words of healing.' });
+autoLine('anubite', 'egypt', 5, 'Anubite Warden', '🐕', 'sword', 'foot', 'heavy', { abil: ['lifesteal'], desc: 'Jackal-headed guardians of the Duat.' });
+autoLine('bennu', 'egypt', 6, 'Bennu Firebird', '🔥', 'tome', 'fly', 'light', { range: [1, 3], abil: ['regrow'], desc: 'The undying heron of Heliopolis.' });
+autoLine('sphinx', 'egypt', 7, 'Sphinx', '🦁', 'claw', 'foot', 'heavy', { size: 2, abil: ['large', 'luck'], desc: 'Riddle-keeper of Giza.' });
+// ── Norsemen ────────────────────────────────────────────────────────────────
+autoLine('huskarl', 'norse', 1, 'Huskarl', '🪓', 'axe', 'foot', 'heavy', { desc: 'Sworn axemen of a jarl\'s household.' });
+autoLine('shieldm', 'norse', 2, 'Shieldmaiden', '⚔️', 'sword', 'foot', 'light', { desc: 'Warrior women of the shield-wall.' });
+autoLine('volva', 'norse', 3, 'Völva', '🌙', 'staff', 'foot', 'light', { abil: ['heal'], dmgMul: .4, desc: 'Seeresses who chant the galdr of mending.' });
+autoLine('ulfhedinn', 'norse', 4, 'Úlfheðinn', '🐺', 'sword', 'foot', 'light', { abil: ['luck'], desc: 'Wolf-pelted berserkers of Odin.' });
+autoLine('valkyrie', 'norse', 5, 'Valkyrie', '🦢', 'lance', 'fly', 'light', { desc: 'Choosers of the slain on swan-white wings.' });
+autoLine('troll', 'norse', 6, 'Mountain Troll', '🧌', 'axe', 'foot', 'heavy', { abil: ['regrow'], desc: 'Stone-hided brutes whose wounds knit shut.' });
+autoLine('jotunn', 'norse', 7, 'Frost Jötunn', '❄️', 'axe', 'armor', 'heavy', { size: 2, abil: ['large', 'pierce'], desc: 'Giants of Jötunheimr.' });
+// ── Yamato ──────────────────────────────────────────────────────────────────
+autoLine('ashigaru', 'japan', 1, 'Ashigaru', '🎌', 'lance', 'foot', 'light', { desc: 'Light spearmen levied from the provinces.' });
+autoLine('yumi', 'japan', 2, 'Yumi Archer', '🏹', 'bow', 'foot', 'light', { range: [2, 4], desc: 'Masters of the great bow.' });
+autoLine('samurai', 'japan', 3, 'Samurai', '🗡️', 'sword', 'foot', 'heavy', { abil: ['luck'], desc: 'Disciplined swordsmen of the warrior houses.' });
+autoLine('miko', 'japan', 4, 'Miko', '🎐', 'staff', 'foot', 'light', { abil: ['heal'], dmgMul: .4, desc: 'Shrine maidens who channel the kami.' });
+autoLine('kitsune', 'japan', 5, 'Kitsune', '🦊', 'tome', 'foot', 'light', { range: [1, 3], desc: 'Nine-tailed fox spirits wielding foxfire.' });
+autoLine('tengu', 'japan', 6, 'Tengu', '👺', 'sword', 'fly', 'light', { desc: 'Crow-winged mountain goblins.' });
+autoLine('oni', 'japan', 7, 'Oni', '👹', 'axe', 'foot', 'heavy', { size: 2, abil: ['large', 'doubleStrike'], desc: 'Iron-clubbed ogres of Onigashima.' });
+// ── Neutral creatures (levels used for tougher wandering stacks) ────────────
+autoLine('wolf', 'neutral', 1, 'Dire Wolf', '🐺', 'claw', 'foot', 'light', { names: ['Dire Wolf', 'Grey Wolf', 'Alpha Wolf'] });
+autoLine('skeleton', 'neutral', 1, 'Skeleton', '💀', 'sword', 'foot', 'heavy', { names: ['Skeleton', 'Skeleton Warrior', 'Skeleton Champion'] });
+autoLine('harpy', 'neutral', 2, 'Harpy', '🦇', 'claw', 'fly', 'light', { abil: ['hitAndRun'], names: ['Harpy', 'Harpy Hag', 'Harpy Queen'] });
+autoLine('draugr', 'neutral', 3, 'Draugr', '🧟', 'axe', 'foot', 'heavy', { abil: ['regrow'], names: ['Draugr', 'Barrow Draugr', 'Draugr Lord'] });
+autoLine('spider', 'neutral', 3, 'Giant Spider', '🕷️', 'claw', 'foot', 'light', { abil: ['pierce'], names: ['Giant Spider', 'Venom Spider', 'Spider Queen'] });
+autoLine('basilisk', 'neutral', 4, 'Basilisk', '🦎', 'tome', 'foot', 'heavy', { range: [1, 2], names: ['Basilisk', 'Greater Basilisk', 'Basilisk King'] });
+autoLine('griffin', 'neutral', 5, 'Griffin', '🦅', 'claw', 'fly', 'light', { names: ['Griffin', 'Royal Griffin', 'Griffin Lord'] });
+autoLine('wyrm', 'neutral', 7, 'Ancient Wyrm', '🐲', 'tome', 'fly', 'heavy', { size: 2, range: [1, 2], abil: ['large', 'pierce'], names: ['Young Wyrm', 'Ancient Wyrm', 'Elder Wyrm'] });
+const NEUTRAL_LINES = Object.values(LINES).filter(l => l.faction === 'neutral').map(l => l.id);
+const GROUP_NAMES = { wolf: 'Wolf Pack', skeleton: 'Restless Dead', harpy: 'Harpy Flock', draugr: 'Draugr Barrow', spider: 'Spider Nest', basilisk: 'Basilisk Lair', griffin: 'Griffin Aerie', wyrm: 'Ancient Wyrm' };
 
-// ── Norse ───────────────────────────────────────────────────────────────────
-defUnit('huskarl',  'norse', 1, 'Huskarl',          '🪓', 'axe',   'foot',  [24, 8, 0, 4, 4, 2, 6, 1, 5], [], 'Sworn axemen of a jarl\'s household.');
-defUnit('shieldm',  'norse', 2, 'Shieldmaiden',     '⚔️', 'sword', 'foot',  [20, 7, 0, 8, 8, 5, 5, 3, 5], [], 'Warrior women of the shield-wall.');
-defUnit('volva',    'norse', 3, 'Völva',            '🌙', 'staff', 'foot',  [18, 0, 8, 5, 6, 7, 2, 8, 5], ['heal'], 'Seeresses who chant the galdr of mending.');
-defUnit('ulfhedinn','norse', 4, 'Úlfheðinn',        '🐺', 'sword', 'foot',  [28, 10, 0, 9, 11, 3, 5, 2, 6], ['crit'], 'Wolf-pelted berserkers of Odin.');
-defUnit('valkyrie', 'norse', 5, 'Valkyrie',         '🦢', 'lance', 'fly',   [26, 10, 4, 9, 11, 8, 6, 9, 7], [], 'Choosers of the slain on swan-white wings.');
-defUnit('troll',    'norse', 6, 'Mountain Troll',   '🧌', 'axe',   'foot',  [42, 15, 0, 4, 4, 1, 11, 1, 5], ['regen'], 'Stone-hided brutes whose wounds knit shut.');
-defUnit('jotunn',   'norse', 7, 'Frost Jötunn',     '❄️', 'axe',   'foot',  [55, 19, 6, 6, 5, 2, 12, 6, 4], ['pierce'], 'Giants of Jötunheimr, sworn foes of the Aesir.');
-
-// ── Yamato (Japanese) ───────────────────────────────────────────────────────
-defUnit('ashigaru', 'japan', 1, 'Ashigaru',         '🎌', 'lance', 'foot',  [19, 6, 0, 6, 6, 4, 6, 2, 5], [], 'Light spearmen levied from the provinces.');
-defUnit('yumi',     'japan', 2, 'Yumi Archer',      '🎯', 'bow',   'foot',  [18, 6, 0, 9, 7, 5, 3, 3, 5], [], 'Masters of the great asymmetric bow.');
-defUnit('samurai',  'japan', 3, 'Samurai',          '🗡️', 'sword', 'foot',  [24, 8, 0, 10, 9, 5, 6, 3, 5], ['crit'], 'Disciplined swordsmen of the warrior houses.');
-defUnit('miko',     'japan', 4, 'Miko',             '🎐', 'staff', 'foot',  [20, 0, 9, 6, 7, 9, 3, 11, 5], ['heal'], 'Shrine maidens who channel the kami.');
-defUnit('kitsune',  'japan', 5, 'Kitsune',          '🦊', 'tome',  'foot',  [24, 2, 11, 9, 12, 8, 4, 10, 6], [], 'Nine-tailed fox spirits wielding foxfire.');
-defUnit('tengu',    'japan', 6, 'Tengu',            '👺', 'sword', 'fly',   [32, 12, 4, 12, 13, 7, 7, 8, 7], [], 'Crow-winged mountain goblins, peerless swordsmen.');
-defUnit('oni',      'japan', 7, 'Oni',              '👹', 'axe',   'foot',  [52, 18, 0, 7, 5, 3, 12, 3, 5], ['brave'], 'Iron-clubbed ogres of Onigashima.');
-
-// ── Heroes (lords) ──────────────────────────────────────────────────────────
-defUnit('hero_greek', 'greek', 0, 'Perseus',  '🦸', 'sword', 'foot',  [28, 9, 2, 9, 9, 8, 7, 4, 5], [], 'Slayer of Medusa, son of Zeus.', { hero: true, mt: 8 });
-defUnit('hero_egypt', 'egypt', 0, 'Ramesses', '👑', 'lance', 'horse', [28, 8, 5, 8, 8, 7, 7, 6, 6], [], 'Pharaoh of the Two Lands, beloved of Ra.', { hero: true, mt: 9 });
-defUnit('hero_norse', 'norse', 0, 'Ragnar',   '🧔', 'axe',   'foot',  [30, 10, 0, 7, 8, 6, 8, 3, 5], [], 'Jarl and raider, who claims descent from Odin.', { hero: true, mt: 11 });
-defUnit('hero_japan', 'japan', 0, 'Raikō',    '🏯', 'sword', 'foot',  [27, 9, 2, 10, 10, 7, 6, 5, 5], [], 'Minamoto no Raikō, slayer of the oni Shuten-dōji.', { hero: true, mt: 8 });
-
-// ── Neutral creatures of the wilds ──────────────────────────────────────────
-defUnit('wolf',     'neutral', 1, 'Dire Wolf',      '🐺', 'claw',  'foot',  [18, 6, 0, 5, 6, 2, 3, 1, 6], [], 'Hungry pack hunters.', { group: 'Wolf Pack' });
-defUnit('skeleton', 'neutral', 1, 'Skeleton',       '💀', 'sword', 'foot',  [18, 6, 0, 5, 5, 0, 5, 1, 5], [], 'The restless dead.', { group: 'Restless Dead' });
-defUnit('harpy',    'neutral', 2, 'Harpy',          '🦇', 'claw',  'fly',   [17, 6, 0, 6, 9, 3, 3, 3, 6], [], 'Shrieking snatchers of the winds.', { group: 'Harpy Flock' });
-defUnit('draugr',   'neutral', 3, 'Draugr',         '🧟', 'axe',   'foot',  [26, 9, 0, 4, 4, 0, 8, 2, 4], ['regen'], 'Barrow-wights that will not stay down.', { group: 'Draugr Barrow' });
-defUnit('spider',   'neutral', 3, 'Giant Spider',   '🕷️', 'claw',  'foot',  [22, 8, 0, 7, 8, 2, 4, 2, 5], ['pierce'], 'Venomous weavers of the deep woods.', { group: 'Spider Nest' });
-defUnit('basilisk', 'neutral', 4, 'Basilisk',       '🦎', 'tome',  'foot',  [28, 4, 9, 7, 6, 2, 8, 8, 4], [], 'Its gaze burns like poison.', { group: 'Basilisk Lair' });
-defUnit('griffin',  'neutral', 5, 'Griffin',        '🦅', 'claw',  'fly',   [30, 11, 0, 9, 11, 4, 6, 4, 7], [], 'Eagle-lion guardians of gold.', { group: 'Griffin Aerie' });
-defUnit('hydra',    'neutral', 6, 'Hydra',          '🐍', 'claw',  'foot',  [45, 13, 0, 7, 5, 2, 10, 4, 4], ['brave', 'regen'], 'Cut one head, two grow back.', { group: 'Hydra' });
-defUnit('wyrm',     'neutral', 7, 'Ancient Wyrm',   '🐲', 'tome',  'fly',   [60, 16, 14, 10, 8, 5, 14, 10, 6], ['pierce'], 'A dragon older than the gods.', { group: 'Ancient Wyrm' });
-
-const NEUTRAL_UNITS = Object.values(UNITS).filter(u => u.faction === 'neutral').map(u => u.id);
+// ── Heroes (commanders; they lead from behind and boost the army) ───────────
+const HEROES = {
+  hero_greek: { name: 'Perseus',  icon: '🦸', att: 2, def: 1, power: 1, desc: 'Slayer of Medusa, son of Zeus.' },
+  hero_egypt: { name: 'Ramesses', icon: '👑', att: 1, def: 1, power: 2, desc: 'Pharaoh of the Two Lands, beloved of Ra.' },
+  hero_norse: { name: 'Ragnar',   icon: '🧔', att: 2, def: 2, power: 0, desc: 'Jarl and raider, who claims descent from Odin.' },
+  hero_japan: { name: 'Raikō',    icon: '🏯', att: 1, def: 2, power: 1, desc: 'Minamoto no Raikō, slayer of the oni Shuten-dōji.' },
+};
+const xpForLevel = l => Math.round(600 * Math.pow(l, 1.6));
 
 // ── Factions ────────────────────────────────────────────────────────────────
 const FACTIONS = {
   greek: {
     name: 'Hellenes', adj: 'Greek', color: '#3a78d8', biome: 'grass', hero: 'hero_greek',
     town: 'Athens', townIcon: '🏛️', god: 'Zeus', temple: 'Parthenon',
-    units: ['hoplite', 'toxotes', 'oracle', 'centaur', 'pegasus', 'minotaur', 'cyclops'],
-    dwellings: ['Phalanx Barracks', 'Archery Range', 'Delphic Sanctum', 'Centaur Glade', 'Pegasus Stables', 'Labyrinth', 'Forge of Hephaestus'],
-    power: { name: 'Thunderbolt', kind: 'bolt', desc: 'Zeus strikes one enemy anywhere on the field for 20 damage.' },
-    blurb: 'Disciplined phalanxes, centaurs and pegasi under the gaze of Olympus.',
+    units: ['peltast', 'hoplite', 'hamippoi', 'minotaur', 'hippeis', 'hydra', 'talos'],
+    dwellings: ['Peltast Camp', 'Phalanx Barracks', 'Hamippoi Track', 'Labyrinth', 'Hippodrome', 'Lernaean Marsh', 'Forge of Hephaestus'],
+    power: { name: 'Thunderbolt', kind: 'bolt', desc: 'Zeus strikes one enemy stack anywhere on the field.' },
+    blurb: 'A tough phalanx army with a fast wing of runners and horsemen, backed by the Hydra and bronze Talos.',
   },
   egypt: {
     name: 'Kemet', adj: 'Egyptian', color: '#d6a21b', biome: 'sand', hero: 'hero_egypt',
     town: 'Thebes', townIcon: '🔺', god: 'Ra', temple: 'Temple of Karnak',
     units: ['medjay', 'scorpion', 'chariot', 'priest', 'anubite', 'bennu', 'sphinx'],
     dwellings: ['Medjay Barracks', 'Scorpion Pit', 'Chariot Yard', 'House of Thoth', 'Hall of the Duat', 'Heliopolis Spire', 'Giza Plateau'],
-    power: { name: 'Solar Flare', kind: 'flare', desc: 'Ra scorches every enemy on the field for 8 damage.' },
+    power: { name: 'Solar Flare', kind: 'flare', desc: 'Ra scorches every enemy stack on the field.' },
     blurb: 'Chariots, scorpions and the undying servants of the sun god.',
   },
   norse: {
@@ -150,7 +208,7 @@ const FACTIONS = {
     town: 'Uppsala', townIcon: '🏰', god: 'Thor', temple: 'Temple at Uppsala',
     units: ['huskarl', 'shieldm', 'volva', 'ulfhedinn', 'valkyrie', 'troll', 'jotunn'],
     dwellings: ['Mead Hall', 'Shield Wall', 'Seiðr Hut', 'Wolf Den', 'Hall of Valhalla', 'Troll Cave', 'Gate of Jötunheimr'],
-    power: { name: 'Mjölnir', kind: 'hammer', desc: 'Thor hurls his hammer: 14 damage to one enemy and 7 to enemies beside it.' },
+    power: { name: 'Mjölnir', kind: 'hammer', desc: 'Thor\'s hammer smashes one stack and splashes the stacks beside it.' },
     blurb: 'Axes, berserkers and valkyries, with trolls and giants at the gate.',
   },
   japan: {
@@ -158,7 +216,7 @@ const FACTIONS = {
     town: 'Kyōto', townIcon: '⛩️', god: 'Amaterasu', temple: 'Grand Shrine of Ise',
     units: ['ashigaru', 'yumi', 'samurai', 'miko', 'kitsune', 'tengu', 'oni'],
     dwellings: ['Ashigaru Camp', 'Kyūdōjō', 'Dōjō', 'Shrine Hall', 'Inari Shrine', 'Mount Kurama', 'Onigashima Gate'],
-    power: { name: 'Dawn of Amaterasu', kind: 'dawn', desc: 'The sun goddess restores every ally to full health.' },
+    power: { name: 'Dawn of Amaterasu', kind: 'dawn', desc: 'The sun goddess heals every allied stack and raises some of its fallen.' },
     blurb: 'Samurai and archers allied with fox spirits, tengu and oni.',
   },
 };
@@ -167,23 +225,27 @@ const NEUTRAL_COLOR = '#8a8578';
 const NEUTRAL_TOWNS = ['Delos', 'Memphis', 'Hedeby', 'Nara', 'Troy', 'Abydos', 'Birka', 'Izumo'];
 
 // ── Town buildings ──────────────────────────────────────────────────────────
-// d1..d7 are dwellings (names come from the faction). d1 is pre-built.
+// d1..d7 dwellings, u1..u7 upgrade them to level 2, e1..e7 to level 3 (elite).
 const BUILDINGS = {
   hall2:   { name: 'Town Hall',   cost: { gold: 2500 }, req: [], desc: 'Raises town income to 1000 gold per day.' },
   hall3:   { name: 'City Hall',   cost: { gold: 5000, wood: 5, stone: 5, ichor: 2 }, req: ['hall2', 'market'], desc: 'Raises town income to 2000 gold per day.' },
   market:  { name: 'Marketplace', cost: { gold: 500, wood: 5 }, req: [], desc: 'Lets you trade resources.' },
   citadel: { name: 'Citadel',     cost: { gold: 2500, stone: 10 }, req: [], desc: '+50% weekly recruits in every dwelling.' },
   walls:   { name: 'Walls',       cost: { gold: 1500, stone: 15 }, req: ['citadel'], desc: 'Defenders fight from behind walls and forts.' },
-  temple:  { name: 'Temple',      cost: { gold: 2000, stone: 5, ichor: 2 }, req: ['d3'], desc: '+1 ichor per day. Your god answers twice per battle.' },
-  d1: { cost: {}, req: [] },
-  d2: { cost: { gold: 1000, wood: 5 }, req: ['d1'] },
-  d3: { cost: { gold: 1500, stone: 5 }, req: ['d2'] },
-  d4: { cost: { gold: 2000, wood: 5, stone: 5 }, req: ['d3'] },
-  d5: { cost: { gold: 3000, stone: 10 }, req: ['d4'] },
-  d6: { cost: { gold: 5000, wood: 10, ichor: 5 }, req: ['d5', 'citadel'] },
-  d7: { cost: { gold: 8000, stone: 10, ichor: 10 }, req: ['d6', 'hall2'] },
+  temple:  { name: 'Temple',      cost: { gold: 2000, stone: 5, ichor: 2 }, req: ['d2'], desc: 'Heals wounded stacks of visiting heroes and garrisons, and raises the fallen for gold. +1 ichor per day; your god answers twice per battle.' },
 };
-const BUILD_ORDER = ['d2', 'd3', 'hall2', 'd4', 'market', 'citadel', 'd5', 'temple', 'walls', 'd6', 'hall3', 'd7'];
+const DWELLING_COST = {
+  1: {}, 2: { gold: 1000, wood: 5 }, 3: { gold: 1500, stone: 5 }, 4: { gold: 2000, wood: 5, stone: 5 },
+  5: { gold: 3000, stone: 10 }, 6: { gold: 5000, wood: 10, ichor: 5 }, 7: { gold: 8000, stone: 10, ichor: 10 },
+};
+for (let t = 1; t <= 7; t++) {
+  BUILDINGS['d' + t] = { cost: DWELLING_COST[t], req: t === 1 ? [] : ['d' + (t - 1), ...(t === 6 ? ['citadel'] : t === 7 ? ['hall2'] : [])] };
+  const base = t === 1 ? { gold: 500, wood: 5 } : DWELLING_COST[t];
+  const scale = (c, m, extra = {}) => { const o = {}; for (const [k, v] of Object.entries(c)) o[k] = Math.round(v * m / (k === 'gold' ? 50 : 1)) * (k === 'gold' ? 50 : 1); for (const [k, v] of Object.entries(extra)) o[k] = (o[k] || 0) + v; return o; };
+  BUILDINGS['u' + t] = { cost: scale(base, .75), req: ['d' + t], level: 2 };
+  BUILDINGS['e' + t] = { cost: scale(base, 1.25, t >= 4 ? { ichor: 2 } : {}), req: ['u' + t, ...(t >= 4 ? ['citadel'] : [])], level: 3 };
+}
+const BUILD_ORDER = ['d2', 'u1', 'd3', 'hall2', 'u2', 'temple', 'd4', 'market', 'citadel', 'u3', 'd5', 'u4', 'walls', 'e1', 'e2', 'd6', 'u5', 'hall3', 'e3', 'd7', 'u6', 'e4', 'e5', 'u7', 'e6', 'e7'];
 const MARKET = { wood: { sell: 60, buy: 250 }, stone: { sell: 60, buy: 250 }, ichor: { sell: 200, buy: 700 } };
 
 // ── Adventure map terrain ───────────────────────────────────────────────────
@@ -200,7 +262,7 @@ const TERRAIN = {
 const ROAD_COST = 10;
 const BASE_MP = 200;
 
-// ── Battle terrain (Fire Emblem style) ──────────────────────────────────────
+// ── Battle terrain ───────────────────────────────────────────────────────────────────────────────────────────────
 const BTER = {
   plain:  { name: 'Plain',    avo: 0,  def: 0, cost: { foot: 1, armor: 1, horse: 1, fly: 1 } },
   forest: { name: 'Forest',   avo: 20, def: 1, cost: { foot: 2, armor: 2, horse: 3, fly: 1 } },
@@ -222,28 +284,27 @@ const BTHEMES = {
 };
 
 // ── Artifacts & shrines ─────────────────────────────────────────────────────
-// hero: stat bonus to the hero only; army: bonus to every unit incl. hero.
+// hero: raises the hero's Attack/Defence/Power; army: bonus to every stack.
 const ARTIFACTS = {
-  aegis:     { name: 'Aegis of Athena',      icon: '🛡️', hero: { def: 4, res: 2 }, desc: 'Hero +4 Def, +2 Res' },
-  fleece:    { name: 'Golden Fleece',        icon: '🐏', hero: { hp: 10 }, desc: 'Hero +10 HP' },
+  aegis:     { name: 'Aegis of Athena',      icon: '🛡️', hero: { def: 3 }, desc: 'Hero +3 Defence' },
+  fleece:    { name: 'Golden Fleece',        icon: '🐏', army: { hpPct: 10 }, desc: 'Army +10% health' },
   talaria:   { name: 'Sandals of Hermes',    icon: '🪽', mp: 60, desc: '+60 movement points per day' },
-  gungnir:   { name: 'Gungnir',              icon: '🔱', hero: { str: 3, skl: 4 }, desc: 'Hero +3 Str, +4 Skl' },
+  gungnir:   { name: 'Gungnir',              icon: '🔱', hero: { att: 3 }, desc: 'Hero +3 Attack' },
   draupnir:  { name: 'Draupnir',             icon: '💍', income: { gold: 500 }, desc: '+500 gold per day' },
-  horus:     { name: 'Eye of Horus',         icon: '🧿', army: { skl: 3 }, desc: 'Army +3 Skl' },
-  ankh:      { name: 'Ankh of Life',         icon: '☥',  army: { hp: 4 }, desc: 'Army +4 HP' },
-  kusanagi:  { name: 'Kusanagi-no-Tsurugi',  icon: '🗡️', hero: { str: 4, spd: 2 }, desc: 'Hero +4 Str, +2 Spd' },
-  yata:      { name: 'Yata no Kagami',       icon: '🪞', army: { res: 3 }, desc: 'Army +3 Res' },
-  megingjord:{ name: 'Megingjörð',           icon: '🎗️', army: { str: 2 }, desc: 'Army +2 Str' },
-  hadeshelm: { name: 'Helm of Hades',        icon: '⛑️', army: { spd: 1, lck: 4 }, desc: 'Army +1 Spd, +4 Lck' },
+  horus:     { name: 'Eye of Horus',         icon: '🧿', hero: { power: 2 }, desc: 'Hero +2 Power' },
+  ankh:      { name: 'Ankh of Life',         icon: '☥',  army: { hpPct: 15 }, desc: 'Army +15% health' },
+  kusanagi:  { name: 'Kusanagi-no-Tsurugi',  icon: '🗡️', hero: { att: 2, def: 1 }, desc: 'Hero +2 Attack, +1 Defence' },
+  yata:      { name: 'Yata no Kagami',       icon: '🪞', army: { res: 10 }, desc: 'Army +10% Resistance' },
+  megingjord:{ name: 'Megingjörð',           icon: '🎗️', hero: { att: 2, power: 1 }, desc: 'Hero +2 Attack, +1 Power' },
+  hadeshelm: { name: 'Helm of Hades',        icon: '⛑️', army: { mov: 1 }, desc: 'Army +1 Move' },
   khepri:    { name: 'Scarab of Khepri',     icon: '🪲', income: { ichor: 1 }, desc: '+1 ichor per day' },
 };
 const SHRINES = [
-  { name: 'Shrine of Ares',       stat: 'str', val: 2 },
-  { name: 'Shrine of Athena',     stat: 'skl', val: 2 },
-  { name: 'Shrine of Hermes',     stat: 'spd', val: 2 },
-  { name: 'Altar of Thoth',       stat: 'mag', val: 2 },
-  { name: 'Hearth of Hephaestus', stat: 'def', val: 2 },
-  { name: 'Well of Urðr',         stat: 'lck', val: 3 },
-  { name: 'Spring of Asclepius',  stat: 'hp',  val: 5 },
-  { name: 'Torii of Inari',       stat: 'res', val: 2 },
+  { name: 'Shrine of Ares',       stat: 'att',   val: 2 },
+  { name: 'Shrine of Athena',     stat: 'def',   val: 2 },
+  { name: 'Altar of Thoth',       stat: 'power', val: 1 },
+  { name: 'Hearth of Hephaestus', stat: 'def',   val: 1 },
+  { name: 'Well of Urðr',         stat: 'power', val: 1 },
+  { name: 'Torii of Inari',       stat: 'att',   val: 1 },
 ];
+const HERO_STAT = { att: 'Attack', def: 'Defence', power: 'Power' };

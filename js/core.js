@@ -1,6 +1,6 @@
 'use strict';
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers, unit instances, levelling and combat maths shared by both maps.
+// Helpers, stacks and the Heroes 3 damage rules shared by both maps.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const rnd = n => Math.floor(Math.random() * n);
@@ -57,59 +57,57 @@ const canAfford = (res, cost) => Object.entries(cost).every(([k, v]) => (res[k] 
 const pay = (res, cost) => { for (const [k, v] of Object.entries(cost)) res[k] -= v; };
 const costText = cost => Object.entries(cost).filter(([, v]) => v).map(([k, v]) => `${RES_INFO[k].icon}${v}`).join(' ') || 'free';
 
-// ── Unit instances ──────────────────────────────────────────────────────────
+// ── Stacks ──────────────────────────────────────────────────────────────────
+// A stack is { uid, type, n, hp }: n creatures, the top one at hp health.
 let UID = 1;
-function makeUnit(type, lvl = 1) {
-  const T = UNITS[type];
-  const u = { uid: UID++, type, lvl: 1, xp: 0, stats: { ...T.base }, hp: T.base.hp };
-  while (u.lvl < lvl) levelUp(u);
-  u.hp = u.stats.hp;
-  return u;
+function makeStack(type, n) { return { uid: UID++, type, n: Math.max(1, Math.round(n)), hp: UNITS[type].hp }; }
+const stackHp = s => s.n > 0 ? (s.n - 1) * UNITS[s.type].hp + s.hp : 0;
+function setStackHp(s, total, maxN = Infinity) {
+  const H = UNITS[s.type].hp;
+  total = Math.max(0, Math.min(total, maxN * H));
+  s.n = Math.ceil(total / H); s.hp = total - (s.n - 1) * H;
+  if (s.n <= 0) { s.n = 0; s.hp = 0; }
 }
-function levelUp(u) {
-  const T = UNITS[u.type], gains = {};
-  for (const s of STATS) if (chance(T.growth[s])) { u.stats[s]++; gains[s] = 1; }
-  if (!Object.keys(gains).length) { const s = pick(['hp', 'str', 'skl', 'spd', 'def']); u.stats[s]++; gains[s] = 1; }
-  if (gains.hp) u.hp++;
-  u.lvl++;
-  return gains;
-}
-// Adds XP and returns an array of stat-gain objects (one per level gained).
-function gainXp(u, amount) {
-  const ups = [];
-  if (u.lvl >= MAX_LEVEL) return ups;
-  u.xp += Math.max(1, Math.round(amount));
-  while (u.xp >= 100 && u.lvl < MAX_LEVEL) { u.xp -= 100; ups.push(levelUp(u)); }
-  if (u.lvl >= MAX_LEVEL) u.xp = 0;
-  return ups;
+// Adds n creatures of a type to a list of stacks, merging with a matching stack.
+function addToArmy(list, type, n, slots) {
+  const same = list.find(s => s.type === type);
+  if (same) { same.n += n; return same; }
+  if (list.length >= slots) return null;
+  const s = makeStack(type, n); list.push(s); return s;
 }
 
-// Bonus stats from artifacts. `bonus` is attached to a unit just for battle.
-const st = (u, s) => (u.stats[s] || 0) + ((u.bonus && u.bonus[s]) || 0);
-const maxHp = u => st(u, 'hp');
-function armyBonus(hero, forHero) {
-  const b = {};
-  if (!hero) return b;
-  for (const id of hero.artifacts) {
-    const A = ARTIFACTS[id];
-    for (const src of [A.army, forHero && A.hero]) if (src) for (const [k, v] of Object.entries(src)) b[k] = (b[k] || 0) + v;
-  }
-  if (forHero && hero.shrineBonus) for (const [k, v] of Object.entries(hero.shrineBonus)) b[k] = (b[k] || 0) + v;
-  return b;
+// Hero stats with artifacts and shrine blessings.
+function heroStat(h, k) {
+  if (!h) return 0;
+  let v = h[k] || 0;
+  for (const id of h.artifacts || []) { const A = ARTIFACTS[id]; if (A.hero && A.hero[k]) v += A.hero[k]; }
+  if (h.shrineBonus && h.shrineBonus[k]) v += h.shrineBonus[k];
+  return v;
+}
+function armyArtifact(h, k) {
+  let v = 0; if (!h) return v;
+  for (const id of h.artifacts || []) { const A = ARTIFACTS[id]; if (A.army && A.army[k]) v += A.army[k]; }
+  return v;
 }
 
-// Rough strength rating used by the AI and for threat descriptions.
-function unitPower(u) {
-  const T = UNITS[u.type];
-  const atk = (T.weapon === 'staff' ? st(u, 'mag') * 0.6 : Math.max(st(u, 'str'), st(u, 'mag')) + T.mt) * (T.abil.includes('brave') ? 1.6 : 1);
-  return (u.hp + atk * 2.2 + st(u, 'def') + st(u, 'res') * 0.6 + st(u, 'spd') * 1.2 + st(u, 'skl') * 0.6) * (T.abil.includes('regen') ? 1.15 : 1);
+// ── Values used by the AI, auto-resolve and threat labels ───────────────────
+// Fighting strength follows Lanchester's square law: sqrt(total health ×
+// total damage), each scaled by Defence and Attack.
+function creatureValue(T) {
+  return Math.sqrt(effHp(T) * effDmg(T));
 }
-const armyPower = units => units.reduce((s, u) => s + unitPower(u), 0);
+const effHp = T => T.hp * Math.pow(1.04, T.def) * (1 + T.res / 200) * (T.abil.includes('regrow') ? 1.15 : 1);
+const effDmg = T => (T.dmg[0] + T.dmg[1]) / 2 * Math.pow(1.045, T.att) * (T.range[1] > 1 ? 1.25 : 1) * (T.abil.includes('manyHeads') || T.abil.includes('doubleStrike') ? 1.4 : 1);
+const stackCount = s => s.n > 0 ? s.n - 1 + s.hp / UNITS[s.type].hp : 0;
+const stackPower = s => creatureValue(UNITS[s.type]) * stackCount(s);
+function armyPower(stacks, hero) {
+  let hp = 0, dmg = 0;
+  for (const s of stacks) { const n = stackCount(s), T = UNITS[s.type]; hp += n * effHp(T); dmg += n * effDmg(T); }
+  return Math.sqrt(hp * dmg) * Math.pow(1.04, heroStat(hero, 'att') + heroStat(hero, 'def'));
+}
 
 function threatLabel(mine, theirs) {
-  // Tuned against bot playtests: equal ratings are not an even fight, as the
-  // defender's units gang up on yours.
-  const r = theirs * 1.6 / Math.max(1, mine);
+  const r = theirs / Math.max(1, mine);
   if (r < 0.35) return ['Effortless', '#7ec27e'];
   if (r < 0.7) return ['Easy', '#a6d06a'];
   if (r < 1.0) return ['Fair fight', '#e2c25a'];
@@ -118,35 +116,26 @@ function threatLabel(mine, theirs) {
   return ['Impossible', '#d03a3a'];
 }
 function countLabel(n) {
-  return n <= 1 ? 'A lone' : n <= 2 ? 'A pair of' : n <= 4 ? 'A few' : n <= 6 ? 'A pack of' : 'A horde of';
+  return n < 5 ? 'A few' : n < 10 ? 'Several' : n < 20 ? 'A pack of' : n < 50 ? 'Lots of' : n < 100 ? 'A horde of' : 'A throng of';
 }
 
-// ── Combat maths (Fire Emblem Awakening flavoured) ──────────────────────────
-// a/d are battle combatants: { u, x, y, side, ... }
+// ── Heroes 3 damage ─────────────────────────────────────────────────────────
+// Base damage: one roll per creature (10 rolls scaled up for big stacks).
+function rollBase(T, n, mode) {
+  const [a, b] = T.dmg;
+  if (mode === 'min') return a * n;
+  if (mode === 'max') return b * n;
+  if (mode === 'avg') return (a + b) / 2 * n;
+  if (n <= 10) { let s = 0; for (let i = 0; i < n; i++) s += rint(a, b); return s; }
+  let s = 0; for (let i = 0; i < 10; i++) s += rint(a, b); return s * n / 10;
+}
+// Attack vs Defence: +5% per point above (to ×4), −2.5% per point below (to ×0.3).
+function attDefMod(att, def) {
+  return att >= def ? 1 + Math.min(att - def, 60) * .05 : Math.max(.3, 1 - Math.min(def - att, 28) * .025);
+}
 function triangle(aw, dw) {
-  if (TRIANGLE[aw] === dw) return 1;
-  if (TRIANGLE[dw] === aw) return -1;
+  const a = triGroup(aw), d = triGroup(dw);
+  if (TRIANGLE[a] === d) return 1;
+  if (TRIANGLE[d] === a) return -1;
   return 0;
-}
-function canAttackAt(T, dist) { return T.weapon !== 'staff' && dist >= T.range[0] && dist <= T.range[1]; }
-
-// Compute one side's strike numbers against the other.
-// ctx: { terr(x,y) -> BTER entry, support(c) -> bool }
-function strikeStats(a, d, ax, ay, dx, dy, ctx) {
-  const A = UNITS[a.u.type], D = UNITS[d.u.type], W = WEAPONS[A.weapon];
-  const tri = triangle(A.weapon, D.weapon);
-  const dT = ctx.terr(dx, dy), aSup = ctx.support(a, ax, ay), dSup = ctx.support(d, dx, dy);
-  let mt = A.mt + tri;
-  if (W.effective && D.move === W.effective) mt *= 3;
-  const atk = (W.magic ? st(a.u, 'mag') : st(a.u, 'str')) + mt;
-  let prot = (W.magic ? st(d.u, 'res') : st(d.u, 'def')) + dT.def;
-  if (A.abil.includes('pierce')) prot = Math.floor(prot / 2);
-  const dmg = Math.max(0, atk - prot);
-  const hitRate = A.hit + st(a.u, 'skl') * 2 + Math.floor(st(a.u, 'lck') / 2) + tri * 15 + (aSup ? 10 : 0);
-  const avoid = st(d.u, 'spd') * 2 + st(d.u, 'lck') + dT.avo + (dSup ? 10 : 0);
-  const hit = clamp(hitRate - avoid, 0, 100);
-  const crit = clamp(A.crit + Math.floor(st(a.u, 'skl') / 2) - st(d.u, 'lck'), 0, 100);
-  const doubles = st(a.u, 'spd') - st(d.u, 'spd') >= 4;
-  const brave = A.abil.includes('brave');
-  return { dmg, hit, crit, doubles, brave, tri, eff: !!(W.effective && D.move === W.effective) };
 }
