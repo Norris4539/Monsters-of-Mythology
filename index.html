@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pantheon: War of the Gods</title>
+<meta name="theme-color" content="#16120e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #16120e; --panel: #221b14; --panel2: #2c241b; --line: #4a3c2c;
+  --text: #efe4cc; --dim: #a8987c; --gold: #e2b54a; --gold2: #ffd978;
+  --red: #c4483c; --blue: #3a78d8; --green: #5fae5a;
+  --serif: 'Cinzel', Georgia, serif; --sans: 'Inter', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 var(--sans); overflow: hidden; }
+button { font: inherit; color: inherit; }
+.hidden { display: none !important; }
+.screen { position: fixed; inset: 0; display: flex; flex-direction: column; }
+h1, h2, h3, .hname, .btitle, .sl, .fc-title { font-family: var(--serif); letter-spacing: .03em; }
+
+.btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { border-color: var(--gold); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: linear-gradient(#b8892c, #8d6519); border-color: #d9aa46; color: #fff8e6; font-weight: 600; }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 4px 9px; font-size: 12px; }
+.btn.big { padding: 11px 20px; font-size: 16px; }
+.btn.on { border-color: #d24fa0; color: #ff9bd4; }
+.sl { font-size: 12px; color: var(--gold); text-transform: uppercase; margin: 12px 0 6px; }
+.dim, .hint { color: var(--dim); font-size: 12px; }
+.warn { color: #ff8a6a; font-size: 12px; }
+.card { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+
+/* ── Menu ── */
+#menu { overflow-y: auto; align-items: center; background: radial-gradient(ellipse at top, #3a2c1a, var(--bg) 70%); }
+#menu header { text-align: center; padding: 28px 16px 4px; }
+#menu h1 { margin: 0; font-size: clamp(28px, 6vw, 52px); color: var(--gold2); text-shadow: 0 2px 0 #000, 0 0 30px rgba(226,181,74,.35); }
+#menu header p { color: var(--dim); margin: 6px 0 0; }
+#menu-body { width: min(1100px, 100%); padding: 0 16px 40px; }
+.factions { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.fcard { text-align: left; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+.fcard.sel { border-color: var(--fc); box-shadow: 0 0 0 1px var(--fc), 0 0 24px color-mix(in srgb, var(--fc) 40%, transparent); }
+.fcard p { margin: 0; color: var(--dim); font-size: 13px; }
+.fhead { display: flex; gap: 10px; align-items: center; }
+.fhead b { font-family: var(--serif); font-size: 18px; display: block; color: var(--fc); }
+.fhead small { color: var(--dim); }
+.ficon { font-size: 32px; }
+.roster { font-size: 22px; letter-spacing: 3px; }
+.power { color: var(--gold2); }
+.opts { display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0; }
+.seg { display: flex; gap: 6px; align-items: center; }
+.seg > span { color: var(--dim); margin-right: 4px; }
+.menu-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ── Adventure map ── */
+.topbar { display: flex; align-items: center; gap: 14px; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+#res { display: flex; gap: 14px; }
+#res b { color: var(--gold2); }
+#date { color: var(--dim); font-family: var(--serif); }
+.topbar .sp { flex: 1; }
+.topbar .tb { display: flex; gap: 6px; }
+.main { flex: 1; display: flex; min-height: 0; }
+#mapwrap { flex: 1; position: relative; min-width: 0; overflow: hidden; touch-action: none; }
+#map { display: block; cursor: pointer; }
+.side { width: 290px; background: var(--panel); border-left: 1px solid var(--line); padding: 10px; overflow-y: auto; display: flex; flex-direction: column; }
+.hero-head { display: flex; gap: 10px; align-items: center; cursor: pointer; }
+.portrait { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; border: 2px solid var(--gold); flex: none; }
+.hname { font-size: 17px; }
+.hname small { color: var(--gold); font-size: 12px; }
+.hsub { color: var(--dim); font-size: 12px; }
+.bar { position: relative; height: 16px; background: #120e0a; border: 1px solid var(--line); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+.bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #2f7d3a, #4cc35c); }
+.bar.xp i { background: linear-gradient(90deg, #2d5f9e, #5fa8ff); }
+.bar span { position: relative; font-size: 11px; padding-left: 6px; line-height: 14px; }
+.army { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.chip { position: relative; aspect-ratio: 1; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; cursor: pointer; padding: 0; min-width: 44px; }
+.chip.empty { cursor: default; opacity: .4; }
+.chip .ci { font-size: 24px; }
+.chip .cl { position: absolute; right: 3px; bottom: 1px; font-size: 10px; color: var(--gold2); }
+.arts { font-size: 22px; display: flex; gap: 6px; flex-wrap: wrap; }
+.towns { display: flex; gap: 6px; flex-wrap: wrap; }
+#hover-box { margin-top: 10px; min-height: 64px; }
+#hover-box .ht { font-weight: 600; }
+#hover-box .hb { color: var(--dim); font-size: 12px; }
+.threat { font-weight: 600; font-size: 12px; margin-top: 2px; }
+#minimap { width: 100%; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 4px; margin-top: 10px; cursor: crosshair; }
+.log { font-size: 12px; color: var(--dim); margin-top: 10px; flex: 1; min-height: 60px; overflow-y: auto; }
+.log div { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.log .day { color: var(--gold); font-size: 10px; }
+
+/* ── Battle ── */
+#battle { background: #0f0c09; }
+.btitle { font-size: 16px; color: var(--gold2); }
+.bphase { color: var(--dim); }
+#bwrap { flex: 1; position: relative; display: grid; place-items: center; padding: 8px; min-width: 0; }
+#bcanvas { width: min(100%, calc((100vh - 80px) * 1.5)); height: auto; aspect-ratio: 15 / 10; border: 2px solid var(--line); border-radius: 6px; cursor: pointer; touch-action: manipulation; }
+.bbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.bmenu { position: absolute; display: flex; flex-direction: column; gap: 4px; z-index: 5; background: rgba(20,15,10,.92); border: 1px solid var(--gold); border-radius: 8px; padding: 6px; }
+.bmenu button { background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 6px 12px; text-align: left; cursor: pointer; min-width: 110px; }
+.bmenu button:hover { border-color: var(--gold); }
+.banner { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); background: rgba(10,8,6,.85); border: 2px solid; border-width: 2px 0; padding: 14px 60px; font: 700 26px var(--serif); pointer-events: none; animation: bannerIn .9s ease; white-space: nowrap; }
+@keyframes bannerIn { 0% { opacity: 0; letter-spacing: .4em; } 25%, 80% { opacity: 1; letter-spacing: .08em; } 100% { opacity: 0; } }
+#b-forecast { margin-top: 10px; }
+.forecast .fc-title { color: var(--gold); text-align: center; margin-bottom: 6px; }
+.fc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.fc-side { border-radius: 6px; padding: 6px; font-size: 12px; }
+.fc-side.p { background: rgba(47,111,214,.25); }
+.fc-side.e { background: rgba(196,60,60,.25); }
+.fc-name { font-weight: 600; font-size: 13px; }
+.up { color: #7fe07f; } .down { color: #ff8a7a; }
+.fc-btns { display: flex; gap: 6px; margin-top: 8px; }
+.fc-btns .btn { flex: 1; }
+#b-info { margin-top: 10px; }
+#b-info:empty { display: none; }
+.ucard .uc-head { display: flex; gap: 8px; align-items: center; }
+.ucard .uc-icon { font-size: 28px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--blue); }
+.ucard.e .uc-icon { background: var(--red); }
+.uc-name { font-weight: 600; }
+.uc-sub { font-size: 11px; color: var(--dim); }
+.uc-hp { margin: 6px 0 4px; }
+.uc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 8px; font-size: 12px; }
+.uc-stats b { color: var(--gold2); }
+.uc-stats sup { color: #7fe07f; font-size: 9px; }
+.uc-wpn, .uc-abil { font-size: 11px; color: var(--dim); margin-top: 4px; }
+.uc-abil { color: #b9a7ff; }
+.terr { font-size: 12px; color: var(--dim); margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+
+/* ── Modals ── */
+.modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.modal { background: var(--panel); border: 1px solid var(--gold); border-radius: 10px; width: min(460px, 100%); max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 10px 50px rgba(0,0,0,.6); }
+.modal.town { width: min(900px, 100%); }
+.modal.win { border-color: #6fd36f; } .modal.lose { border-color: var(--red); }
+.modal-head { display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.modal-head h2 { margin: 0; font-size: 19px; flex: 1; color: var(--gold2); }
+.x { background: none; border: 0; font-size: 18px; cursor: pointer; color: var(--dim); }
+.modal-body { padding: 12px 14px; overflow-y: auto; }
+.modal-body p { margin: 6px 0; }
+.modal-btns { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); justify-content: flex-end; flex-wrap: wrap; }
+.desc { font-style: italic; color: var(--dim); }
+.abil { padding-left: 18px; color: #c9bcff; font-size: 13px; }
+.help ul { padding-left: 18px; } .help li { margin: 4px 0; }
+.town-sub { color: var(--dim); }
+.rs { color: var(--text); }
+.recruit { display: flex; flex-direction: column; gap: 4px; }
+.rrow { display: grid; grid-template-columns: 42px 1fr auto auto auto; gap: 10px; align-items: center; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+.rrow.locked { opacity: .5; }
+.ricon { font-size: 26px; background: none; border: 0; cursor: pointer; }
+.rname small { display: block; color: var(--dim); font-size: 11px; }
+.ravail, .rcost { font-size: 12px; color: var(--dim); }
+.armies { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.armies .army { grid-template-columns: repeat(6, 1fr); }
+.bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.bcard { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 7px; display: flex; flex-direction: column; gap: 3px; }
+.bcard small { color: var(--dim); font-size: 11px; }
+.bcard.done { border-color: #4f7d47; opacity: .75; }
+.bcard.ok { border-color: var(--gold); }
+.bcard .why { color: #d98a6a; }
+.bfoot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.tag { color: #8fd68a; font-size: 12px; }
+.market { display: flex; flex-direction: column; gap: 4px; }
+.mrow { display: flex; gap: 8px; align-items: center; }
+.mrow > :first-child { flex: 1; }
+
+#toasts { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 60; pointer-events: none; align-items: center; }
+.toast { background: rgba(28,22,15,.95); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 14px; transition: opacity .4s, transform .4s; text-align: center; max-width: 90vw; }
+.toast.out { opacity: 0; transform: translateY(10px); }
+
+@media (max-width: 760px) {
+  .main { flex-direction: column; }
+  .side { width: 100%; border-left: 0; border-top: 1px solid var(--line); max-height: 42vh; }
+  #mapwrap { min-height: 50vh; }
+  #bcanvas { width: 100%; }
+  .army { grid-template-columns: repeat(8, 1fr); }
+  .chip { min-width: 0; }
+  .chip .ci { font-size: 18px; }
+  .rrow { grid-template-columns: 36px 1fr auto; }
+  .rrow .rcost, .rrow .ravail { grid-column: 2; }
+  .armies { grid-template-columns: 1fr; }
+  #res { gap: 8px; font-size: 12px; }
+  #minimap { display: none; }
+}
+</style>
+</head>
+<body>
+  <div id="menu" class="screen">
+    <header>
+      <h1>Pantheon</h1>
+      <p>War of the Gods — lead the armies of myth across a world of rival pantheons.</p>
+    </header>
+    <div id="menu-body"></div>
+  </div>
+
+  <div id="campaign" class="screen hidden">
+    <div class="topbar">
+      <div id="res"></div>
+      <div id="date"></div>
+      <div class="sp"></div>
+      <div class="tb">
+        <button class="btn small" id="btn-center" title="Center on hero (C)">🎯</button>
+        <button class="btn small" id="btn-help" title="How to play">❔</button>
+        <button class="btn small" id="btn-save">💾 Save</button>
+        <button class="btn small" id="btn-load">📜 Load</button>
+        <button class="btn small" id="btn-menu">☰ Menu</button>
+        <button class="btn small primary" id="btn-end" title="End turn (E)">⏳ End Turn</button>
+      </div>
+    </div>
+    <div class="main">
+      <div id="mapwrap"><canvas id="map"></canvas></div>
+      <aside class="side">
+        <div id="hero-box"></div>
+        <div id="army-box"></div>
+        <div id="arts-box"></div>
+        <div id="towns-box"></div>
+        <div id="hover-box" class="card"></div>
+        <canvas id="minimap"></canvas>
+        <div id="log" class="log"></div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="battle" class="screen hidden">
+    <div class="topbar" id="btop"></div>
+    <div class="main">
+      <div id="bwrap"><canvas id="bcanvas"></canvas></div>
+      <aside class="side" id="bside"></aside>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/campaign.js"></script>
+  <script src="js/mapview.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
