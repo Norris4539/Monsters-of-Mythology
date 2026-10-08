@@ -223,7 +223,7 @@ function monsterGroup(danger, size = 1) {
   const L = LINES[pick(pool)];
   const diff = G ? G.difficulty : 1;
   const lvl = clamp(1 + (danger > 0.55 ? 1 : 0) + (danger > 0.85 || diff >= 3 ? 1 : 0), 1, 3);
-  const type = L.levels[lvl - 1];
+  const type = pick(levelTypes(L, lvl));
   // Roughly a week or two of growth, more further out.
   const total = Math.max(1, Math.round(L.grow * (1 + danger * 3) * (0.7 + Math.random() * 0.6) * (0.75 + size * 0.25) * (0.85 + diff * 0.15)));
   const parts = UNITS[type].size > 1 || total < 6 ? 1 : rint(1, 3);
@@ -532,7 +532,7 @@ function buildingName(t, b) {
     const tier = dwellingTier(b), d = FACTIONS[t.faction].dwellings[tier - 1];
     if (b[0] === 'd') return d;
     const L = LINES[FACTIONS[t.faction].units[tier - 1]];
-    return `${d} ${b[0] === 'u' ? 'II' : 'III'} (${UNITS[L.levels[b[0] === 'u' ? 1 : 2]].name})`;
+    return `${d} ${b[0] === 'u' ? 'II' : 'III'} (${levelTypes(L, b[0] === 'u' ? 2 : 3).map(id => UNITS[id].name).join(' / ')})`;
   }
   if (b === 'temple') return FACTIONS[t.faction].temple;
   return BUILDINGS[b].name;
@@ -560,9 +560,11 @@ const growthOf = (t, tier) => Math.ceil(lineOf(t, tier).grow * (t.built.includes
 const townLevel = (t, tier) => t.built.includes('e' + tier) ? 3 : t.built.includes('u' + tier) ? 2 : t.built.includes('d' + tier) ? 1 : 0;
 const maxAffordable = (res, cost) => Math.min(...Object.entries(cost).filter(([, v]) => v > 0).map(([k, v]) => Math.floor((res[k] || 0) / v)), 1e9);
 // Recruit n creatures of a tier at a level into dest (hero army or garrison).
-function recruit(t, tier, lvl, n, dest) {
-  const p = playerOf(t.owner), key = 'd' + tier, type = lineOf(t, tier).levels[lvl - 1];
-  if (lvl > townLevel(t, tier)) return null;
+// type picks the branch when the level has two; by default the first.
+function recruit(t, tier, lvl, n, dest, type = null) {
+  const p = playerOf(t.owner), key = 'd' + tier, opts = levelTypes(lineOf(t, tier), lvl);
+  type = type && opts.includes(type) ? type : opts[0];
+  if (!type || lvl > townLevel(t, tier)) return null;
   n = Math.min(n, t.pool[key] || 0, maxAffordable(p.res, UNITS[type].cost));
   if (n <= 0) return null;
   const s = addToArmy(dest, type, n, dest === t.garrison ? GARRISON_SLOTS : ARMY_SLOTS);
@@ -571,24 +573,26 @@ function recruit(t, tier, lvl, n, dest) {
   return s;
 }
 // Upgrading a stack costs the price difference per creature.
-function upgradeCost(s, toLvl) {
-  const T = UNITS[s.type], N = UNITS[LINES[T.line].levels[toLvl - 1]], c = {};
+function upgradeCost(s, toType) {
+  const T = UNITS[s.type], N = UNITS[toType], c = {};
   for (const k of RES) { const v = ((N.cost[k] || 0) - (T.cost[k] || 0)) * s.n; if (v > 0) c[k] = v; }
   return c;
 }
-function canUpgrade(t, s) {
+// Types this town can upgrade a stack to (empty if none).
+function upgradeOptions(t, s) {
   const T = UNITS[s.type], L = LINES[T.line];
-  if (L.faction !== t.faction || !t.built.includes('d' + L.tier)) return 0;
-  return townLevel(t, L.tier) > T.lvl ? townLevel(t, L.tier) : 0;
+  if (L.faction !== t.faction || !t.built.includes('d' + L.tier)) return [];
+  const to = townLevel(t, L.tier);
+  return to > T.lvl ? upgradeTargets(s.type, to) : [];
 }
-function upgradeStack(t, s, list) {
-  const to = canUpgrade(t, s), p = playerOf(t.owner);
-  if (!to) return false;
-  const cost = upgradeCost(s, to);
+function upgradeStack(t, s, list, toType = null) {
+  const opts = upgradeOptions(t, s), p = playerOf(t.owner);
+  const nt = toType && opts.includes(toType) ? toType : opts[0];
+  if (!nt) return false;
+  const cost = upgradeCost(s, nt);
   if (!canAfford(p.res, cost)) return false;
   pay(p.res, cost);
-  const nt = LINES[UNITS[s.type].line].levels[to - 1], same = list.find(x => x !== s && x.type === nt);
-  const frac = s.hp / UNITS[s.type].hp;
+  const same = list.find(x => x !== s && x.type === nt), frac = s.hp / UNITS[s.type].hp;
   if (same) { same.n += s.n; list.splice(list.indexOf(s), 1); }
   else { s.type = nt; s.hp = Math.max(1, Math.round(UNITS[nt].hp * frac)); }
   return true;
@@ -691,13 +695,15 @@ function aiTown(p, t) {
   }
   const h = heroOf(p), heroHere = h && h.alive && h.x === t.x && h.y === t.y;
   if (heroHere) {
-    for (const s of h.army.slice()) upgradeStack(t, s, h.army);
+    for (const s of h.army.slice()) upgradeStack(t, s, h.army, pick(upgradeOptions(t, s).concat([null])));
     for (const [type, n] of Object.entries(h.fallen)) if (p.res.gold > 3000) resurrect(h, t, type, n);
   }
   for (let tier = 7; tier >= 1; tier--) {
     const lvl = townLevel(t, tier); if (!lvl) continue;
     if (tier >= 6 && p.res.gold < 2500) continue;  // save up rather than buy one beast
-    recruit(t, tier, lvl, 999, heroHere ? h.army : t.garrison) || recruit(t, tier, lvl, 999, t.garrison);
+    const dest = heroHere ? h.army : t.garrison;
+    const type = dest.find(s => levelTypes(lineOf(t, tier), lvl).includes(s.type))?.type || pick(levelTypes(lineOf(t, tier), lvl));
+    recruit(t, tier, lvl, 999, dest, type) || recruit(t, tier, lvl, 999, t.garrison, type);
   }
   if (heroHere) absorbGarrison(h, t, true);
 }

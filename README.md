@@ -21,7 +21,8 @@ Every creature line has three levels. The Greek lines are hand-tuned, with two c
 | 2 | Ephebe → Hoplite → Sacred Band | Heavy | Phalanx; the Sacred Band adds Bond |
 | 3 | Hamippoi → Boeotian Hamippoi → Epilektoi Hamippoi | Light | Runs with the horse (+Attack and Move next to cavalry) |
 | 4 | Minotaur → Labrys Guard → Asterion | Heavy | Cleave |
-| 5 | Prodromoi → Hippeis → Hetairoi | Light | Javelins at range 2 for half damage with no retaliation; Charge (+5% damage per tile moved) |
+| 5 | Prodromoi → Hippeis → Hetairoi (melee) | Light | Prodromoi: javelins at range 2 for half damage, and Charge (+5% damage per tile moved). Melee branch: lance and Charge |
+| 5 | Prodromoi → Hippakontistai → Tarantine (ranged) | Light | Ranged branch: javelins at range 1–3 at full damage, Hit and Run |
 | 6 | Marsh Hydra → Lernaean Hydra → Hydra Matriarch | Heavy, 2×2 | Many heads (hits every adjacent enemy), Regrowth |
 | 7 | Bronze Automaton → Talos → Colossus | Heavy, 2×2 | Siege, Bleeding ichor |
 
@@ -42,6 +43,7 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 - New recruits arrive every week. Each dwelling has one pool of creatures, which you can buy at any level the town has unlocked. Recruits join the hero if they are in town, otherwise the garrison.
 - With an upgrade built, a hero in town can convert a whole stack to the next level by paying the price difference per creature.
 - The **Temple** heals every wounded stack when your hero visits. It also raises the fallen (the creatures your hero lost in won battles) for their full price, ichor included for beasts. It gives +1 ichor per day and lets your god answer twice per battle.
+- Some lines branch at levels 2 and 3. The Hippeis split into melee shock cavalry and ranged javelin cavalry: both are recruited from the same dwelling pool, and a level 1 stack can be upgraded into either branch. A branched stack stays on its branch.
 - A hero leads up to 7 stacks; recruiting a creature type you already have merges it into that stack.
 - Resources are gold, wood, stone and ichor. Ichor is the rare one, needed for tier 6 and 7 creatures, elite buildings and buildings for beasts.
 - Rival AI players explore, collect, build, recruit, fight monsters and besiege towns. Fights between two AIs are auto-resolved. Any fight that involves you is played as a tactical battle.

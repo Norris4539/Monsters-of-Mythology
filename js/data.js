@@ -70,23 +70,37 @@ const LEVEL_COST = [1, 1.25, 1.6];   // price multiplier per level
 
 const UNITS = {}, LINES = {};
 const unitId = (line, lvl) => lvl === 1 ? line : `${line}_${lvl}`;
-// lv: three level specs { name, att, def, dmg, hp, mov, res, abil? }
-function defLine(id, faction, tier, cls, base, lv, desc) {
-  const T = TIER[tier], L = { id, faction, tier, cls, desc, icon: base.icon, levels: [], grow: base.grow || T.grow };
-  lv.forEach((s, i) => {
-    const uid = unitId(id, i + 1);
+// lv: three level specs { name, att, def, dmg, hp, mov, res, abil?, weapon?, range?, only?, branch?, desc? }
+// (only replaces the line's base abilities). alt: optional second branch for
+// levels 2 and 3, e.g. a ranged variant next to the melee one.
+function defLine(id, faction, tier, cls, base, lv, desc, alt = null) {
+  const T = TIER[tier], L = { id, faction, tier, cls, desc, icon: base.icon, levels: [], alt: [null, null, null], grow: base.grow || T.grow };
+  const make = (s, i, uid) => {
     const cost = {}; for (const [k, v] of Object.entries(base.cost || T.cost)) cost[k] = Math.round(v * LEVEL_COST[i] / (k === 'gold' ? 5 : 1)) * (k === 'gold' ? 5 : 1);
     UNITS[uid] = {
-      id: uid, line: id, lvl: i + 1, faction, tier, cls, desc,
-      name: s.name, icon: base.icon, weapon: base.weapon, move: base.move,
+      id: uid, line: id, lvl: i + 1, faction, tier, cls, desc: s.desc || desc, branch: s.branch || null,
+      name: s.name, icon: s.icon || base.icon, weapon: s.weapon || base.weapon, move: base.move,
       att: s.att, def: s.def, dmg: s.dmg, hp: s.hp, mov: s.mov, res: s.res,
-      range: base.range || [1, 1], size: base.size || 1,
-      abil: [...(base.abil || []), ...(s.abil || [])], cost,
+      range: s.range || base.range || [1, 1], size: base.size || 1,
+      abil: [...(s.only || base.abil || []), ...(s.abil || [])], cost,
     };
-    L.levels.push(uid);
-  });
+    return uid;
+  };
+  lv.forEach((s, i) => L.levels.push(make(s, i, unitId(id, i + 1))));
+  if (alt) alt.forEach((s, k) => { const i = k + 1; L.alt[i] = make(s, i, unitId(id, i + 1) + 'r'); });
   LINES[id] = L;
 }
+// Unit types a line offers at a level (two when it branches).
+const levelTypes = (L, lvl) => [L.levels[lvl - 1], L.alt && L.alt[lvl - 1]].filter(Boolean);
+// What a stack of this type can be upgraded to at a level: a branched stack
+// stays on its branch; a level 1 stack may pick either.
+function upgradeTargets(type, toLvl) {
+  const T = UNITS[type], L = LINES[T.line];
+  if (toLvl <= T.lvl) return [];
+  const opts = levelTypes(L, toLvl);
+  return T.branch ? opts.filter(id => UNITS[id].branch === T.branch) : opts;
+}
+const BRANCH_NAMES = { melee: 'Melee', ranged: 'Ranged' };
 // Generic three-level line built from the tier template with small tweaks.
 function autoLine(id, faction, tier, name, icon, weapon, move, cls, opts = {}) {
   const T = TIER[tier], h = cls === 'heavy';
@@ -124,11 +138,16 @@ defLine('minotaur', 'greek', 4, 'heavy', { icon: '🐂', weapon: 'axe', move: 'f
   { name: 'Labrys Guard', att: 16, def: 15, dmg: [12, 20], hp: 50, mov: 5, res: 20 },
   { name: 'Asterion',     att: 20, def: 19, dmg: [14, 24], hp: 60, mov: 6, res: 30 },
 ], 'The bull of Minos, swinging the Cretan double axe (labrys).');
+// Level 1 scouts do a bit of both; from level 2 the line splits into shock
+// cavalry with the lance and javelin cavalry that skirmishes at range.
 defLine('hippeis', 'greek', 5, 'light', { icon: '🐎', weapon: 'lance', move: 'horse', range: [1, 2], abil: ['charge', 'halfRange'], grow: 4, cost: { gold: 800 } }, [
-  { name: 'Prodromoi', att: 15, def: 10, dmg: [12, 20], hp: 55, mov: 8,  res: 5 },
-  { name: 'Hippeis',   att: 19, def: 13, dmg: [14, 22], hp: 62, mov: 9,  res: 10 },
-  { name: 'Hetairoi',  att: 24, def: 16, dmg: [16, 26], hp: 70, mov: 10, res: 15 },
-], 'Greek horsemen who throw javelins, then charge home with the spear.');
+  { name: 'Prodromoi', att: 15, def: 10, dmg: [12, 20], hp: 55, mov: 8, res: 5 },
+  { name: 'Hippeis',   att: 21, def: 15, dmg: [15, 24], hp: 66, mov: 9,  res: 10, range: [1, 1], only: ['charge'], branch: 'melee', desc: 'Citizen cavalry who close with the spear and charge home.' },
+  { name: 'Hetairoi',  att: 26, def: 18, dmg: [18, 28], hp: 76, mov: 10, res: 15, range: [1, 1], only: ['charge'], branch: 'melee', desc: 'Alexander\'s Companions: heavy cavalry with the long xyston lance.' },
+], 'Greek scouts on horseback who throw javelins, then charge home with the spear.', [
+  { name: 'Hippakontistai', att: 17, def: 11, dmg: [11, 18], hp: 56, mov: 10, res: 10, weapon: 'javelin', range: [1, 3], only: ['hitAndRun'], branch: 'ranged', icon: '🏇', desc: 'Mounted javelin throwers who ride in, throw and wheel away.' },
+  { name: 'Tarantine',      att: 21, def: 14, dmg: [13, 21], hp: 62, mov: 11, res: 15, weapon: 'javelin', range: [1, 3], only: ['hitAndRun'], branch: 'ranged', icon: '🏇', desc: 'Elite javelin cavalry with a small shield, famed across the Hellenistic world.' },
+]);
 defLine('hydra', 'greek', 6, 'heavy', { icon: '🐍', weapon: 'claw', move: 'foot', size: 2, abil: ['large', 'manyHeads', 'regrow'], grow: 2, cost: { gold: 1800, ichor: 1 } }, [
   { name: 'Marsh Hydra',     att: 18, def: 18, dmg: [25, 45], hp: 180, mov: 5, res: 25 },
   { name: 'Lernaean Hydra',  att: 23, def: 23, dmg: [30, 50], hp: 210, mov: 5, res: 30 },

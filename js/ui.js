@@ -102,7 +102,7 @@ function stackModal(s, opts = {}) {
   const body = el('div', null, stackCard(s, 'p'),
     el('p', { className: 'desc' }, T.desc || L.desc),
     T.abil.length ? el('ul', { className: 'abil' }, T.abil.map(a => el('li', null, el('b', null, ABILITIES[a][0] + ': '), ABILITIES[a][1]))) : null,
-    el('p', { className: 'dim' }, `Line: ${L.levels.map((id, i) => `${i + 1 === T.lvl ? '▶ ' : ''}${UNITS[id].name}`).join(' → ')} · ${costText(T.cost)} each`));
+    el('p', { className: 'dim' }, `Line: ${[1, 2, 3].map(l => levelTypes(L, l).map(id => `${id === T.id ? '▶ ' : ''}${UNITS[id].name}${UNITS[id].branch && levelTypes(L, l).length > 1 ? ` (${BRANCH_NAMES[UNITS[id].branch]})` : ''}`).join(' / ')).join(' → ')} · ${costText(T.cost)} each`));
   const btns = [['Close', null]];
   if (opts.dismiss) btns.push(['Dismiss stack', () => confirmModal('Dismiss?', `${s.n} ${T.name} will leave your army forever.`, opts.dismiss)]);
   modal(`${T.icon} ${T.name}`, body, btns);
@@ -148,12 +148,13 @@ function openTown(t) {
         el('div', { className: 'rname' }, el('b', null, top.name), el('small', null, `Tier ${tier} · ${CLASSES[top.cls]} · ${WEAPONS[top.weapon].name}${top.size > 1 ? ' · Large' : ''}`)),
         el('div', { className: 'ravail' }, lvl ? `${avail} available · +${growthOf(t, tier)}/week` : `Build ${F.dwellings[tier - 1]}`));
       const buys = el('div', { className: 'rbuy' });
-      if (lvl) for (let l = 1; l <= lvl; l++) {
-        const U = UNITS[L.levels[l - 1]], most = Math.min(avail, maxAffordable(p.res, U.cost));
+      if (lvl) for (let l = 1; l <= lvl; l++) for (const id of levelTypes(L, l)) {
+        const U = UNITS[id], most = Math.min(avail, maxAffordable(p.res, U.cost));
         const fits = dest.some(s => s.type === U.id) || dest.length < (dest === t.garrison ? GARRISON_SLOTS : ARMY_SLOTS);
-        const hire = n => { recruit(t, tier, l, n, dest); render(); refreshPanel(); };
+        const hire = n => { recruit(t, tier, l, n, dest, id); render(); refreshPanel(); };
+        const tag = levelTypes(L, l).length > 1 ? ` ${U.name} (${BRANCH_NAMES[U.branch]})` : '';
         buys.append(el('div', { className: 'rlvl' },
-          el('span', { title: U.name }, `${'★'.repeat(l)} ${costText(U.cost)}`),
+          el('button', { className: 'linkish', title: 'Unit details', onClick: () => unitModalOf(id) }, `${'★'.repeat(l)}${tag} ${costText(U.cost)}`),
           el('button', { className: 'btn small', disabled: !fits || most < 1, onClick: () => hire(1) }, '+1'),
           el('button', { className: 'btn small primary', disabled: !fits || most < 1, onClick: () => hire(most) }, `All ${most > 0 ? most : ''}`)));
       }
@@ -170,11 +171,11 @@ function openTown(t) {
       render(); refreshPanel();
     };
     const stackRow = (list, s, onClick) => {
-      const to = canUpgrade(t, s), wrap = el('div', { className: 'srow' }, unitChip(s, onClick));
-      if (to) {
-        const cost = upgradeCost(s, to), N = UNITS[LINES[UNITS[s.type].line].levels[to - 1]];
+      const opts = upgradeOptions(t, s), wrap = el('div', { className: 'srow' }, unitChip(s, onClick));
+      for (const to of opts) {
+        const cost = upgradeCost(s, to), N = UNITS[to], tag = opts.length > 1 ? `${BRANCH_NAMES[N.branch]} ` : '';
         wrap.append(el('button', { className: 'btn small up', disabled: !canAfford(p.res, cost), title: `Upgrade to ${N.name} for ${costText(cost)}`,
-          onClick: () => { upgradeStack(t, s, list); render(); refreshPanel(); } }, `⬆ ${costText(cost)}`));
+          onClick: () => { upgradeStack(t, s, list, to); render(); refreshPanel(); } }, `⬆ ${tag}${costText(cost)}`));
       }
       return wrap;
     };
@@ -200,8 +201,9 @@ function openTown(t) {
     const all = ['hall2', 'hall3', 'market', 'citadel', 'walls', 'temple', ...[1, 2, 3, 4, 5, 6, 7].flatMap(k => ['d' + k, 'u' + k, 'e' + k])].filter(b => b !== 'd1');
     for (const b of all) {
       const done = t.built.includes(b), why = canBuild(t, b), B_ = BUILDINGS[b];
-      const U = 'due'.includes(b[0]) && !B_.name ? UNITS[lineOf(t, dwellingTier(b)).levels['due'.indexOf(b[0])]] : null;
-      const desc = U ? (b[0] === 'd' ? `Recruits ${U.icon} ${U.name} (${growthOf(t, dwellingTier(b))}/week)` : `Recruit and upgrade to ${U.icon} ${U.name}: Attack ${U.att}, Defence ${U.def}, Move ${U.mov}`) : B_.desc;
+      const Us = 'due'.includes(b[0]) && !B_.name ? levelTypes(lineOf(t, dwellingTier(b)), 'due'.indexOf(b[0]) + 1).map(id => UNITS[id]) : null;
+      const desc = Us ? (b[0] === 'd' ? `Recruits ${Us[0].icon} ${Us[0].name} (${growthOf(t, dwellingTier(b))}/week)`
+        : `Recruit and upgrade to ${Us.map(U => `${U.icon} ${U.name}${U.branch && Us.length > 1 ? ` (${BRANCH_NAMES[U.branch].toLowerCase()})` : ''}: Attack ${U.att}, Defence ${U.def}, Move ${U.mov}`).join('; or ')}`) : B_.desc;
       grid.append(el('div', { className: 'bcard' + (done ? ' done' : why ? ' no' : ' ok') },
         el('b', null, buildingName(t, b)), el('small', null, desc),
         done ? el('span', { className: 'tag' }, '✓ Built') : el('div', { className: 'bfoot' },
@@ -233,7 +235,7 @@ function showMainMenu() {
     return el('button', { className: 'fcard' + (MENU.faction === k ? ' sel' : ''), style: { '--fc': F.color }, onClick: () => { MENU.faction = k; showMainMenu(); } },
       el('div', { className: 'fhead' }, el('span', { className: 'ficon' }, F.townIcon), el('div', null, el('b', null, F.name), el('small', null, `Patron: ${F.god}`))),
       el('p', null, F.blurb),
-      el('div', { className: 'roster' }, F.units.map(id => el('span', { title: `T${LINES[id].tier} ${LINES[id].levels.map(u => UNITS[u].name).join(' → ')}` }, LINES[id].icon))),
+      el('div', { className: 'roster' }, F.units.map(id => el('span', { title: `T${LINES[id].tier} ${[1, 2, 3].map(l => levelTypes(LINES[id], l).map(u => UNITS[u].name).join(' / ')).join(' → ')}` }, LINES[id].icon))),
       el('small', { className: 'power' }, `✨ ${F.power.name}: ${F.power.desc}`),
       el('small', null, `Hero: ${HEROES[F.hero].icon} ${HEROES[F.hero].name}`));
   }));
