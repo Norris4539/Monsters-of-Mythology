@@ -15,7 +15,7 @@ Levels share one skeleton and animation set; kit nodes are named L1_, L2_, L3_
 or L23_ (levels 2 and 3), the rest are worn by every level.
 """
 import bpy, bmesh, math, os, sys, random
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Euler
 from mathutils.bvhtree import BVHTree
 V = Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -472,7 +472,8 @@ def kit(body, J):
             st = lathe(f'Strap{S}{zz:.2f}', [(rr, -.006), (rr + .002, 0), (rr, .006)], 24); st.location = (an.x, yy, zz); st.scale = (1, 1.15, 1)
             add(st, leather, f'foot.{S}')
 
-    # Shield, spear, sword -------------------------------------------------
+    # Shield and spear: built about their own origin (shield: +Z faces the enemy,
+    # spear: +Z towards the point, grip at the origin) and put in the hands later.
     for lv in (1, 2, 3):
         R, rim = .45, .045
         face = lathe(f'L{lv}_ShieldFace', [(0, .12), (.15, .113), (.28, .09), (.37, .055), (R - rim, .01)], 64)
@@ -483,17 +484,22 @@ def kit(body, J):
                 uvl.data[li].uv = (co.x / (2 * (R - rim)) + .5, co.y / (2 * (R - rim)) + .5)
         rimo = lathe(f'L{lv}_ShieldRim', [(R - rim, .01), (R - rim * .5, .02), (R, .012), (R + .004, -.005), (R - .006, -.012)], 64)
         back = lathe(f'L{lv}_ShieldBack', [(0, .1), (.2, .085), (R - .01, -.012)], 48)
-        for o in (face, rimo, back): o.rotation_euler.x = math.pi / 2; o.location = SHIELD_C
-        add(face, m_painted(f'Blazon{lv}', blazon(lv)), 'shield'); add(rimo, bronze, 'shield'); add(back, m_wood('ShieldWood'), 'shield')
-        por = lathe(f'L{lv}_Porpax', [(.05, -.012), (.055, 0), (.05, .012)], 24); por.rotation_euler.x = math.pi / 2; por.location = SHIELD_C + V((0, .14, 0)); por.scale = (1, .6, 1)
-        add(por, bronze, 'shield')
+        add(face, m_painted(f'Blazon{lv}', blazon(lv)), 'later:forearm.L'); add(rimo, bronze, 'later:forearm.L'); add(back, m_wood('ShieldWood'), 'later:forearm.L')
+        # porpax: bronze armband at the centre, around the forearm (forearm runs along local X)
+        por = lathe(f'L{lv}_Porpax', [(.042, -.018), (.047, 0), (.042, .018)], 24)
+        por.rotation_euler.y = math.pi / 2; por.location = (0, 0, .064); por.scale = (1, .75, 1)
+        mod(por, 'SOLIDIFY', thickness=.003); bake_mods(por)
+        add(por, bronze, 'later:forearm.L')
+        # antilabe: the cord grip near the rim, where the hand closes
+        ant = lathe(f'L{lv}_Antilabe', [(.022, -.03), (.026, 0), (.022, .03)], 16)
+        ant.location = (-.19, 0, .07); ant.scale = (.6, 1, 1)
+        add(ant, m_leather('Cord', '#5a3a20'), 'later:forearm.L')
     ash, iron = m_wood('Ash'), m_iron()
     L0, L1 = .8, 1.45
     shaft = lathe('SpearShaft', [(0, -L0), (.013, -L0 + .01), (.0145, 0), (.013, L1), (0, L1 + .005)], 12)
     head_ = lathe('SpearHead', [(.013, L1 - .03), (.026, L1 + .05), (.022, L1 + .16), (0, L1 + .27)], 8); head_.scale = (1, .3, 1)
     butt = lathe('SpearButt', [(0, -L0 - .2), (.014, -L0 - .02), (.0135, -L0 + .02)], 8)
-    for o, mt in ((shaft, ash), (head_, iron), (butt, bronze)):
-        o.rotation_euler = (-math.pi / 2 + .06, 0, 0); o.location = SPEAR_GRIP; add(o, mt, 'spear')
+    for o, mt in ((shaft, ash), (head_, iron), (butt, bronze)): add(o, mt, 'later:hand.R')
     return out
 
 
@@ -539,7 +545,6 @@ def cloak(name, z_top, w=.56, h=1.0):
 
 
 # ── Skeleton from the MakeHuman joints ──────────────────────────────────────
-SPEAR_GRIP = V((0, 0, 0)); SHIELD_C = V((0, 0, 0))
 def skeleton_spec(J):
     sp = sorted([J[k] for k in J if k.startswith('spine-')], key=lambda v: v.z)
     mean = lambda ks: sum((J[k] for k in ks), V()) / len(ks)
@@ -558,33 +563,27 @@ def skeleton_spec(J):
               (f'thumb.{n}', J[f'{s}-finger-1-2'], J[f'{s}-finger-1-4'], f'hand.{n}', True),
               (f'thigh.{n}', J[f'{s}-upper-leg'], J[f'{s}-knee'], 'hips', True),
               (f'shin.{n}', J[f'{s}-knee'], J[f'{s}-ankle'], f'thigh.{n}', True),
-              (f'ik_foot.{n}', J[f'{s}-ankle'], J[f'{s}-ankle'] + V((0, .12, 0)), 'root', False),
-              (f'foot.{n}', J[f'{s}-ankle'], J[f'{s}-foot-2'], f'ik_foot.{n}', True),
-              (f'pole_knee.{n}', J[f'{s}-knee'] + V((0, -.6, 0)), J[f'{s}-knee'] + V((0, -.5, 0)), 'root', False)]
-    sx = 1 if True else -1
-    B += [('spear', SPEAR_GRIP, SPEAR_GRIP + V((0, .2, 0)), 'chest', True),
-          ('shield', SHIELD_C, SHIELD_C + V((0, .2, 0)), 'chest', True),
-          ('ik_hand.R', SPEAR_GRIP, SPEAR_GRIP + V((0, .1, 0)), 'spear', False),
-          ('ik_hand.L', SHIELD_C + V((-.15, .13, -.02)), SHIELD_C + V((-.15, .23, -.02)), 'shield', False),
-          ('pole_elbow.R', J['r-shoulder'] + V((-.5, .45, .15)), J['r-shoulder'] + V((-.5, .55, .15)), 'chest', False),
-          ('pole_elbow.L', J['l-shoulder'] + V((.55, .25, -.35)), J['l-shoulder'] + V((.55, .35, -.35)), 'chest', False)]
+              (f'ik_foot.{n}', J[f'{s}-ankle'], J[f'{s}-ankle'] + V((0, .12, 0)), 'root', False),   # foot control
+              (f'foot.{n}', J[f'{s}-ankle'], J[f'{s}-foot-2'], f'ik_foot.{n}', True)]
     return B
 
-def build_armature(B):
+def build_armature(B, J):
     arm = bpy.data.armatures.new('HopliteRig'); ob = link(bpy.data.objects.new('HopliteRig', arm))
     activate(ob); bpy.ops.object.mode_set(mode='EDIT')
     for name, h, t, parent, deform in B:
         b = arm.edit_bones.new(name); b.head = h; b.tail = t; b.roll = 0; b.use_deform = deform
         if parent: b.parent = arm.edit_bones[parent]
-    bpy.ops.object.mode_set(mode='POSE')
-    P = ob.pose.bones
-    for side in 'LR':
-        c = P[f'forearm.{side}'].constraints.new('IK'); c.target = ob; c.subtarget = f'ik_hand.{side}'
-        c.pole_target = ob; c.pole_subtarget = f'pole_elbow.{side}'; c.pole_angle = math.radians(-90); c.chain_count = 2
-        c = P[f'shin.{side}'].constraints.new('IK'); c.target = ob; c.subtarget = f'ik_foot.{side}'
-        c.pole_target = ob; c.pole_subtarget = f'pole_knee.{side}'; c.pole_angle = math.radians(-90); c.chain_count = 2
-    for pb in P: pb.rotation_mode = 'XYZ'
     bpy.ops.object.mode_set(mode='OBJECT')
+    for pb in ob.pose.bones: pb.rotation_mode = 'QUATERNION'
+    # Hand reference vectors in each hand bone's own frame: the knuckle line
+    # (index to little finger) and the palm normal.
+    for s, n in (('l', 'L'), ('r', 'R')):
+        bone = arm.bones[f'hand.{n}']; inv = bone.matrix_local.to_3x3().inverted()
+        k = J[f'{s}-finger-5-2'] - J[f'{s}-finger-2-2']
+        y = (bone.tail_local - bone.head_local).normalized()
+        palm = k.cross(y).normalized()
+        if palm.x * (1 if n == 'L' else -1) > 0: palm = -palm   # in the rest pose the palms face the thighs
+        HAND_REF[n] = (inv @ k, inv @ palm)
     return ob
 
 def bind_rigid(ob, rig, bone):
@@ -609,54 +608,153 @@ def bind_skin(ob, rig, body):
     m = ob.modifiers.new('Armature', 'ARMATURE'); m.object = rig
 
 
-# ── Animations (same names and timing as the game expects) ──────────────────
-def key(rig, f, pose):
+# ── Posing: limbs solved directly, keyed as plain rotations (no IK at runtime) ─
+HAND_REF = {}
+def _upd(): bpy.context.view_layer.update()
+
+def two_bone(S, T, a, b, hint):
+    """Elbow/knee position for a chain of lengths a, b from S reaching T, bent towards hint."""
+    d = T - S; L = min(max(d.length, abs(a - b) + 1e-4), (a + b) * .999); u = d.normalized()
+    x = (a * a - b * b + L * L) / (2 * L); h = math.sqrt(max(0, a * a - x * x))
+    p = hint - u * hint.dot(u); p = p.normalized() if p.length > 1e-6 else u.orthogonal().normalized()
+    return S + u * x + p * h
+
+def swing(rig, name, d_new, twist=0.0):
+    """Point a bone along d_new with the smallest rotation from where its parent carries it."""
+    pb = rig.pose.bones[name]; pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0); _upd()
+    M = pb.matrix.copy(); d0 = M.col[1].xyz.normalized(); dn = d_new.normalized()
+    R = d0.rotation_difference(dn).to_matrix()
+    if twist: R = Matrix.Rotation(twist, 3, dn) @ R
+    Mn = (R @ M.to_3x3()).to_4x4(); Mn.translation = M.translation
+    pb.matrix = Mn; _upd()
+
+def orient(rig, name, y_t, k_t, k_local):
+    """Set a bone's full orientation: its axis along y_t and its local vector k_local along k_t."""
+    pb = rig.pose.bones[name]; pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0); _upd()
+    M = pb.matrix.copy()
+    yl = V((0, 1, 0)); kl = (k_local - yl * k_local.dot(yl)).normalized()
+    yt = y_t.normalized(); kt = (k_t - yt * k_t.dot(yt)).normalized()
+    Bl = Matrix((kl, yl, kl.cross(yl))).transposed(); Bt = Matrix((kt, yt, kt.cross(yt))).transposed()
+    Mn = (Bt @ Bl.inverted()).to_4x4(); Mn.translation = M.translation
+    pb.matrix = Mn; _upd()
+
+def curl(rig, side, fist=1.0):
+    """Close the fingers and thumb towards the palm."""
+    hand = rig.pose.bones[f'hand.{side}']; palm = (hand.matrix.to_3x3() @ HAND_REF[side][1]).normalized()
+    for name, ang in ((f'fingers.{side}', 1.35 * fist), (f'fingertips.{side}', 1.45 * fist), (f'thumb.{side}', .55 * fist)):
+        pb = rig.pose.bones[name]; pb.rotation_quaternion = (1, 0, 0, 0); _upd()
+        d0 = pb.matrix.col[1].xyz.normalized(); ax = d0.cross(palm)
+        if ax.length < 1e-6: continue
+        swing(rig, name, Matrix.Rotation(ang, 3, ax.normalized()) @ d0)
+
+def pose(rig, P):
+    """Apply a pose spec. Body bones take local euler rotations and offsets; feet are
+    world offsets of the foot controls; arms are wrist targets and elbow hints given
+    in the chest's rest frame, so they ride along with the torso."""
+    PB = rig.pose.bones
+    for pb in PB: pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0)
+    for name in ('root', 'hips', 'spine', 'chest', 'neck', 'head', 'ik_foot.L', 'ik_foot.R'):
+        p = P.get(name, {})
+        PB[name].location = p.get('loc', (0, 0, 0)); PB[name].rotation_quaternion = Euler(p.get('rot', (0, 0, 0))).to_quaternion()
+    _upd()
+    # Legs: hip to the foot control, knees forward.
+    hips_rot = PB['hips'].matrix.to_3x3() @ rig.data.bones['hips'].matrix_local.to_3x3().inverted()
+    for n in 'LR':
+        th, sh = PB[f'thigh.{n}'], PB[f'shin.{n}']
+        S, A = th.head.copy(), PB[f'ik_foot.{n}'].head.copy()
+        E = two_bone(S, A, th.bone.length, sh.bone.length, hips_rot @ V((.15 if n == 'L' else -.15, -1, 0)))
+        swing(rig, f'thigh.{n}', E - S); swing(rig, f'shin.{n}', A - PB[f'shin.{n}'].head)
+    # Arms, relative to the chest.
+    D = PB['chest'].matrix @ rig.data.bones['chest'].matrix_local.inverted(); D3 = D.to_3x3()
+    for n in 'LR':
+        a = P['arm' + n]
+        up, fo = PB[f'upperarm.{n}'], PB[f'forearm.{n}']
+        S = up.head.copy(); W = D @ V(a['w'])
+        E = two_bone(S, W, up.bone.length, fo.bone.length, D3 @ V(a['hint']))
+        swing(rig, f'upperarm.{n}', E - S); swing(rig, f'forearm.{n}', W - PB[f'forearm.{n}'].head)
+        fdir = (W - E).normalized()
+        if 'spear' in a:   # overhand grip: knuckle line along the shaft, towards the point
+            sd = (D3 @ V(a['spear'])).normalized()
+            orient(rig, f'hand.{n}', fdir - sd * fdir.dot(sd) + D3 @ V(a.get('wrist', (0, 0, 0))), sd, HAND_REF[n][0])
+        else:
+            swing(rig, f'hand.{n}', fdir + D3 @ V(a.get('wrist', (0, 0, 0))))
+        curl(rig, n, a.get('fist', 1.0))
+
+def key_all(rig, f):
     for pb in rig.pose.bones:
-        p = pose.get(pb.name, {})
-        pb.location = p.get('loc', (0, 0, 0)); pb.rotation_euler = p.get('rot', (0, 0, 0))
-        pb.keyframe_insert('location', frame=f); pb.keyframe_insert('rotation_euler', frame=f)
+        pb.keyframe_insert('location', frame=f); pb.keyframe_insert('rotation_quaternion', frame=f)
 
 def make_action(rig, name, frames):
     rig.animation_data_create(); act = bpy.data.actions.new(name); act.use_fake_user = True
     rig.animation_data.action = act
-    for f, pose in frames: key(rig, f, pose)
+    for f, P in frames: pose(rig, P); key_all(rig, f)
     return act
 
-FCURL = 1.25
-GRIP = {'fingers.R': {'rot': (FCURL, 0, 0)}, 'fingertips.R': {'rot': (1.1, 0, 0)}, 'thumb.R': {'rot': (.5, 0, 0)},
-        'fingers.L': {'rot': (FCURL, 0, 0)}, 'fingertips.L': {'rot': (1.1, 0, 0)}, 'thumb.L': {'rot': (.5, 0, 0)}}
+def poses(J):
+    """Pose specs. Arm targets are offsets from each shoulder joint in the rest frame."""
+    SR, SL = J['r-shoulder'], J['l-shoulder']
+    def armR(w, hint=(-1, .35, .15), spear=(0, -1, -.06), **kw): return {'w': SR + V(w), 'hint': hint, 'spear': spear, **kw}
+    def armL(w, hint=(1, .1, -.45), **kw): return {'w': SL + V(w), 'hint': hint, **kw}
+    base = {'hips': {'loc': (0, 0, -.05)}, 'chest': {'rot': (.03, 0, .1)}, 'head': {'rot': (-.03, 0, -.08)},
+            'ik_foot.L': {'loc': (-.02, -.2, 0)}, 'ik_foot.R': {'loc': (.02, .18, 0)},
+            'armR': armR((-.08, -.16, .13)), 'armL': armL((-.17, -.26, -.2))}
+    def st(**over):
+        P = {k: dict(v) for k, v in base.items()}
+        for k, v in over.items(): P[k] = v if k.startswith('arm') else {**P.get(k, {}), **v}
+        return P
+    return st, armR, armL
 
-def stance(**over):
-    p = {'hips': {'loc': (0, 0, -.05)}, 'chest': {'rot': (.03, 0, .1)}, 'head': {'rot': (-.03, 0, -.08)},
-         'ik_foot.L': {'loc': (-.02, -.2, 0)}, 'ik_foot.R': {'loc': (.02, .18, 0)}, **{k: dict(v) for k, v in GRIP.items()}}
-    for k, v in over.items(): p[k] = {**p.get(k, {}), **v}
-    return p
-
-def actions(rig):
+def actions(rig, J):
+    st, armR, armL = poses(J)
     A = []
-    A.append(make_action(rig, 'Idle', [(1, stance()), (24, stance(hips={'loc': (0, 0, -.06)}, chest={'rot': (.045, 0, .1)}, spear={'loc': (0, 0, -.01)})), (48, stance())]))
-    W = lambda fl, fr, zl, zr, hz: stance(**{'ik_foot.L': {'loc': (-.02, fl, zl)}, 'ik_foot.R': {'loc': (.02, fr, zr)}, 'hips': {'loc': (0, 0, -.05 + hz)}})
+    A.append(make_action(rig, 'Idle', [(1, st()), (24, st(hips={'loc': (0, 0, -.058)}, chest={'rot': (.042, 0, .1)}, armR=armR((-.08, -.16, .12)))), (48, st())]))
+    W = lambda fl, fr, zl, zr, hz: st(**{'ik_foot.L': {'loc': (-.02, fl, zl)}, 'ik_foot.R': {'loc': (.02, fr, zr)}, 'hips': {'loc': (0, 0, -.05 + hz)}})
     A.append(make_action(rig, 'Walk', [(1, W(-.22, .2, 0, 0, -.012)), (7, W(-.01, -.01, 0, .09, .018)), (13, W(.2, -.22, 0, 0, -.012)), (19, W(-.01, -.01, .09, 0, .018)), (25, W(-.22, .2, 0, 0, -.012))]))
     A.append(make_action(rig, 'Thrust', [
-        (1, stance()),
-        (7, stance(spear={'loc': (.02, .24, .04), 'rot': (-.1, 0, 0)}, chest={'rot': (-.05, 0, .26)}, hips={'loc': (0, .04, -.05)})),
-        (11, stance(spear={'loc': (-.03, -.5, -.08), 'rot': (.1, 0, -.05)}, chest={'rot': (.2, 0, -.06)}, hips={'loc': (0, -.13, -.1)}, **{'ik_foot.L': {'loc': (-.02, -.4, 0)}}, shield={'loc': (.02, .05, -.03)})),
-        (16, stance(spear={'loc': (-.03, -.46, -.08), 'rot': (.08, 0, -.05)}, chest={'rot': (.18, 0, -.05)}, hips={'loc': (0, -.12, -.1)}, **{'ik_foot.L': {'loc': (-.02, -.4, 0)}})),
-        (25, stance())]))
-    blk = dict(shield={'loc': (.05, -.12, .1), 'rot': (-.18, 0, -.12)}, hips={'loc': (0, .02, -.12)}, chest={'rot': (.11, 0, .18)}, head={'rot': (.08, 0, -.08)}, spear={'loc': (0, .08, -.04)})
-    A.append(make_action(rig, 'Block', [(1, stance()), (6, stance(**blk)), (14, stance(**blk)), (20, stance())]))
-    A.append(make_action(rig, 'Hit', [(1, stance()),
-        (4, stance(chest={'rot': (-.25, 0, .22)}, head={'rot': (-.3, 0, .1)}, hips={'loc': (0, .09, -.07)}, shield={'loc': (0, .1, .03), 'rot': (.12, 0, 0)}, spear={'loc': (0, .1, .06)})),
-        (9, stance(chest={'rot': (-.1, 0, .14)}, head={'rot': (-.12, 0, 0)}, hips={'loc': (0, .04, -.06)})), (17, stance())]))
-    fall = dict(chest={'rot': (-.1, 0, .1)}, hips={'loc': (0, 0, -.1)}, spear={'loc': (.1, .2, -.05), 'rot': (-.8, .4, .5)}, shield={'loc': (-.05, .1, .05), 'rot': (.6, 0, .3)})
-    A.append(make_action(rig, 'Death', [(1, stance()),
-        (8, stance(chest={'rot': (.32, 0, .18)}, head={'rot': (.28, 0, 0)}, hips={'loc': (0, .02, -.22)}, spear={'loc': (0, .1, -.1), 'rot': (.3, 0, .2)})),
-        (20, stance(root={'loc': (0, .27, 0), 'rot': (-1.38, 0, .08)}, head={'rot': (-.3, 0, .2)}, **fall)),
-        (25, stance(root={'loc': (0, .29, 0), 'rot': (-1.52, 0, .08)}, head={'rot': (-.4, 0, .2)}, **fall)),
-        (40, stance(root={'loc': (0, .29, 0), 'rot': (-1.5, 0, .08)}, head={'rot': (-.45, 0, .25)}, **fall))]))
+        (1, st()),
+        (7, st(chest={'rot': (-.05, 0, .28)}, hips={'loc': (0, .04, -.05)}, armR=armR((-.02, .02, .17), spear=(0, -1, .02)))),
+        (11, st(chest={'rot': (.18, 0, -.08)}, hips={'loc': (0, -.13, -.1)}, **{'ik_foot.L': {'loc': (-.02, -.4, 0)}},
+                armR=armR((.03, -.44, .05), hint=(-1, .2, .05), spear=(.03, -1, -.12)), armL=armL((-.15, -.22, -.21)))),
+        (16, st(chest={'rot': (.16, 0, -.06)}, hips={'loc': (0, -.12, -.1)}, **{'ik_foot.L': {'loc': (-.02, -.4, 0)}},
+                armR=armR((.03, -.4, .05), hint=(-1, .2, .05), spear=(.03, -1, -.1)))),
+        (25, st())]))
+    blk = dict(hips={'loc': (0, .02, -.12)}, chest={'rot': (.11, 0, .18)}, head={'rot': (.08, 0, -.08)},
+               armL=armL((-.14, -.33, -.08), hint=(1, .1, -.2)), armR=armR((-.04, -.12, .17), spear=(0, -1, .1)))
+    A.append(make_action(rig, 'Block', [(1, st()), (6, st(**blk)), (14, st(**blk)), (20, st())]))
+    A.append(make_action(rig, 'Hit', [(1, st()),
+        (4, st(chest={'rot': (-.25, 0, .22)}, head={'rot': (-.3, 0, .1)}, hips={'loc': (0, .09, -.07)}, armL=armL((-.17, -.2, -.17)), armR=armR((-.05, -.08, .16), spear=(0, -1, .1)))),
+        (9, st(chest={'rot': (-.1, 0, .14)}, head={'rot': (-.12, 0, 0)}, hips={'loc': (0, .04, -.06)})), (17, st())]))
+    fallR, fallL = armR((-.2, -.05, -.12), hint=(-1, .2, -.3), spear=(.4, -1, -.35), fist=.8), armL((.05, -.2, -.3), hint=(1, .2, -.5))
+    fall = dict(chest={'rot': (-.1, 0, .1)}, hips={'loc': (0, 0, -.1)}, armR=fallR, armL=fallL)
+    A.append(make_action(rig, 'Death', [(1, st()),
+        (8, st(chest={'rot': (.32, 0, .18)}, head={'rot': (.28, 0, 0)}, hips={'loc': (0, .02, -.22)}, armR=armR((-.12, -.1, .02), spear=(.15, -1, -.3)))),
+        (20, st(root={'loc': (0, .27, 0), 'rot': (-1.38, 0, .08)}, head={'rot': (-.3, 0, .2)}, **fall)),
+        (25, st(root={'loc': (0, .29, 0), 'rot': (-1.52, 0, .08)}, head={'rot': (-.4, 0, .2)}, **fall)),
+        (40, st(root={'loc': (0, .29, 0), 'rot': (-1.5, 0, .08)}, head={'rot': (-.45, 0, .25)}, **fall))]))
     rig.animation_data.action = A[0]
     return A
 
+def place_in_hands(rig, items):
+    """In the idle pose, put the spear through the right fist and strap the shield
+    to the left forearm, then parent them to those bones."""
+    PB = rig.pose.bones
+    hand = PB['hand.R']; Mh = hand.matrix.to_3x3()
+    palm = (Mh @ HAND_REF['R'][1]).normalized(); k = (Mh @ HAND_REF['R'][0]).normalized()
+    grip = hand.head + (hand.tail - hand.head) * .5 + palm * .028
+    z = k; x = z.orthogonal().normalized(); y = z.cross(x)
+    Ms = Matrix((x, y, z)).transposed().to_4x4(); Ms.translation = grip
+    fo = PB['forearm.L']; E, W = fo.head.copy(), fo.tail.copy()
+    fdir = (W - E).normalized()
+    n = V((0, -1, .05)).normalized(); n = (n - fdir * n.dot(fdir)).normalized()   # face the enemy, square to the forearm
+    xs = -fdir; ys = n.cross(xs)   # the hand end of the forearm points to local -X (the antilabe)
+    centre = E + (W - E) * .3 - n * .064   # the porpax (local z .064) sits on the forearm near the elbow
+    Mf = Matrix((xs, ys, n)).transposed().to_4x4(); Mf.translation = centre
+    for name, (ob, mt, bind) in items.items():
+        if not bind.startswith('later:'): continue
+        bone = bind.split(':')[1]
+        ob.matrix_world = (Ms if bone == 'hand.R' else Mf) @ ob.matrix_basis
+        bpy.context.view_layer.update()
+        bind_rigid(ob, rig, bone)
 
 # ── Bake procedural materials to textures ───────────────────────────────────
 def bake_textures(items):
@@ -710,10 +808,7 @@ def bake_textures(items):
 
 # ── Build ───────────────────────────────────────────────────────────────────
 def build():
-    global SPEAR_GRIP, SHIELD_C
     body, J = build_body()
-    SPEAR_GRIP = J['r-shoulder'] + V((-.06, -.11, .1))
-    SHIELD_C = V((J['l-shoulder'].x * .55, J['l-shoulder'].y - .4, J['l-shoulder'].z - .27))
     items = kit(body, J)
     items['Body'] = (body, m_skin(J['l-eye']), 'body')
     # cloth
@@ -726,19 +821,19 @@ def build():
         ck = cloak(nm, top); drape(nm, ck, lambda c, t=top: c.z > t - .016, body, 70, .2)   # pinned across the upper back; the sides fall free
         items[nm] = (ck, m_cloth(nm + 'Wool', col, 300, .12, 1024), 'skin')
     bake_textures(items)
-    B = skeleton_spec(J); rig = build_armature(B)
-    rig.data.pose_position = 'REST'; bpy.context.view_layer.update()
-    for n in ('spear', 'shield'): rig.data.bones[n].use_deform = False
+    rig = build_armature(skeleton_spec(J), J)
+    rig.data.pose_position = 'REST'; _upd()
     activate(body); rig.select_set(True); bpy.context.view_layer.objects.active = rig
     bpy.ops.object.parent_set(type='ARMATURE_AUTO')
-    for n in ('spear', 'shield'): rig.data.bones[n].use_deform = True
     print('weighted', sum(1 for v in body.data.vertices if v.groups), '/', len(body.data.vertices))
     for name, (ob, mt, bind) in items.items():
-        if ob is body: continue
+        if ob is body or bind.startswith('later:'): continue
         if bind == 'skin': bind_skin(ob, rig, body)
         else: bind_rigid(ob, rig, bind)
-    rig.data.pose_position = 'POSE'; bpy.context.view_layer.update()
-    return rig, actions(rig)
+    rig.data.pose_position = 'POSE'; _upd()
+    st, _, _ = poses(J); pose(rig, st())
+    place_in_hands(rig, items)
+    return rig, actions(rig, J)
 
 def export(rig, path):
     bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True)

@@ -76,7 +76,7 @@ The Hoplite line is modelled, rigged and animated by a Blender script in a reali
   - the muscle cuirass, linothorax and greaves are grown from the body's surface, helmets are smooth hulls over the skull, and the chiton and cloaks are draped with the cloth simulator;
   - procedural materials (skin, hammered bronze with patina, painted shields, linen, leather, wool, ash) are baked into colour, roughness and normal textures;
   - one skeleton carries all three levels; kit nodes are named `L1_` (Ephebe), `L2_` (Hoplite), `L3_` (Sacred Band) or `L23_` (levels 2 and 3), so a renderer shows one level by name;
-  - animations: Idle, Walk, Thrust, Block, Hit and Death, with the hands reaching the spear and shield by IK.
+  - animations: Idle, Walk, Thrust, Block, Hit and Death. Arms and legs are solved in the script (shoulder to wrist target, elbow towards a natural hint) and keyed as plain rotations, so the browser plays exactly what Blender shows. The spear is held overhand through the right fist, and the shield is strapped to the left forearm by the porpax with the hand on the antilabe.
 - `tools/blender/glb2json.py` turns the `.glb` into a self-contained `.json` glTF for hosts that cannot serve binary files.
 
 The game still draws units as emoji; the models are used by the 3D preview while the art direction is settled.
