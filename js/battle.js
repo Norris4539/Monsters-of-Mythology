@@ -369,7 +369,7 @@ async function doCombat(a, d, mode) {
       const other = foes(a).find(o => o !== d && o.alive && distC(a, o) === 1 && (!d.alive || distC(d, o) <= 1));
       if (other) await strike(a, other, 'melee', { splash: true, label: 'Cleave!' });
     }
-    if (melee && d.alive && a.alive && !d.retaliated) {
+    if (melee && d.alive && a.alive && !d.retaliated && !a.T.abil.includes('longSpear')) {
       const rm = attackMode(d, a);
       if (rm && rm !== 'ranged') { d.retaliated = true; await strike(d, a, rm, { retal: true, moved: 0 }); }
     }
@@ -656,7 +656,7 @@ async function enemyAct(c) {
       } else {
         const dmg = calcDamage(c, p, mode, { roll: 'avg', moved, x, y }).dmg, kills = Math.min(p.s.n, killsFor(p, dmg));
         gain = valueOf(p, kills) + dmg * .2;
-        if (mode !== 'ranged' && !p.retaliated && kills < p.s.n) {
+        if (mode !== 'ranged' && !p.retaliated && kills < p.s.n && !c.T.abil.includes('longSpear')) {
           const left = p.s.n - kills, rm = rectDist(x, y, c.size, p.x, p.y, p.size) === 1 ? (p.T.range[0] >= 2 ? 'meleeHalf' : 'melee') : null;
           if (rm) { const saved = p.s.n; p.s.n = left; const rd = calcDamage(p, c, rm, { roll: 'avg', moved: 0 }).dmg; p.s.n = saved; gain -= valueOf(c, Math.min(c.s.n, killsFor(c, rd))) * .6; }
         }
@@ -799,8 +799,8 @@ function forecastCard(a, d) {
   const lo = calcDamage(a, d, mode, { roll: 'min' }).dmg, hi = calcDamage(a, d, mode, { roll: 'max' }).dmg;
   const kLo = Math.min(d.s.n, killsFor(d, lo)), kHi = Math.min(d.s.n, killsFor(d, hi));
   let retal = null;
-  const many = a.T.abil.includes('manyHeads') && mode !== 'ranged';
-  if (mode !== 'ranged' && !many && !d.retaliated) {
+  const many = a.T.abil.includes('manyHeads') && mode !== 'ranged', spears = a.T.abil.includes('longSpear');
+  if (mode !== 'ranged' && !many && !spears && !d.retaliated) {
     const rm = attackMode(d, a);
     if (rm && rm !== 'ranged') {
       const avg = calcDamage(a, d, mode, { roll: 'avg' }).dmg, left = Math.max(0, d.s.n - killsFor(d, avg));
@@ -817,7 +817,7 @@ function forecastCard(a, d) {
         tri ? el('div', { className: tri > 0 ? 'up' : 'down' }, tri > 0 ? '▲ +2 Attack (triangle)' : '▼ −2 Attack (triangle)') : null,
         a.T.abil.includes('charge') && mode === 'melee' && a.moved ? el('div', { className: 'up' }, `Charge +${a.moved * 5}%`) : null),
       el('div', { className: 'fc-side e' }, el('div', { className: 'fc-name' }, `${d.s.n} ${d.T.icon} ${d.T.name}`),
-        many ? el('div', null, 'Cannot retaliate (many heads)') : mode === 'ranged' ? el('div', null, 'No retaliation at range') : d.retaliated ? el('div', null, 'Already retaliated this round') :
+        many ? el('div', null, 'Cannot retaliate (many heads)') : spears ? el('div', null, 'Cannot retaliate (long spears)') : mode === 'ranged' ? el('div', null, 'No retaliation at range') : d.retaliated ? el('div', null, 'Already retaliated this round') :
           retal ? [el('div', null, `Retaliates ~${retal.dmg}`), el('div', null, `Slays ~${retal.kills} of ${a.s.n}`)] : el('div', null, 'Cannot retaliate'))),
     el('div', { className: 'fc-btns' },
       el('button', { className: 'btn primary', onClick: () => confirmAttack() }, 'Attack!'),

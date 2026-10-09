@@ -18,7 +18,7 @@ Every creature line has three levels. The Greek lines are hand-tuned, with two c
 | Tier | Level 1 → 2 → 3 | Class | Abilities |
 |---|---|---|---|
 | 1 | Peltast → Thracian Peltast → Agrianian | Light | Javelins (range 1–2), Hit and Run |
-| 2 | Ephebe → Hoplite → Sacred Band | Heavy | Phalanx; the Sacred Band adds Bond |
+| 2 | Ephebe → Hoplite → Sacred Band | Heavy | Phalanx; Long spears (attacks at range 1 that cannot be retaliated against); the Sacred Band adds Bond |
 | 3 | Hamippoi → Boeotian Hamippoi → Epilektoi Hamippoi | Light | Javelins at range 2 for half damage with no retaliation, full strength in melee; runs with the horse (+Attack and Move next to cavalry) |
 | 4 | Minotaur → Labrys Guard → Asterion | Heavy | Cleave |
 | 5 | Prodromoi → Hippeis → Hetairoi (melee) | Light | Prodromoi: javelins at range 2 for half damage, and Charge (+5% damage per tile moved). Melee branch: lance and Charge |

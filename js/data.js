@@ -39,6 +39,7 @@ const CLASSES = { heavy: 'Heavy', light: 'Light' };
 const ABILITIES = {
   hitAndRun:   ['Hit and run', 'May move again with any movement left after attacking.'],
   phalanx:     ['Phalanx', '+2 Defence while next to another friendly Heavy stack.'],
+  longSpear:   ['Long spears', 'Its reach keeps enemies at bay: targets of its attacks cannot retaliate.'],
   bond:        ['Sacred bond', '+1 Attack and Defence for each adjacent stack of the same kind.'],
   withHorse:   ['Run with the horse', '+2 Move and +2 Attack on turns it starts next to friendly cavalry.'],
   cleave:      ['Cleave', 'Also strikes another enemy beside the target for half damage.'],
@@ -123,7 +124,7 @@ defLine('peltast', 'greek', 1, 'light', { icon: '🎯', weapon: 'javelin', move:
   { name: 'Thracian Peltast', att: 5, def: 4, dmg: [1, 4], hp: 7, mov: 7, res: 5 },
   { name: 'Agrianian',        att: 6, def: 5, dmg: [2, 4], hp: 8, mov: 8, res: 10 },
 ], 'Javelin skirmishers with a crescent wicker shield (pelte). They throw, then slip away.');
-defLine('hoplite', 'greek', 2, 'heavy', { icon: '🛡️', weapon: 'lance', move: 'foot', abil: ['phalanx'], grow: 10, cost: { gold: 150 } }, [
+defLine('hoplite', 'greek', 2, 'heavy', { icon: '🛡️', weapon: 'lance', move: 'foot', abil: ['phalanx', 'longSpear'], grow: 10, cost: { gold: 150 } }, [
   { name: 'Ephebe',      att: 4, def: 6,  dmg: [2, 3], hp: 12, mov: 4, res: 5 },
   { name: 'Hoplite',     att: 5, def: 8,  dmg: [2, 4], hp: 14, mov: 4, res: 10 },
   { name: 'Sacred Band', att: 6, def: 10, dmg: [3, 5], hp: 16, mov: 5, res: 15, abil: ['bond'] },
