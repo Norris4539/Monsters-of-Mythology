@@ -113,7 +113,7 @@ def region_shell(name, src, keep, offset, smooth=0, factor=.5, guard=None):
     return obj_from_bm(name, bm)
 
 
-def envelope(name, src, keep, centre, guard, iters=60):
+def envelope(name, src, keep, centre, guard, iters=60, flare=None, also=()):
     """A smooth hull over part of src: radii from `centre` are averaged with their
     neighbours but never come closer than `guard` to src. Bridges over lips and
     chin like a helmet does, leaving a ridge over the nose."""
@@ -122,18 +122,25 @@ def envelope(name, src, keep, centre, guard, iters=60):
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
     for layer in list(bm.loops.layers.uv.values()): bm.loops.layers.uv.remove(layer)
     bvh = BVHTree.FromObject(src, bpy.context.evaluated_depsgraph_get())
+    extra = [BVHTree.FromObject(o, bpy.context.evaluated_depsgraph_get()) for o in also]
     dirs, rmin = [], []
     for v in bm.verts:
         d = (v.co - centre).normalized(); dirs.append(d)
         hit = bvh.ray_cast(centre, d, .3)   # first surface outward from inside the skull
         rb = (hit[0] - centre).length if hit[0] else (v.co - centre).length
-        rmin.append(max(rb, min((v.co - centre).length, rb + .01)) + guard)
+        rb = max(rb, min((v.co - centre).length, rb + .01))
+        for t in extra:   # clear anything else worn on the head too (the beard)
+            h2 = t.ray_cast(centre, d, .3)
+            if h2[0]: rb = max(rb, (h2[0] - centre).length)
+        rmin.append(rb + guard)
     bm.verts.index_update()
     r = list(rmin)
     nbr = [[e.other_vert(v).index for e in v.link_edges] for v in bm.verts]
     for _ in range(iters):
         r = [max(rmin[i], .5 * r[i] + .5 * sum(r[j] for j in nbr[i]) / max(1, len(nbr[i]))) for i in range(len(r))]
     for i, v in enumerate(bm.verts): v.co = centre + dirs[i] * r[i]
+    if flare:
+        for v in bm.verts: v.co += (v.co - centre).normalized() * flare(v.co)
     return obj_from_bm(name, bm)
 
 # ── Procedural materials, baked to textures later ───────────────────────────
@@ -185,16 +192,26 @@ class Mat:
             self.L.new(bump, b.inputs['Height']); self.L.new(b.outputs['Normal'], self.bsdf.inputs['Normal'])
         return self
 
-def m_bronze(name='Bronze', patina=.35, res=512):
+def m_bronze(name='Bronze', patina=.3, res=512, engrave=0.0):
     m = Mat(name, metal=1.0, res=res)
     big = m.noise(6, 6, .55); fine = m.noise(80, 3, .6)
     vor = m.node('ShaderNodeTexVoronoi', Scale=55.0); m.L.new(m.coord.outputs['Object'], vor.inputs['Vector'])
-    base = m.ramp(big.outputs['Fac'], [(.3, srgb('#7a4f24')), (.55, srgb('#b07a3c')), (.75, srgb('#d6a45a'))])
+    base = m.ramp(big.outputs['Fac'], [(.3, srgb('#4e3d22')), (.55, srgb('#7a5f35')), (.8, srgb('#9c7c47'))])
     pat = m.ramp(m.noise(14, 5, .65).outputs['Fac'], [(.55, (0, 0, 0)), (.75, (1, 1, 1))])
-    col = m.mix(base.outputs['Color'], srgb('#4f7f62'), pat.outputs['Color'])
+    col = m.mix(base.outputs['Color'], srgb('#4a5e3e'), pat.outputs['Color'])
     col = m.mix(col, base.outputs['Color'], 1 - patina)
-    rough = m.ramp(fine.outputs['Fac'], [(.35, (.22, .22, .22)), (.7, (.5, .5, .5))])
-    m.set(col, rough.outputs['Color'], vor.outputs['Distance'], .25, .0015)
+    geo = m.node('ShaderNodeNewGeometry')   # convex edges catch wear and shine
+    wear = m.ramp(geo.outputs['Pointiness'], [(.52, (0, 0, 0)), (.6, (1, 1, 1))])
+    col = m.mix(col, srgb('#c9a466'), wear.outputs['Color'])
+    bump = vor.outputs['Distance']
+    if engrave:   # incised scrollwork: thin dark lines from a distorted ring pattern
+        sw = m.node('ShaderNodeTexWave', wave_type='RINGS', Scale=38.0, Distortion=9.0, Detail=3.0); m.L.new(m.coord.outputs['Object'], sw.inputs['Vector'])
+        lines = m.ramp(sw.outputs['Fac'], [(.0, (1, 1, 1)), (.03, (1, 1, 1)), (.055, (0, 0, 0)), (1.0, (0, 0, 0))])
+        col = m.mix(col, srgb('#2c2414'), m.mix((0, 0, 0), lines.outputs['Color'], engrave))
+        inv = m.ramp(lines.outputs['Color'], [(0, (1, 1, 1)), (1, (0, 0, 0))])
+        bump = inv.outputs['Color']
+    rough = m.ramp(fine.outputs['Fac'], [(.35, (.28, .28, .28)), (.7, (.5, .5, .5))])
+    m.set(col, rough.outputs['Color'], bump, .3 if engrave else .25, .0015)
     return m
 
 def m_skin(eye=None):
@@ -378,88 +395,198 @@ def kit(body, J):
 
     # Helmets ---------------------------------------------------------------
     bronze = m_bronze('Bronze', .3, 512)
+    engraved = m_bronze('BronzeEngraved', .25, 512, engrave=.4)
+    jaw = J['jaw']
     hc = V((0, eye.y + .085, eye.z - .005))   # centre of the skull
-    def helmet_shell(name, open_face=False):
-        keep = lambda c: c.z > J['jaw'].z - .045 and c.z > neck.z + .02 and (c.y > head.y - .02 or c.z > eye.z + .03 or not open_face)
-        return envelope(name, body, keep, hc, .014)
-    cor = helmet_shell('L2_Helmet')
-    # Corinthian T-shaped opening: eye slits joined to a central slot over the mouth
-    bm = bmesh.new()
-    for x0, x1, z0, z1 in ((-.068, -.009, eye.z - .02, eye.z + .017), (.009, .068, eye.z - .02, eye.z + .017), (-.019, .019, J['jaw'].z - .08, eye.z - .018)):
-        bmesh.ops.create_cube(bm, size=1, matrix=Matrix.Translation(((x0 + x1) / 2, head.y - .12, (z0 + z1) / 2)) @ Matrix.Diagonal((x1 - x0, .14, z1 - z0, 1)))
-    cut = obj_from_bm('cut', bm, False); mod(cor, 'BOOLEAN', object=cut, operation='DIFFERENCE', solver='EXACT'); bake_mods(cor); bpy.data.objects.remove(cut)
-    mod(cor, 'SOLIDIFY', thickness=.003, offset=1); mod(cor, 'SUBSURF', levels=1, render_levels=1); bake_mods(cor)
-    add(cor, bronze, 'head')
-    att = helmet_shell('L3_Helmet', open_face=True)
-    bm = bmesh.new()
-    bmesh.ops.create_cube(bm, size=1, matrix=Matrix.Translation((0, head.y - .09, (eye.z - .03 + J['jaw'].z - .08) / 2)) @ Matrix.Diagonal((.13, .12, (eye.z + .012) - (J['jaw'].z - .08), 1)))
-    cut = obj_from_bm('cut', bm, False); mod(att, 'BOOLEAN', object=cut, operation='DIFFERENCE', solver='EXACT'); bake_mods(att); bpy.data.objects.remove(cut)
-    mod(att, 'SOLIDIFY', thickness=.003, offset=1); mod(att, 'SUBSURF', levels=1, render_levels=1); bake_mods(att)
-    add(att, bronze, 'head')
+    bot = jaw.z - .085                          # lower edge of the cheek guards
+    def inside(pts, a, b):
+        res, n = False, len(pts)
+        for i in range(n):
+            (x1, y1), (x2, y2) = pts[i], pts[(i + 1) % n]
+            if (y1 > b) != (y2 > b) and a < x1 + (b - y1) * (x2 - x1) / (y2 - y1): res = not res
+        return res
+    def trim(ob, tests, subdiv=True):
+        """Delete hull faces inside 2D outlines, then relax the new rim so it reads as a clean edge.
+        tests: (outline, axis, where) — axis 'Y' tests (x, z) on faces where(c); 'X' tests (y, z)."""
+        bm = bmesh.new(); bm.from_mesh(ob.data)
+        if subdiv: bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=1, use_grid_fill=True)
+        dead = []
+        for f in bm.faces:
+            c = f.calc_center_median()
+            for pts, axis, where in tests:
+                if where(c) and inside(pts, *((c.x, c.z) if axis == 'Y' else (c.y, c.z))): dead.append(f); break
+        bmesh.ops.delete(bm, geom=dead, context='FACES')
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+        for _ in range(4):
+            rim = [v for v in bm.verts if v.is_boundary]
+            new = {}
+            for v in rim:
+                nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
+                if len(nb) == 2: new[v] = v.co * .5 + (nb[0].co + nb[1].co) * .25
+            for v, co in new.items(): v.co = co
+        bm.to_mesh(ob.data); bm.free()
+        for pl in ob.data.polygons: pl.use_smooth = True
+    def finish(ob, mat, t=.0035):   # the hull is already subdivided by trim(), so no subsurf here
+        mod(ob, 'SOLIDIFY', thickness=t, offset=1); mod(ob, 'BEVEL', width=.0014, segments=1, limit_method='ANGLE')
+        bake_mods(ob); add(ob, mat, 'head')
+    def rivets(prefix, hull, pts):
+        bvh = BVHTree.FromObject(hull, bpy.context.evaluated_depsgraph_get())
+        for i, d in enumerate(pts):
+            d = V(d).normalized(); hit = bvh.ray_cast(hc + d * .3, -d)
+            if hit[0] is None: continue
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=.0075, segments=16, ring_count=8, location=hit[0] + hit[1] * .002)
+            rv = bpy.context.object; rv.name = f'{prefix}Rivet{i}'; rv.scale = (1, 1, 1); rv.rotation_euler = hit[1].to_track_quat('Z', 'Y').to_euler(); rv.scale = (1, 1, .5)
+            add(rv, bronze, 'head')
+
+    # Corinthian (level 2), after the reference sheet: down past the chin, flared neck guard
+    def keep_cor(c):
+        if c.y < head.y + .005: return c.z > bot
+        return c.z > neck.z - .035
+    cor = envelope('L2_Helmet', body, keep_cor, hc, .014, also=[beard], flare=lambda p: max(0, jaw.z + .01 - p.z) * (.5 if p.y > head.y + .02 else .04))   # neck guard flares; cheek guards close in
+    z = eye.z
+    face = [(.011, z + .014), (.072, z + .014), (.082, z - .002), (.034, z - .03), (.017, z - .058), (.017, bot - .03),
+            (-.017, bot - .03), (-.017, z - .058), (-.034, z - .03), (-.082, z - .002), (-.072, z + .014), (-.011, z + .014),
+            (-.011, z - .048), (0, z - .058), (.011, z - .048)]
+    ny = head.y + .045
+    notch = [(ny - .028, bot - .05), (ny - .026, jaw.z + .006), (ny - .012, jaw.z + .022), (ny + .006, jaw.z + .012), (ny + .014, bot - .05)]
+    trim(cor, [(face, 'Y', lambda c: c.y < head.y - .02), (notch, 'X', lambda c: abs(c.x) > .04)])
+    smart_band = region_shell('L2_HelmetBand', cor, lambda c: eye.z + .022 < c.z < eye.z + .038 and c.y > head.y - .2, .0022)
+    finish(cor, engraved)
+    mod(smart_band, 'SOLIDIFY', thickness=.0015, offset=1); bake_mods(smart_band); add(smart_band, engraved, 'head')
+    rivets('L2_', cor, [(1, -.25, -.1), (-1, -.25, -.1)])
+
+    # Attic (level 3): open face, cheeks covered, a gilded brow
+    att = envelope('L3_Helmet', body, lambda c: c.z > jaw.z - .03 and c.z > neck.z + .02 and (c.y > head.y - .02 or c.z > eye.z + .03), hc, .014,
+                   flare=lambda p: max(0, eye.z - .02 - p.z) * .25)
+    trim(att, [([(.07, z + .016), (.075, z - .06), (.03, jaw.z - .05), (-.03, jaw.z - .05), (-.075, z - .06), (-.07, z + .016)], 'Y', lambda c: c.y < head.y - .02)])
+    finish(att, engraved)
     brim = lathe('L3_Brim', [(.095, 0), (.112, -.004), (.115, -.008)], 48); brim.scale = (.95, 1.08, 1); brim.location = (0, head.y - .005, eye.z + .02)
     mod(brim, 'SOLIDIFY', thickness=.002); bake_mods(brim); add(brim, m_bronze('Gilt', .05, 256), 'head')
+    rivets('L3_', att, [(1, -.1, -.15), (-1, -.1, -.15)])
     pil = lathe('L1_Pilos', [(0, .175), (.03, .165), (.065, .11), (.09, .05), (.1, 0), (.103, -.012)], 48)
     pil.location = (0, head.y + .008, eye.z + .026); pil.scale = (1.04, 1.15, 1); mod(pil, 'SOLIDIFY', thickness=.004); bake_mods(pil)
     add(pil, m_cloth('Felt', '#7d5a36', 250, .1, 512, .95), 'head')
-    # Crests: horsehair on a bronze stilt
-    def crest(name, hexa, hexb, z0, length=.36, tall=.13, width=.04, tail=.18):
-        bm = bmesh.new(); n = 24; rows = []
-        for i in range(n + 1):
-            t = i / n; y = (t - .42) * length
-            h = tall * math.sin(min(1, t * 1.35) * math.pi / 2) ** .7 * (1 - .15 * t)
-            drop = max(0, t - .85) / .15 * tail
-            rows.append([bm.verts.new((sx * width / 2 * (1 - .4 * t), y, (h - drop) * kk + (-drop * .6 if kk == 0 else 0))) for sx in (-1, 1) for kk in (0, 1)])
-        for i in range(n):
-            a, b = rows[i], rows[i + 1]
-            for q in ((a[0], b[0], b[1], a[1]), (a[2], a[3], b[3], b[2]), (a[1], b[1], b[3], a[3]), (a[0], a[2], b[2], b[0])): bm.faces.new(q)
-        ob = obj_from_bm(name, bm); mod(ob, 'SUBSURF', levels=2, render_levels=2); bake_mods(ob)
-        ob.location = (0, head.y + .01, z0)
-        add(ob, m_hair(name + 'Mat', hexa), 'head')
-        st = lathe(name + 'Stilt', [(.008, -.04), (.01, 0), (.014, .012), (.008, .02)], 16); st.location = (0, head.y + .0, z0)
-        add(st, bronze, 'head')
-    top = max((body.matrix_world @ v.co).z for v in body.data.vertices) + .016
-    crest('L2_Crest', '#1d1712', '#e8e0d0', top + .025)
-    crest('L3_Crest', '#8e1a14', '#8e1a14', top + .03, .4, .16, .045)
+
+    # Crests: a fan of horsehair strands seated on the helmet ridge, with a tail down the back
+    def crest(name, hull, hexcol, rise=.15, tail=.5):
+        bvh = BVHTree.FromObject(hull, bpy.context.evaluated_depsgraph_get())
+        def ridge(y):
+            hit = bvh.ray_cast(V((0, y, 3)), V((0, 0, -1)))
+            return hit[0].z if hit[0] else None
+        y0, y1 = head.y - .075, head.y + .105
+        cu = bpy.data.curves.new(name, 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = .0042; cu.bevel_resolution = 0
+        rnd = random.Random(5)
+        def strand(B, ang0, length, k, droop, x_off):
+            pts, p, a = [], B.copy(), ang0
+            steps = 14
+            for i in range(steps + 1):
+                pts.append(p.copy())
+                a += k * length / steps
+                d = V((0, math.sin(a), math.cos(a))); d.z -= droop * (i / steps) ** 2; d.normalize()
+                p += d * (length / steps); p.x += x_off * length / steps
+            sp = cu.splines.new('POLY'); sp.points.add(len(pts) - 1)
+            for i, (pt, q) in enumerate(zip(sp.points, pts)): pt.co = (q.x, q.y, q.z, 1); pt.radius = 1.0 - .65 * i / len(pts)
+        n = 64
+        for i in range(n):   # the fan: short and upright in front, longer and swept back behind
+            t = i / (n - 1); y = y0 + (y1 - y0) * t; zr = ridge(y)
+            if zr is None: continue
+            for sx in (-1, 0, 1):
+                B = V((sx * .005 + rnd.uniform(-.002, .002), y, zr - .004))
+                strand(B, math.radians(-12 + 40 * t) + rnd.uniform(-.06, .06), rise * (.85 + .3 * math.sin(math.pi * min(1, t * 1.15))) * rnd.uniform(.92, 1.06),
+                       2.6 + 2.4 * t, .0, sx * .03)
+        for i in range(34):   # the tail: long strands that arc over and fall down the back
+            y = y1 - .02 + rnd.uniform(-.015, .015); zr = ridge(y) or (eye.z + .1)
+            B = V((rnd.uniform(-.008, .008), y, zr - .004))
+            strand(B, math.radians(55) + rnd.uniform(-.1, .1), tail * rnd.uniform(.8, 1.05), 5.5 + rnd.uniform(-.6, .6), .9, rnd.uniform(-.06, .06))
+        cob = link(bpy.data.objects.new(name, cu)); bpy.context.view_layer.update()
+        me = bpy.data.meshes.new_from_object(cob.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+        bpy.data.objects.remove(cob); bpy.data.curves.remove(cu)
+        ob = link(bpy.data.objects.new(name, me))
+        for pl in me.polygons: pl.use_smooth = True
+        hm = Mat(name + 'Hair', res=0); hm.set(srgb(hexcol), .38)
+        add(ob, hm, 'head')
+        holder = region_shell(name + 'Holder', hull, lambda c: abs(c.x) < .016 and y0 - .01 < c.y < y1 + .01 and c.z > eye.z + .05, .004)
+        mod(holder, 'SOLIDIFY', thickness=.004, offset=1); bake_mods(holder); add(holder, bronze, 'head')
+    crest('L2_Crest', cor, '#141110')
+    crest('L3_Crest', att, '#8c1712', .17, .42)
 
     # Body armour ------------------------------------------------------------
     torso = lambda z0, z1, w: (lambda c: z0 < c.z < z1 and abs(c.x) < w)
     cuirass = region_shell('L3_Cuirass', body, torso(.93, sh_z + .035, .2), .018, 3, .5, guard=.015)
     mod(cuirass, 'SOLIDIFY', thickness=.003, offset=1); mod(cuirass, 'SUBSURF', levels=1, render_levels=1); bake_mods(cuirass)
-    add(cuirass, m_bronze('BronzeCuirass', .25, 1024), 'skin')
+    add(cuirass, m_bronze('BronzeCuirass', .25, 1024, engrave=.3), 'skin')
+    guards = region_shell('L3_ShoulderGuards', body, lambda c: c.z > sh_z - .045 and .055 < abs(c.x) < .2 and abs(c.y) < .1, .03, 3, .5, guard=.026)
+    mod(guards, 'SOLIDIFY', thickness=.003, offset=1); mod(guards, 'BEVEL', width=.0015, segments=2, limit_method='ANGLE'); bake_mods(guards)
+    add(guards, engraved, 'skin')
+    bvh_c = BVHTree.FromObject(cuirass, bpy.context.evaluated_depsgraph_get())
+    hit = bvh_c.ray_cast(V((0, -1, sh_z - .13)), V((0, 1, 0)))
+    if hit[0]:
+        boss = lathe('L3_ChestBoss', [(0, .012), (.03, .009), (.045, .003), (.048, 0)], 32)
+        boss.location = hit[0] + V((0, -.002, 0)); boss.rotation_euler = (math.pi / 2, 0, 0)
+        add(boss, engraved, 'chest')
     lino = region_shell('L2_Linothorax', body, torso(.9, sh_z + .03, .205), .024, 14, .6, guard=.02)
     mod(lino, 'SOLIDIFY', thickness=.005, offset=1); bake_mods(lino)
     add(lino, m_linen_band('Linothorax', '#e4dbc4', '#2b4d8f', 1.0, sh_z - .02), 'skin')
+    yoke = region_shell('L2_Yoke', body, lambda c: sh_z - .04 < c.z < sh_z + .05 and .05 < abs(c.x) < .19 and abs(c.y) < .11, .03, 4, .5, guard=.027)
+    mod(yoke, 'SOLIDIFY', thickness=.005, offset=1); bake_mods(yoke)
+    add(yoke, m_cloth('YokeLinen', '#e4dbc4', 700, .04), 'skin')
     tunic = region_shell('L1_Tunic', body, torso(.9, sh_z + .03, .21), .008, 6, .5, guard=.006)
     mod(tunic, 'SOLIDIFY', thickness=.002, offset=1); bake_mods(tunic)
     add(tunic, m_cloth('Tunic', '#cdbf9c', 500, .08), 'skin')
-    for name, z0 in (('L23_Greaves', 0),):
-        for side in ('l', 'r'):
-            kz, az = J[f'{side}-knee'].z, J[f'{side}-ankle'].z
-            g = region_shell(f'L23_Greave{side.upper()}', body, (lambda kz, az, sx: lambda c: az + .05 < c.z < kz + .05 and c.x * sx > .03)(kz, az, 1 if side == 'l' else -1), .0045, 1, .4, guard=.0035)
-            mod(g, 'SOLIDIFY', thickness=.002, offset=1); mod(g, 'SUBSURF', levels=1, render_levels=1); bake_mods(g)
-            add(g, bronze, f'shin.{side.upper()}')
-    # Pteruges: two layers of strips around the hips
-    def pteruges(name, hexcol, z=.94, n=28, length=.17):
-        bvh = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
-        bm = bmesh.new()
-        for L in range(2):
-            for i in range(n):
-                a = (i + L * .5) / n * 2 * math.pi
-                d = V((math.cos(a), math.sin(a), 0))
-                hit = bvh.ray_cast(V((0, 0, z - L * .04)) + d * .6, -d)
-                r = (hit[0] - V((0, 0, z - L * .04))).length if hit[0] else .18
-                c = V((0, 0, z - L * .04)) + d * (r + .03 + L * .008)
-                ln = length + L * .045
-                m = Matrix.Translation(c - V((0, 0, ln / 2))) @ Matrix.Rotation(math.atan2(d.y, d.x) - math.pi / 2, 4, 'Z') @ Matrix.Rotation(-.1 - L * .04, 4, 'X') @ Matrix.Diagonal((.036, .004, ln, 1))
-                bmesh.ops.create_cube(bm, size=1, matrix=m)
-        ob = obj_from_bm(name, bm, smooth=False)
-        mod(ob, 'BEVEL', width=.0015, segments=1); bake_mods(ob)
-        return ob
-    add(pteruges('L2_Pteruges', '#e4dbc4'), m_cloth('Strips', '#e2d6bc', 400, .05), 'skin')
-    add(pteruges('L3_Pteruges', '#7a2a1c'), m_leather('RedLeather', '#7c2a1c'), 'skin')
+    # Short chiton sleeves on the upper arms
+    for tag, col in (('L1_Sleeves', '#cdbf9c'), ('L23_Sleeves', '#e6dcc4')):
+        def on_upper_arm(c):
+            for sd in ('l', 'r'):
+                S, E = J[f'{sd}-shoulder'], J[f'{sd}-elbow']; u = E - S; t = (c - S).dot(u) / u.length_squared
+                if -.25 < t < .45 and (c - (S + u * t)).length < .09: return True
+            return False
+        sl = region_shell(tag, body, on_upper_arm, .007, 2, .5, guard=.005)
+        mod(sl, 'SOLIDIFY', thickness=.002, offset=1); bake_mods(sl)
+        add(sl, m_cloth(tag + 'Cloth', col, 600, .05), 'skin')
+    # Greaves: from above the knee to the ankle, tied with straps behind the calf
+    leather = m_leather('Leather', '#5a3a20')
+    for side in ('l', 'r'):
+        kz, az = J[f'{side}-knee'].z, J[f'{side}-ankle'].z
+        g = region_shell(f'L23_Greave{side.upper()}', body, (lambda kz, az, sx: lambda c: az + .05 < c.z < kz + .075 and c.x * sx > .03)(kz, az, 1 if side == 'l' else -1), .0045, 1, .4, guard=.0035)
+        mod(g, 'SOLIDIFY', thickness=.002, offset=1); mod(g, 'BEVEL', width=.001, segments=2, limit_method='ANGLE'); mod(g, 'SUBSURF', levels=1, render_levels=1); bake_mods(g)
+        add(g, bronze, f'shin.{side.upper()}')
+        bvh_g = BVHTree.FromObject(g, bpy.context.evaluated_depsgraph_get())
+        for k, zz in enumerate((kz - .1, az + .09)):
+            ring = []
+            for i in range(32):
+                a = i / 32 * 2 * math.pi; d = V((math.cos(a), math.sin(a), 0)); cx = V((J[f'{side}-knee'].x * .5 + J[f'{side}-ankle'].x * .5, 0, zz))
+                h = bvh_g.ray_cast(cx + d * .3, -d)
+                ring.append((h[0] + d * .002) if h[0] else cx + d * .05)
+            cu = bpy.data.curves.new('strap', 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = .0035
+            sp = cu.splines.new('POLY'); sp.points.add(len(ring) - 1); sp.use_cyclic_u = True
+            for pt, q in zip(sp.points, ring): pt.co = (q.x, q.y, q.z, 1)
+            cob = link(bpy.data.objects.new('strap', cu)); bpy.context.view_layer.update()
+            me = bpy.data.meshes.new_from_object(cob.evaluated_get(bpy.context.evaluated_depsgraph_get())); bpy.data.objects.remove(cob); bpy.data.curves.remove(cu)
+            st = link(bpy.data.objects.new(f'L23_GreaveStrap{side.upper()}{k}', me)); add(st, leather, f'shin.{side.upper()}')
+    # Baldric across the chest (right shoulder to left hip) and a xiphos at the hip
+    bvh_b = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
+    def strap_path(front):
+        pts = []
+        for i in range(25):
+            t = i / 24; x = -.12 + .3 * t; zz = sh_z + .05 - (sh_z + .05 - .95) * t
+            o = V((x, -1 if front else 1, zz)); h = bvh_b.ray_cast(o, V((0, 1 if front else -1, 0)))
+            if h[0]: pts.append((h[0] + h[1] * .034, h[1]))
+        return pts
+    bm = bmesh.new()
+    for front in (True, False):
+        P = strap_path(front); row = []
+        for i, (p, nrm) in enumerate(P):
+            dvec = (P[min(i + 1, len(P) - 1)][0] - P[max(i - 1, 0)][0]).normalized(); w = dvec.cross(nrm).normalized() * .02
+            row.append((bm.verts.new(p - w), bm.verts.new(p + w)))
+        for i in range(len(row) - 1): bm.faces.new((row[i][0], row[i + 1][0], row[i + 1][1], row[i][1]))
+    bald = obj_from_bm('L23_Baldric', bm); mod(bald, 'SOLIDIFY', thickness=.003); bake_mods(bald)
+    add(bald, leather, 'skin')
+    scab = lathe('L23_Scabbard', [(0, -.48), (.016, -.45), (.028, -.3), (.03, -.08), (.028, 0)], 16); scab.scale = (1, .35, 1)
+    hilt = lathe('L23_Hilt', [(.0, .14), (.022, .135), (.022, .12), (.012, .11), (.014, .05), (.05, .03), (.05, .015), (.02, 0)], 16); hilt.scale = (1, .45, 1)
+    for o, mt in ((scab, leather), (hilt, bronze)):
+        o.location = (.2, .03, .96); o.rotation_euler = (math.radians(-35), math.radians(10), 0); add(o, mt, 'hips')
 
-    # Sandals --------------------------------------------------------------
-    leather = m_leather('Leather', '#6a4022')
+    # Sandals: sole with straps over the toes, instep and ankle, laced above it
     for side in ('l', 'r'):
         S = side.upper(); an = J[f'{side}-ankle']
         foot_pts = [(body.matrix_world @ v.co) for v in body.data.vertices if (body.matrix_world @ v.co).z < .03 and abs((body.matrix_world @ v.co).x - an.x) < .09]
@@ -468,9 +595,23 @@ def kit(body, J):
         bmesh.ops.convex_hull(bm, input=bm.verts)
         so = obj_from_bm(f'Sole{S}', bm, False); mod(so, 'BEVEL', width=.003, segments=2); bake_mods(so)
         so.scale = (1.06, 1.04, 1); add(so, leather, f'foot.{S}')
-        for zz, yy, rr in ((an.z + .015, an.y + .01, .047), (.045, an.y - .1, .045)):
-            st = lathe(f'Strap{S}{zz:.2f}', [(rr, -.006), (rr + .002, 0), (rr, .006)], 24); st.location = (an.x, yy, zz); st.scale = (1, 1.15, 1)
-            add(st, leather, f'foot.{S}')
+        bvh_f = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
+        for k, (yy, zz, tilt) in enumerate(((an.y - .15, .03, 0), (an.y - .1, .05, .25), (an.y - .045, .07, .5), (an.y, an.z + .015, 0), (an.y + .005, an.z + .055, 0))):
+            ring = []
+            for i in range(28):
+                a = i / 28 * 2 * math.pi; d = V((math.cos(a), math.sin(a) * math.sin(tilt) * 0, math.sin(a)))
+                d = V((math.cos(a), -math.sin(tilt) * math.sin(a) * .0, math.sin(a)))
+                cx = V((an.x, yy, zz))
+                if tilt == 0 and k >= 3: d = V((math.cos(a), math.sin(a), 0))
+                h = bvh_f.ray_cast(cx + d * .2, -d, .25)
+                q = (h[0] + h[1] * .002) if h[0] else cx + d * .04
+                ring.append(V((q.x, q.y, max(q.z, .011))))
+            cu = bpy.data.curves.new('sstrap', 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = .0028
+            sp = cu.splines.new('POLY'); sp.points.add(len(ring) - 1); sp.use_cyclic_u = True
+            for pt, q in zip(sp.points, ring): pt.co = (q.x, q.y, q.z, 1)
+            cob = link(bpy.data.objects.new('sstrap', cu)); bpy.context.view_layer.update()
+            me = bpy.data.meshes.new_from_object(cob.evaluated_get(bpy.context.evaluated_depsgraph_get())); bpy.data.objects.remove(cob); bpy.data.curves.remove(cu)
+            st = link(bpy.data.objects.new(f'Strap{S}{k}', me)); add(st, leather, f'foot.{S}')
 
     # Shield and spear: built about their own origin (shield: +Z faces the enemy,
     # spear: +Z towards the point, grip at the origin) and put in the hands later.
@@ -763,6 +904,8 @@ def bake_textures(items):
     for name, (ob, mt, bind) in items.items():
         if mt.res == 0:   # flat colours need no texture
             ob.data.materials.clear(); ob.data.materials.append(mt.m); continue
+        if not ob.data.polygons:
+            print('empty mesh, skipped:', ob.name); continue
         if not ob.data.uv_layers: smart_uv(ob)
         key_ = (mt.m.name, ob.name)
         imgs = {}
@@ -806,6 +949,35 @@ def bake_textures(items):
         print('baked', ob.name, list(imgs))
 
 
+def pteruges(name, skirt, body, z=.95, n=28, length=.17):
+    """Two layers of leather strips laid over the draped skirt, so they follow its flare; bronze studs at the ends."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    hulls = [BVHTree.FromObject(o, dg) for o in (skirt, body)]
+    def surf(o, d):   # outermost of skirt and body along a horizontal ray towards the axis
+        best = None
+        for h in hulls:
+            hit = h.ray_cast(o + d * .6, -d)
+            if hit[0] and (best is None or (hit[0] - o).length > (best[0] - o).length): best = hit
+        return best
+    bm, bs = bmesh.new(), bmesh.new()
+    for L in range(2):
+        ln, off = length + L * .045, .006 + L * .006
+        for i in range(n):
+            a = (i + L * .5) / n * 2 * math.pi; d = V((math.cos(a), math.sin(a), 0)); side = V((-d.y, d.x, 0))
+            rows = []
+            for k in range(9):
+                zz = z - L * .035 - ln * k / 8; o = V((0, 0, zz)); hit = surf(o, d)
+                p = (hit[0] + d * off) if hit else o + d * (.2 + off)
+                rows.append((bm.verts.new(p - side * .017), bm.verts.new(p + side * .017)))
+            for k in range(8): bm.faces.new((rows[k][0], rows[k][1], rows[k + 1][1], rows[k + 1][0]))
+            end = (rows[-1][0].co + rows[-1][1].co) / 2 * .6 + (rows[-2][0].co + rows[-2][1].co) / 2 * .4
+            bmesh.ops.create_uvsphere(bs, u_segments=10, v_segments=6, radius=1,
+                                      matrix=Matrix.Translation(end + d * .003) @ Matrix.Diagonal((.008, .008, .008, 1)))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    ob = obj_from_bm(name, bm); mod(ob, 'SOLIDIFY', thickness=.004, offset=1); bake_mods(ob)
+    return ob, obj_from_bm(name + 'Studs', bs)
+
+
 # ── Build ───────────────────────────────────────────────────────────────────
 def build():
     body, J = build_body()
@@ -814,12 +986,14 @@ def build():
     # cloth
     sk = chiton('L23_Chiton', '#e6dcc4'); drape('L23_Chiton', sk, lambda c: c.z > .985, body)
     items['L23_Chiton'] = (sk, m_cloth('Chiton', '#e6dcc4', 600), 'skin')
+    pt, studs = pteruges('L23_Pteruges', sk, body)
+    items[pt.name] = (pt, m_leather('DarkLeather', '#3d2416'), 'skin'); items[studs.name] = (studs, m_bronze('Studs', .3, 256), 'skin')
     sk1 = chiton('L1_Skirt', '#cdbf9c', .97, .66); drape('L1_Skirt', sk1, lambda c: c.z > .955, body)
     items['L1_Skirt'] = (sk1, m_cloth('TunicSkirt', '#cdbf9c', 500, .08), 'skin')
     top = J['l-shoulder'].z + .04
     for nm, col in (('L1_Cloak', '#1e1a18'), ('L3_Cloak', '#7a1414')):
         ck = cloak(nm, top); drape(nm, ck, lambda c, t=top: c.z > t - .016, body, 70, .2)   # pinned across the upper back; the sides fall free
-        items[nm] = (ck, m_cloth(nm + 'Wool', col, 300, .12, 1024), 'skin')
+        items[nm] = (ck, m_cloth(nm + 'Wool', col, 300, .12, 512), 'skin')
     bake_textures(items)
     rig = build_armature(skeleton_spec(J), J)
     rig.data.pose_position = 'REST'; _upd()
@@ -841,7 +1015,7 @@ def export(rig, path):
     rig.animation_data.action = bpy.data.actions['Idle']; SC.frame_set(1)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_animation_mode='ACTIONS',
                               export_def_bones=False, export_force_sampling=True, export_optimize_animation_size=True,
-                              export_image_format='JPEG', export_jpeg_quality=85, export_yup=True)
+                              export_image_format='JPEG', export_jpeg_quality=78, export_yup=True)
     print('exported', path, os.path.getsize(path) // 1024, 'KB')
 
 def render(rig, path, action='Idle', frame=1, level=2, cam=((2.0, -3.1, 1.4), (85, 0, 33)), res=(420, 560), samples=32, hide=()):
