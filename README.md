@@ -66,6 +66,17 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 - Your hero stays off the field. Their Attack and Defence add to every stack. Their Power scales the god power, which can be used once per battle, or twice with a Temple.
 - You win by destroying every enemy stack. Retreating saves the hero but loses the whole army. The **☠ Danger** button shows the combined enemy threat range.
 
+## 3D models (Blender)
+
+The Hoplite line is modelled, rigged and animated by a Blender script in a Heroes III style: heroic proportions, bold silhouettes, a big painted shield and saturated colours.
+
+- `tools/blender/hoplite.py` builds the model with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`.
+- One body and skeleton carry all three levels. Each piece of kit is a separate node named after its level (`L1_` Ephebe, `L2_` Hoplite, `L3_` Sacred Band, `L23_` shared by levels 2 and 3), so a renderer shows one level by toggling nodes by name.
+- Animations: Idle, Walk, Thrust, Block, Hit and Death. The spear and shield are bones that the hands reach by IK.
+- Shading is baked into the vertex colours as ambient occlusion, for a painted look without extra textures.
+
+The game still draws units as emoji; the models are used by the 3D preview while the art direction is settled.
+
 ## Code layout
 
 | File | Contents |
