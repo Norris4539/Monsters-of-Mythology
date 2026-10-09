@@ -1,449 +1,579 @@
-"""Builds the Heroes III-style Hoplite line in Blender and exports it as one glTF.
+"""Realistic Hoplite line, built in Blender and exported as one glTF.
 
 Run with Blender's Python (pip install bpy pillow):
-    python tools/blender/hoplite.py assets/models [--renders] [--blend]
-Writes hoplite.glb (and optionally preview stills and the .blend file).
-tools/blender/glb2json.py turns the .glb into a self-contained .json glTF for
-hosts that cannot serve binary model files.
+    python tools/blender/fetch_makehuman.py third_party/makehuman
+    python tools/blender/hoplite.py third_party/makehuman assets/models [--renders]
+The first command downloads the MakeHuman base mesh and shape targets (CC0).
 
-One body and skeleton carry all three levels; each piece of kit is a separate
-object whose name starts with its level tag, so the game shows one level at a
-time by name:
-    L1_  Ephebe       felt pilos, undyed tunic, black chlamys, plain shield
-    L2_  Hoplite      Corinthian helmet, linothorax, greaves, Gorgon shield
-    L3_  Sacred Band  crested Attic helmet, bronze muscle cuirass, crimson cloak, club shield
-    L23_ shared by levels 2 and 3 (greaves, beard)
-Untagged objects are worn by every level.
+Body: the MakeHuman base mesh morphed to a young, athletic Mediterranean man, 1.76 m.
+Kit at historical scale, fitted to the body: the muscle cuirass, linothorax and
+greaves are grown from the body's own surface; the chiton and cloaks are draped
+with Blender's cloth simulation. Materials are procedural and baked to textures
+(colour, roughness, normal) so they survive export to the browser.
 
-Animations (24 fps): Idle, Walk, Thrust, Block, Hit, Death.
-The spear and shield are bones; the hands reach them by IK, so an animation
-only moves the body, the spear, the shield and the feet.
+Levels share one skeleton and animation set; kit nodes are named L1_, L2_, L3_
+or L23_ (levels 2 and 3), the rest are worn by every level.
 """
 import bpy, bmesh, math, os, sys, random
-from mathutils import Vector, Matrix, Euler
+from mathutils import Vector, Matrix
 from mathutils.bvhtree import BVHTree
+V = Vector
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from mhbody import load_mh
 
-OUT = next((a for a in sys.argv[1:] if os.path.isdir(a)), os.path.dirname(os.path.abspath(__file__)))
-random.seed(7)
+ARGS = [a for a in sys.argv[1:] if os.path.isdir(a)]
+MH, OUT = ARGS[0], ARGS[1]
+random.seed(11)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 SC = bpy.context.scene
-V = Vector
+SC.render.engine = 'CYCLES'; SC.cycles.device = 'CPU'
 
 
-# ── Helpers ─────────────────────────────────────────────────────────────────
-def link(ob):
-    SC.collection.objects.link(ob)
+# ── Generic helpers ─────────────────────────────────────────────────────────
+def link(ob): SC.collection.objects.link(ob); return ob
+
+def obj_from_bm(name, bm, smooth=True):
+    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    ob = link(bpy.data.objects.new(name, me))
+    for p in me.polygons: p.use_smooth = smooth
     return ob
 
-MATS = {}
-def mat(name, color, metal=0.0, rough=0.6, image=None):
-    if name in MATS:
-        return MATS[name]
-    m = bpy.data.materials.new(name); m.use_nodes = True
-    b = m.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (*color, 1)
-    b.inputs['Metallic'].default_value = metal
-    b.inputs['Roughness'].default_value = rough
-    if image:
-        t = m.node_tree.nodes.new('ShaderNodeTexImage'); t.image = image
-        m.node_tree.links.new(t.outputs['Color'], b.inputs['Base Color'])
-    MATS[name] = m
+def bake_mods(ob):
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    old = ob.data; ob.modifiers.clear(); ob.data = me
+    if old.users == 0: bpy.data.meshes.remove(old)
+    return ob
+
+def mod(ob, kind, **kw):
+    m = ob.modifiers.new(kind.lower(), kind)
+    for k, v in kw.items(): setattr(m, k, v)
     return m
+
+def activate(ob):
+    bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); bpy.context.view_layer.objects.active = ob
+
+def lathe(name, prof, segs=48):
+    bm = bmesh.new()
+    vs = [bm.verts.new((r, 0, z)) for r, z in prof]
+    es = [bm.edges.new((vs[i], vs[i + 1])) for i in range(len(vs) - 1)]
+    bmesh.ops.spin(bm, geom=vs + es, cent=(0, 0, 0), axis=(0, 0, 1), angle=2 * math.pi, steps=segs, use_duplicate=False)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    return obj_from_bm(name, bm)
+
+def smart_uv(ob, margin=.02):
+    activate(ob); bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=margin)
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 def srgb(h):
     h = h.lstrip('#'); c = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
     return tuple(x / 12.92 if x <= .04045 else ((x + .055) / 1.055) ** 2.4 for x in c)
 
-# Heroes III palette: saturated, warm, readable at small size.
-C = {
-    'skin': srgb('#d08a5c'), 'bronze': srgb('#c98a3a'), 'bronzeDk': srgb('#8a5a24'), 'gold': srgb('#e7b84a'),
-    'linen': srgb('#e9dfc4'), 'tunic': srgb('#d8c9a2'), 'leather': srgb('#7a4422'), 'leatherRed': srgb('#8e2a1c'),
-    'crimson': srgb('#a3161a'), 'black': srgb('#1c1714'), 'felt': srgb('#8a6438'), 'wood': srgb('#b88752'),
-    'hair': srgb('#2e1d12'), 'iron': srgb('#9aa0a6'), 'crestRed': srgb('#c0171a'), 'blue': srgb('#2d4f9e'),
-    'white': srgb('#f1ece0'), 'eye': srgb('#f4efe6'), 'iris': srgb('#3a2414'),
-}
 
-def obj_from_bm(name, bm, material=None, smooth=True):
-    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
-    ob = link(bpy.data.objects.new(name, me))
-    if material: me.materials.append(material)
-    if smooth:
-        for p in me.polygons: p.use_smooth = True
-    return ob
+# ── Body ────────────────────────────────────────────────────────────────────
+TARGETS = [('caucasian-male-young.target', .8), ('african-male-young.target', .1), ('asian-male-young.target', .1),
+           ('universal-male-young-maxmuscle-averageweight.target', .7), ('universal-male-young-averagemuscle-minweight.target', .3)]
+HEIGHT = 1.76
 
-def bake_mods(ob):
-    """Apply all modifiers by replacing the mesh with its evaluated copy."""
-    dg = bpy.context.evaluated_depsgraph_get()
-    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
-    old = ob.data; ob.modifiers.clear(); ob.data = me
-    bpy.data.meshes.remove(old)
-    return ob
-
-def subsurf(ob, lv=2):
-    m = ob.modifiers.new('sub', 'SUBSURF'); m.levels = lv; m.render_levels = lv
-    return bake_mods(ob)
-
-def solidify(ob, t, offset=-1):
-    m = ob.modifiers.new('sol', 'SOLIDIFY'); m.thickness = t; m.offset = offset
-    return bake_mods(ob)
-
-def lathe(name, prof, segs=48, material=None, smooth=True):
-    """Spin a (radius, z) profile around Z."""
-    bm = bmesh.new()
-    vs = [bm.verts.new((r, 0, z)) for r, z in prof]
-    es = [bm.edges.new((vs[i], vs[i + 1])) for i in range(len(vs) - 1)]
-    bmesh.ops.spin(bm, geom=vs + es, cent=(0, 0, 0), axis=(0, 0, 1), angle=2 * math.pi, steps=segs, use_duplicate=False)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
-    return obj_from_bm(name, bm, material, smooth)
-
-def metaballs(name, elems, res=.016, thresh=.6, material=None):
-    """elems: (kind, centre, radius, size or (a, b) for capsules, stiffness)."""
-    mb = bpy.data.metaballs.new(name); mb.resolution = res; mb.render_resolution = res; mb.threshold = thresh
-    ob = link(bpy.data.objects.new(name, mb))
-    for kind, p, r, size, stiff in elems:
-        e = mb.elements.new()
-        e.radius = r; e.stiffness = stiff
-        if kind == 'SEG':
-            a, b = V(p), V(size); d = b - a
-            e.type = 'CAPSULE'; e.co = (a + b) / 2; e.size_x = d.length / 2
-            e.rotation = d.normalized().to_track_quat('X', 'Z')
-        else:
-            e.type = kind; e.co = V(p)
-            if kind == 'ELLIPSOID': e.size_x, e.size_y, e.size_z = size
-    bpy.context.view_layer.update()
-    dg = bpy.context.evaluated_depsgraph_get()
-    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
-    bpy.data.objects.remove(ob); bpy.data.metaballs.remove(mb)
-    out = link(bpy.data.objects.new(name, me))
+def build_body():
+    vs, vts, groups, J = load_mh(os.path.join(MH, 'base.obj'), [(os.path.join(MH, f), w) for f, w in TARGETS])
+    ground = J['ground'].z
+    used = sorted({i for fc in groups['body'] for i, _ in fc})
+    k = HEIGHT / (max(vs[i].z for i in used) - ground)
+    for v in vs: v.z -= ground; v *= k
+    for j in J: J[j] = (J[j] - V((0, 0, ground))) * k
+    remap = {o: n for n, o in enumerate(used)}
+    me = bpy.data.meshes.new('Body')
+    me.from_pydata([tuple(vs[i]) for i in used], [], [[remap[i] for i, _ in fc] for fc in groups['body']])
+    uv = me.uv_layers.new(name='UV'); li = 0
+    for fc in groups['body']:
+        for _, t in fc: uv.data[li].uv = vts[t] if t is not None else (0, 0); li += 1
+    ob = link(bpy.data.objects.new('Body', me))
     for p in me.polygons: p.use_smooth = True
-    if material: me.materials.append(material)
-    return out
+    return ob, J
 
-def B(p, r, st=2.5): return ('BALL', p, r, None, st)
-def E(p, r, s, st=2.5): return ('ELLIPSOID', p, r, s, st)
-def S(a, b, r, st=2.5): return ('SEG', a, r, b, st)
+def region_shell(name, src, keep, offset, smooth=0, factor=.5, guard=None):
+    """Copy the faces of src whose centre passes keep(), push them out along the
+    normals and optionally smooth them, never closer than `guard` to src."""
+    bm = bmesh.new(); bm.from_mesh(src.data); bm.normal_update()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not keep(f.calc_center_median())], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    for v in bm.verts: v.co += v.normal * offset
+    for layer in list(bm.loops.layers.uv.values()): bm.loops.layers.uv.remove(layer)
+    for _ in range(smooth):
+        bmesh.ops.smooth_vert(bm, verts=bm.verts, factor=factor, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    if guard:
+        bvh = BVHTree.FromObject(src, bpy.context.evaluated_depsgraph_get())
+        for v in bm.verts:
+            loc, no, fi, d = bvh.find_nearest(v.co)
+            if loc is not None and d < guard:
+                dirv = (v.co - loc); dirv = dirv.normalized() if dirv.length > 1e-6 else no
+                v.co = loc + dirv * guard
+    return obj_from_bm(name, bm)
 
-def shade_flat_ok(ob):
-    for p in ob.data.polygons: p.use_smooth = True
+
+def envelope(name, src, keep, centre, guard, iters=60):
+    """A smooth hull over part of src: radii from `centre` are averaged with their
+    neighbours but never come closer than `guard` to src. Bridges over lips and
+    chin like a helmet does, leaving a ridge over the nose."""
+    bm = bmesh.new(); bm.from_mesh(src.data); bm.normal_update()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not keep(f.calc_center_median())], context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    for layer in list(bm.loops.layers.uv.values()): bm.loops.layers.uv.remove(layer)
+    bvh = BVHTree.FromObject(src, bpy.context.evaluated_depsgraph_get())
+    dirs, rmin = [], []
+    for v in bm.verts:
+        d = (v.co - centre).normalized(); dirs.append(d)
+        hit = bvh.ray_cast(centre, d, .3)   # first surface outward from inside the skull
+        rb = (hit[0] - centre).length if hit[0] else (v.co - centre).length
+        rmin.append(max(rb, min((v.co - centre).length, rb + .01)) + guard)
+    bm.verts.index_update()
+    r = list(rmin)
+    nbr = [[e.other_vert(v).index for e in v.link_edges] for v in bm.verts]
+    for _ in range(iters):
+        r = [max(rmin[i], .5 * r[i] + .5 * sum(r[j] for j in nbr[i]) / max(1, len(nbr[i]))) for i in range(len(r))]
+    for i, v in enumerate(bm.verts): v.co = centre + dirs[i] * r[i]
+    return obj_from_bm(name, bm)
+
+# ── Procedural materials, baked to textures later ───────────────────────────
+class Mat:
+    """A node-built material. color/rough/bump are output sockets fed to a Principled BSDF."""
+    def __init__(self, name, metal=0.0, res=512, sss=0.0):
+        self.m = bpy.data.materials.new(name); self.m.use_nodes = True
+        self.nt = self.m.node_tree; self.N = self.nt.nodes; self.L = self.nt.links
+        self.bsdf = self.N['Principled BSDF']; self.bsdf.inputs['Metallic'].default_value = metal
+        if sss: self.bsdf.inputs['Subsurface Weight'].default_value = sss
+        self.res = res; self.metal = metal
+        self.coord = self.N.new('ShaderNodeTexCoord')
+    def node(self, kind, **inputs):
+        n = self.N.new(kind)
+        for k, v in inputs.items():
+            if k in n.inputs and not hasattr(v, 'links'): n.inputs[k].default_value = v
+            elif hasattr(v, 'links'): self.L.new(v, n.inputs[k])
+            else: setattr(n, k, v)
+        return n
+    def noise(self, scale, detail=4, rough=.5, vec='Object', **kw):
+        n = self.node('ShaderNodeTexNoise', Scale=scale, Detail=detail, Roughness=rough)
+        self.L.new(self.coord.outputs[vec], n.inputs['Vector']); return n
+    def ramp(self, fac, stops):
+        r = self.N.new('ShaderNodeValToRGB'); self.L.new(fac, r.inputs['Fac'])
+        cr = r.color_ramp; cr.elements[0].position, cr.elements[0].color = stops[0][0], (*stops[0][1], 1)
+        cr.elements[1].position, cr.elements[1].color = stops[-1][0], (*stops[-1][1], 1)
+        for p, c in stops[1:-1]: e = cr.elements.new(p); e.color = (*c, 1)
+        return r
+    def mix(self, a, b, fac, blend='MIX'):
+        n = self.N.new('ShaderNodeMix'); n.data_type = 'RGBA'; n.blend_type = blend
+        for sock, v in (('A', a), ('B', b)):
+            s = n.inputs[sock] if sock == 'A' else n.inputs[sock]
+            tgt = [i for i in n.inputs if i.name == sock and i.type == 'RGBA'][0]
+            if hasattr(v, 'links'): self.L.new(v, tgt)
+            else: tgt.default_value = (*v, 1)
+        f = n.inputs['Factor'] if 'Factor' in n.inputs else n.inputs[0]
+        if hasattr(fac, 'links'): self.L.new(fac, f)
+        else: f.default_value = fac
+        return [o for o in n.outputs if o.type == 'RGBA'][0]
+    def set(self, color=None, rough=None, bump=None, bump_strength=.4, bump_dist=.002):
+        if color is not None:
+            if hasattr(color, 'links'): self.L.new(color, self.bsdf.inputs['Base Color'])
+            else: self.bsdf.inputs['Base Color'].default_value = (*color, 1)
+        if rough is not None:
+            if hasattr(rough, 'links'): self.L.new(rough, self.bsdf.inputs['Roughness'])
+            else: self.bsdf.inputs['Roughness'].default_value = rough
+        if bump is not None:
+            b = self.node('ShaderNodeBump', Strength=bump_strength, Distance=bump_dist)
+            self.L.new(bump, b.inputs['Height']); self.L.new(b.outputs['Normal'], self.bsdf.inputs['Normal'])
+        return self
+
+def m_bronze(name='Bronze', patina=.35, res=512):
+    m = Mat(name, metal=1.0, res=res)
+    big = m.noise(6, 6, .55); fine = m.noise(80, 3, .6)
+    vor = m.node('ShaderNodeTexVoronoi', Scale=55.0); m.L.new(m.coord.outputs['Object'], vor.inputs['Vector'])
+    base = m.ramp(big.outputs['Fac'], [(.3, srgb('#7a4f24')), (.55, srgb('#b07a3c')), (.75, srgb('#d6a45a'))])
+    pat = m.ramp(m.noise(14, 5, .65).outputs['Fac'], [(.55, (0, 0, 0)), (.75, (1, 1, 1))])
+    col = m.mix(base.outputs['Color'], srgb('#4f7f62'), pat.outputs['Color'])
+    col = m.mix(col, base.outputs['Color'], 1 - patina)
+    rough = m.ramp(fine.outputs['Fac'], [(.35, (.22, .22, .22)), (.7, (.5, .5, .5))])
+    m.set(col, rough.outputs['Color'], vor.outputs['Distance'], .25, .0015)
+    return m
+
+def m_skin(eye=None):
+    m = Mat('Skin', res=1024, sss=.12)
+    m.bsdf.inputs['Subsurface Radius'].default_value = (.9, .35, .2)
+    tone = m.noise(9, 5, .55)
+    col = m.ramp(tone.outputs['Fac'], [(.35, srgb('#a2643f')), (.55, srgb('#bb7a52')), (.75, srgb('#c98e66'))])
+    red = m.ramp(m.noise(3, 3, .5).outputs['Fac'], [(.5, (0, 0, 0)), (.75, (1, 1, 1))])
+    c2 = m.mix(col.outputs['Color'], srgb('#b2563f'), red.outputs['Color'])
+    c2 = m.mix(col.outputs['Color'], c2, .35)
+    if eye is not None:   # eyebrows painted into the skin: a tapered arch of fine strokes
+        sep = m.node('ShaderNodeSeparateXYZ'); m.L.new(m.coord.outputs['Object'], sep.inputs['Vector'])
+        ax = m.node('ShaderNodeMath', operation='ABSOLUTE'); m.L.new(sep.outputs['X'], ax.inputs[0])
+        arch = m.node('ShaderNodeMath', operation='MULTIPLY_ADD'); m.L.new(ax.outputs[0], arch.inputs[0]); arch.inputs[1].default_value = -.12; arch.inputs[2].default_value = eye.z + .024
+        dz = m.node('ShaderNodeMath', operation='SUBTRACT'); m.L.new(sep.outputs['Z'], dz.inputs[0]); m.L.new(arch.outputs[0], dz.inputs[1])
+        adz = m.node('ShaderNodeMath', operation='ABSOLUTE'); m.L.new(dz.outputs[0], adz.inputs[0])
+        band = m.node('ShaderNodeMapRange', **{'From Min': .0055, 'From Max': .002}); m.L.new(adz.outputs[0], band.inputs['Value'])
+        span = m.node('ShaderNodeMapRange', **{'From Min': .056, 'From Max': .03}); m.L.new(ax.outputs[0], span.inputs['Value'])
+        inner = m.node('ShaderNodeMapRange', **{'From Min': .008, 'From Max': .014}); m.L.new(ax.outputs[0], inner.inputs['Value'])
+        front = m.node('ShaderNodeMapRange', **{'From Min': eye.y + .02, 'From Max': eye.y + .005}); m.L.new(sep.outputs['Y'], front.inputs['Value'])
+        strokes = m.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='X', Scale=900.0, Distortion=2.0); m.L.new(m.coord.outputs['Object'], strokes.inputs['Vector'])
+        mk = band.outputs[0]
+        for other in (span.outputs[0], inner.outputs[0], front.outputs[0], strokes.outputs['Fac']):
+            mm = m.node('ShaderNodeMath', operation='MULTIPLY'); m.L.new(mk, mm.inputs[0]); m.L.new(other, mm.inputs[1]); mk = mm.outputs[0]
+        c2 = m.mix(c2, srgb('#2a1a10'), mk)
+    pores = m.noise(900, 2, .5)
+    m.set(c2, .52, pores.outputs['Fac'], .15, .0006)
+    return m
+
+def m_cloth(name, hexcol, weave=600, var=.06, res=512, rough=.9):
+    m = Mat(name, res=res)
+    w1 = m.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='X', Scale=weave); m.L.new(m.coord.outputs['UV'], w1.inputs['Vector'])
+    w2 = m.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='Y', Scale=weave); m.L.new(m.coord.outputs['UV'], w2.inputs['Vector'])
+    weave_ = m.mix(w1.outputs['Color'], w2.outputs['Color'], .5)
+    c = srgb(hexcol); dark = tuple(x * (1 - var * 3) for x in c)
+    col = m.ramp(m.noise(18, 4, .6).outputs['Fac'], [(.3, dark), (.7, c)])
+    m.set(col.outputs['Color'], rough, weave_, .25, .001)
+    return m
+
+def m_linen_band(name, base, band, top, bot):
+    """Linen with painted borders (object-space Z bands) in a stepped meander colour."""
+    m = m_cloth(name, base, 700, .04, 1024)
+    cloth_col = m.bsdf.inputs['Base Color'].links[0].from_socket
+    sep = m.node('ShaderNodeSeparateXYZ'); m.L.new(m.coord.outputs['Object'], sep.inputs['Vector'])
+    masks = []
+    for z0 in (top, bot):
+        d = m.node('ShaderNodeMath', operation='SUBTRACT'); m.L.new(sep.outputs['Z'], d.inputs[0]); d.inputs[1].default_value = z0
+        a_ = m.node('ShaderNodeMath', operation='ABSOLUTE'); m.L.new(d.outputs[0], a_.inputs[0])
+        lt = m.node('ShaderNodeMath', operation='LESS_THAN'); m.L.new(a_.outputs[0], lt.inputs[0]); lt.inputs[1].default_value = .022
+        masks.append(lt)
+    mx = m.node('ShaderNodeMath', operation='MAXIMUM'); m.L.new(masks[0].outputs[0], mx.inputs[0]); m.L.new(masks[1].outputs[0], mx.inputs[1])
+    wave = m.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='X', Scale=40.0); m.L.new(m.coord.outputs['Object'], wave.inputs['Vector'])
+    pat = m.ramp(wave.outputs['Fac'], [(.45, srgb(band)), (.55, srgb('#a8322a'))])
+    col = m.mix(cloth_col, pat.outputs['Color'], mx.outputs[0])
+    m.L.new(col, m.bsdf.inputs['Base Color'])
+    return m
+
+def m_leather(name, hexcol, res=512):
+    m = Mat(name, res=res)
+    grain = m.node('ShaderNodeTexVoronoi', Scale=180.0); m.L.new(m.coord.outputs['Object'], grain.inputs['Vector'])
+    c = srgb(hexcol)
+    col = m.ramp(m.noise(20, 5, .6).outputs['Fac'], [(.3, tuple(x * .6 for x in c)), (.7, c)])
+    m.set(col.outputs['Color'], .62, grain.outputs['Distance'], .2, .001)
+    return m
+
+def m_wood(name='Ash', res=512):
+    m = Mat(name, res=res)
+    mp = m.node('ShaderNodeMapping'); m.L.new(m.coord.outputs['Object'], mp.inputs['Vector']); mp.inputs['Scale'].default_value = (60, 60, 1.5)
+    w = m.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='X', Scale=1.0, Distortion=3.0, Detail=4.0); m.L.new(mp.outputs['Vector'], w.inputs['Vector'])
+    col = m.ramp(w.outputs['Fac'], [(.2, srgb('#8a6238')), (.6, srgb('#b48a5a')), (.9, srgb('#c49c6c'))])
+    m.set(col.outputs['Color'], .55, w.outputs['Fac'], .1, .001)
+    return m
+
+def m_iron(name='Iron', res=256):
+    m = Mat(name, metal=1.0, res=res)
+    col = m.ramp(m.noise(30, 5, .6).outputs['Fac'], [(.4, srgb('#5d5f62')), (.7, srgb('#9ea2a6'))])
+    m.set(col.outputs['Color'], .38, m.noise(120, 3).outputs['Fac'], .2, .0008)
+    return m
+
+def m_hair(name, hexcol, res=512):
+    m = Mat(name, res=res)
+    w = m.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='Z', Scale=180.0, Distortion=4.0, Detail=3.0); m.L.new(m.coord.outputs['Object'], w.inputs['Vector'])
+    c = srgb(hexcol)
+    col = m.ramp(w.outputs['Fac'], [(.2, tuple(x * .5 for x in c)), (.8, c)])
+    m.set(col.outputs['Color'], .7, w.outputs['Fac'], .6, .002)
+    return m
+
+def m_flat(name, hexcol, rough=.5, metal=0.0):
+    m = Mat(name, metal=metal, res=0); m.set(srgb(hexcol), rough); return m
+
+def m_painted(name, img, metal_bg=False, res=1024):
+    """Painted shield face: the blazon worn through to bronze at chips and the rim."""
+    m = Mat(name, metal=0.0, res=res)
+    t = m.node('ShaderNodeTexImage'); t.image = img; m.L.new(m.coord.outputs['UV'], t.inputs['Vector'])
+    chips = m.ramp(m.noise(22, 6, .7).outputs['Fac'], [(.66, (0, 0, 0)), (.7, (1, 1, 1))])
+    dirt = m.ramp(m.noise(5, 4, .6).outputs['Fac'], [(.3, (1, 1, 1)), (.8, (.75, .7, .62))])
+    col = m.mix(t.outputs['Color'], srgb('#b07a3c'), chips.outputs['Color'])
+    col = m.mix(col, dirt.outputs['Color'], 1.0, 'MULTIPLY')
+    rough = m.ramp(chips.outputs['Color'], [(0, (.55, .55, .55)), (1, (.3, .3, .3))])
+    m.set(col, rough.outputs['Color'], m.noise(60, 4).outputs['Fac'], .15, .001)
+    return m
 
 
-# ── Body (heroic proportions, A-pose) ──────────────────────────────────────
-K = 1.7
-def body():
-    el = [E((0, 0, 1.0), .16 * K, (.95, .75, .8)), E((0, .005, 1.14), .135 * K, (.9, .72, .9)), E((0, 0, 1.32), .19 * K, (1.2, .74, .85), 2.2)]
-    for s in (-1, 1):
-        el += [E((s * .085, -.07, 1.37), .09 * K, (1, .55, .7), 3.5), B((s * .215, 0, 1.445), .09 * K, 3.2),
-               E((s * .11, .02, 1.49), .075 * K, (1.2, .8, .7), 3), E((s * .12, .07, 1.32), .095 * K, (.8, .5, 1.2), 3)]
-    el += [S((0, 0, 1.48), (0, -.01, 1.64), .065 * K)]
-    for s in (-1, 1):
-        sh, elb, wr, ha = V((s * .22, 0, 1.44)), V((s * .4, .01, 1.22)), V((s * .54, -.02, 1.03)), V((s * .6, -.03, .95))
-        el += [S(sh, elb, .055 * K), E(sh.lerp(elb, .45) + V((0, .015, 0)), .066 * K, (1, .82, .82), 3.5),
-               S(elb, wr, .042 * K), E(elb.lerp(wr, .3), .056 * K, (1, .85, .85), 3.5), E(ha, .048 * K, (.65, 1, 1.15), 3)]
-        hp, kn, an, toe = V((s * .1, 0, .95)), V((s * .12, -.01, .52)), V((s * .12, .02, .1)), V((s * .12, -.13, .03))
-        el += [S(hp, kn, .075 * K), E(hp.lerp(kn, .45) + V((0, -.02, 0)), .09 * K, (.9, .9, 1.3), 3),
-               B(kn + V((0, -.02, 0)), .055 * K, 3), S(kn, an, .05 * K), E(kn.lerp(an, .3) + V((0, .035, 0)), .066 * K, (.85, .9, 1.3), 3.5),
-               S(an + V((0, .01, -.05)), toe, .045 * K, 3)]
-    return metaballs('Body', el, .015, material=mat('Skin', C['skin'], 0, .55))
-
-def head():
-    el = [E((0, -.005, 1.735), .1 * K, (.92, 1, 1.08), 2.5), E((0, -.04, 1.655), .068 * K, (1, .95, .85), 3),
-          S((0, -.098, 1.722), (0, -.118, 1.685), .018 * K, 4), E((0, -.088, 1.742), .05 * K, (1.45, .45, .35), 4),
-          B((0, -.08, 1.612), .034 * K, 3.5)]
-    for s in (-1, 1):
-        el += [B((s * .045, -.075, 1.695), .03 * K, 3.5), E((s * .098, -.005, 1.71), .025 * K, (.5, 1, 1.4), 4)]
-    h = metaballs('Head', el, .008, material=mat('Skin', C['skin']))
-    for s in (-1, 1):
-        for nm, r, y, col in (('EyeW', .014, -.083, C['eye']), ('Iris', .008, -.094, C['iris'])):
-            bpy.ops.mesh.primitive_uv_sphere_add(radius=r, segments=16, ring_count=10, location=(s * .036, y, 1.712))
-            e = bpy.context.object; e.name = f'{nm}{"RL"[s > 0]}'; e.data.materials.append(mat(nm, col, 0, .2)); shade_flat_ok(e)
-    return h
-
-def curls(name, pts, r, material, jitter=.008):
-    el = [B(V(p) + V((random.uniform(-jitter, jitter), random.uniform(-jitter, jitter), random.uniform(-jitter, jitter))), r * K * random.uniform(.85, 1.15), 4.5) for p in pts]
-    return metaballs(name, el, .006, material=material)
-
-def beard():
-    pts = []
-    for i in range(26):
-        a = -1.25 + 2.5 * i / 25
-        for z, rr in ((1.645, .078), (1.615, .07), (1.59, .055)):
-            if abs(a) > 1.05 and z < 1.6: continue
-            pts.append((math.sin(a) * rr, -math.cos(a) * rr * .95 - .035, z))
-    pts += [(s * .02, -.1, 1.665) for s in (-1, 0, 1)]
-    return curls('L23_Beard', pts, .016, mat('Hair', C['hair'], 0, .8))
-
-def hair():
-    pts = []
-    for i in range(30):
-        a = math.pi * (.35 + 1.3 * i / 29)
-        for z in (1.68, 1.715, 1.75):
-            pts.append((math.sin(a) * .1, -math.cos(a) * .1 + .005, z))
-    return curls('Hair', pts, .017, mat('Hair', C['hair'], 0, .8))
+# ── Shield blazons (painted in the black-figure manner) ─────────────────────
+def blazon(kind):
+    from PIL import Image, ImageDraw, ImageFilter
+    S = 1024; im = Image.new('RGB', (S, S), (0, 0, 0)); d = ImageDraw.Draw(im); m = S / 2
+    blk, red, cream = (26, 20, 16), (128, 30, 22), (226, 214, 188)
+    if kind == 1:   # Ephebe: plain ochre with the lambda of the city levy
+        d.rectangle((0, 0, S, S), fill=(170, 120, 60))
+        d.polygon([(m, 210), (m + 210, 760), (m + 120, 760), (m, 420), (m - 120, 760), (m - 210, 760)], fill=blk)
+    elif kind == 2:   # Hoplite: gorgoneion on bronze
+        d.rectangle((0, 0, S, S), fill=(176, 122, 60))
+        for k in range(18):
+            a = k / 18 * 2 * math.pi
+            pts = [(m + math.cos(a + t * .5) * (175 + t * 150), m + math.sin(a + t * .5) * (175 + t * 150)) for t in [i / 10 for i in range(11)]]
+            d.line(pts, fill=blk, width=22, joint='curve'); x, y = pts[-1]; d.ellipse((x - 18, y - 18, x + 18, y + 18), fill=blk)
+        d.ellipse((m - 185, m - 185, m + 185, m + 185), fill=blk)
+        for dx in (-72, 72):
+            d.ellipse((m + dx - 40, m - 80, m + dx + 40, m - 10), fill=cream); d.ellipse((m + dx - 17, m - 62, m + dx + 17, m - 28), fill=red)
+        d.chord((m - 100, m + 10, m + 100, m + 140), 0, 180, fill=cream); d.ellipse((m - 26, m + 60, m + 26, m + 170), fill=red)
+        for t in range(-4, 5): d.line((m + t * 20, m + 75, m + t * 20, m + 100), fill=blk, width=7)
+    else:   # Sacred Band: club of Heracles on cream with a red border
+        d.rectangle((0, 0, S, S), fill=cream); d.ellipse((40, 40, S - 40, S - 40), outline=red, width=46)
+        d.polygon([(m - 40, m + 330), (m + 40, m + 330), (m + 120, m - 300), (m, m - 380), (m - 120, m - 300)], fill=blk)
+        for k in range(10):
+            t = k / 9; y = m + 260 - t * 600; w = 50 + 70 * t; x = m + (w if k % 2 else -w)
+            d.ellipse((x - 34, y - 34, x + 34, y + 34), fill=blk)
+    im = im.filter(ImageFilter.GaussianBlur(1.2))
+    p = os.path.join(OUT, f'blazon{kind}.png'); im.save(p)
+    img = bpy.data.images.load(p); img.pack(); return img
 
 
 # ── Kit ─────────────────────────────────────────────────────────────────────
-HEAD_C = V((0, -.005, 1.735))
+def kit(body, J):
+    out = {}   # name -> (object, material, bind)  bind: bone name for rigid, 'skin' for skinned
+    def add(ob, mt, bind): out[ob.name] = (ob, mt, bind); return ob
+    head, neck, eye = J['head'], J['neck'], J['l-eye']
+    sh_z = J['l-shoulder'].z
 
-def corinthian():
-    """Bronze shell with the T-shaped face opening, flared neck guard and a tall crest."""
-    prof = [(0, .145), (.05, .14), (.095, .11), (.122, .06), (.13, 0), (.128, -.06), (.122, -.11), (.13, -.15), (.15, -.17)]
-    h = lathe('L2_Helmet', prof, 56, mat('Bronze', C['bronze'], .85, .32))
-    h.scale = (.9, 1.0, 1.0); h.location = HEAD_C + V((0, 0, .005))
-    bpy.context.view_layer.update()
-    # Face opening: eye slots joined to a vertical slot down the middle.
+    # Hair, beard, brows: thin shells grown from the face
+    def in_beard(c):
+        mz = J['mouth'].z
+        if c.z > mz + .014 or c.z < J['jaw'].z - .08 or c.y > head.y + .02 or c.z < neck.z + .03: return False
+        if c.z > mz - .004 and abs(c.x) > .03: return False          # keep the cheeks bare above the mouth
+        return abs(c.x) < .072
+    beard = region_shell('L23_Beard', body, in_beard, .0, 0)
+    bvh_b = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
+    bm = bmesh.new(); bm.from_mesh(beard.data); bm.normal_update(); bm.verts.index_update()
+    edge = [v for v in bm.verts if v.is_boundary]; dist = {v.index: 0 for v in edge}; front = list(edge)
+    while front:   # hops from the beard's edge
+        nxt = []
+        for v in front:
+            for e in v.link_edges:
+                o = e.other_vert(v)
+                if o.index not in dist: dist[o.index] = dist[v.index] + 1; nxt.append(o)
+        front = nxt
+    nz = lambda p: math.sin(p.x * 310) * math.sin(p.z * 270 + p.x * 90) * math.sin(p.y * 330)
+    for v in bm.verts:
+        k = min(1, dist.get(v.index, 0) / 4)
+        chin = max(0, (J['mouth'].z - .02 - v.co.z)) * .35
+        loc, no, fi, d = bvh_b.find_nearest(v.co)
+        nrm = no if no is not None else v.normal   # the skin's outward normal
+        v.co = (loc if loc is not None else v.co) + nrm * ((.0018 + .0042 * k + chin * .7 * k) * (1 + .3 * nz(v.co)))
+    bm.to_mesh(beard.data); bm.free()
+    mod(beard, 'SUBSURF', levels=1, render_levels=1); bake_mods(beard)
+    add(beard, m_hair('Beard', '#46301e'), 'head')
+    hair = region_shell('Hair', body, lambda c: (c.z > eye.z + .045 and c.y > eye.y + .055) or (c.z > eye.z + .085) or (c.z > J['jaw'].z - .01 and c.y > head.y + .035 and c.z > neck.z + .04), .006, 3, .5, guard=.005)
+    add(hair, m_hair('Hair', '#2a1a10'), 'head')
+    for s, side in ((1, 'l'), (-1, 'r')):
+        e = J[f'{side}-eye']
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=.0118, segments=24, ring_count=16, location=e + V((0, .004, 0)))
+        ob = bpy.context.object; ob.name = 'Eye' + side.upper()
+        em = Mat('Eye', res=128)
+        grad = em.node('ShaderNodeTexGradient', gradient_type='SPHERICAL')
+        mp = em.node('ShaderNodeMapping'); em.L.new(em.coord.outputs['Object'], mp.inputs['Vector']); mp.inputs['Scale'].default_value = (95, 95, 95); mp.inputs['Location'].default_value = (0, .0118 * 95, 0)   # centre the iris on the front of the eye
+        em.L.new(mp.outputs['Vector'], grad.inputs['Vector'])
+        col = em.ramp(grad.outputs['Fac'], [(.0, srgb('#efe8de')), (.55, srgb('#efe8de')), (.6, srgb('#4a2c18')), (.85, srgb('#2a170c')), (.88, (0.01, .01, .01))])
+        em.set(col.outputs['Color'], .15)
+        add(ob, em, 'head')
+
+    # Helmets ---------------------------------------------------------------
+    bronze = m_bronze('Bronze', .3, 512)
+    hc = V((0, eye.y + .085, eye.z - .005))   # centre of the skull
+    def helmet_shell(name, open_face=False):
+        keep = lambda c: c.z > J['jaw'].z - .045 and c.z > neck.z + .02 and (c.y > head.y - .02 or c.z > eye.z + .03 or not open_face)
+        return envelope(name, body, keep, hc, .014)
+    cor = helmet_shell('L2_Helmet')
+    # Corinthian T-shaped opening: eye slits joined to a central slot over the mouth
     bm = bmesh.new()
-    for x0, x1, z0, z1 in ((-.075, .075, -.005, .03), (-.022, .022, -.17, .03)):
-        bmesh.ops.create_cube(bm, size=1, matrix=Matrix.Translation(((x0 + x1) / 2, -.12, (z0 + z1) / 2)) @ Matrix.Diagonal((x1 - x0, .12, z1 - z0, 1)))
-    cut = obj_from_bm('cut', bm, smooth=False); cut.location = h.location
-    bo = h.modifiers.new('cut', 'BOOLEAN'); bo.object = cut; bo.operation = 'DIFFERENCE'; bo.solver = 'EXACT'
-    bake_mods(h); bpy.data.objects.remove(cut)
-    solidify(h, .008); subsurf(h, 1)
-    crest = crest_mesh('L2_Crest', C['black'], C['white'], h.location + V((0, .01, .14)), length=.34, tall=.15)
-    return [h, crest]
-
-def crest_mesh(name, ca, cb, at, length=.34, tall=.15, width=.045, transverse=False):
-    """Horsehair crest: a curved fin with a ridge of stripes, plus the trailing tail."""
+    for x0, x1, z0, z1 in ((-.068, -.009, eye.z - .02, eye.z + .017), (.009, .068, eye.z - .02, eye.z + .017), (-.019, .019, J['jaw'].z - .08, eye.z - .018)):
+        bmesh.ops.create_cube(bm, size=1, matrix=Matrix.Translation(((x0 + x1) / 2, head.y - .12, (z0 + z1) / 2)) @ Matrix.Diagonal((x1 - x0, .14, z1 - z0, 1)))
+    cut = obj_from_bm('cut', bm, False); mod(cor, 'BOOLEAN', object=cut, operation='DIFFERENCE', solver='EXACT'); bake_mods(cor); bpy.data.objects.remove(cut)
+    mod(cor, 'SOLIDIFY', thickness=.003, offset=1); mod(cor, 'SUBSURF', levels=1, render_levels=1); bake_mods(cor)
+    add(cor, bronze, 'head')
+    att = helmet_shell('L3_Helmet', open_face=True)
     bm = bmesh.new()
-    n = 18
-    rows = []
-    for i in range(n + 1):
-        t = i / n; y = (t - .5) * length
-        top = tall * (math.sin(t * math.pi) ** .6) * (1.08 - .25 * t)
-        tail = max(0, t - .78) * 2.6
-        rows.append([bm.verts.new((sx * width / 2 * (1 - .2 * abs(t - .5)), y, top * k - tail * (k * .55))) for sx in (-1, 1) for k in (0, 1)])
-    for i in range(n):
-        a, b = rows[i], rows[i + 1]
-        for q in ((a[0], b[0], b[1], a[1]), (a[2], a[3], b[3], b[2]), (a[1], b[1], b[3], a[3]), (a[0], a[2], b[2], b[0])):
-            bm.faces.new(q)
-    ob = obj_from_bm(name, bm, mat('Crest' + name, ca, 0, .85))
-    ob.data.materials.append(mat('Crest2' + name, cb, 0, .85))
-    for p in ob.data.polygons:   # stripes across the fin
-        p.material_index = int((p.center.y / length + .5) * 7) % 2
-    if transverse: ob.rotation_euler.z = math.pi / 2
-    ob.location = at
-    subsurf(ob, 2)
-    holder = lathe(name + 'Holder', [(.012, 0), (.016, .02), (.01, .03)], 16, mat('Bronze', C['bronze']))
-    holder.location = at - V((0, 0, .02))
-    return [ob, holder]
+    bmesh.ops.create_cube(bm, size=1, matrix=Matrix.Translation((0, head.y - .09, (eye.z - .03 + J['jaw'].z - .08) / 2)) @ Matrix.Diagonal((.13, .12, (eye.z + .012) - (J['jaw'].z - .08), 1)))
+    cut = obj_from_bm('cut', bm, False); mod(att, 'BOOLEAN', object=cut, operation='DIFFERENCE', solver='EXACT'); bake_mods(att); bpy.data.objects.remove(cut)
+    mod(att, 'SOLIDIFY', thickness=.003, offset=1); mod(att, 'SUBSURF', levels=1, render_levels=1); bake_mods(att)
+    add(att, bronze, 'head')
+    brim = lathe('L3_Brim', [(.095, 0), (.112, -.004), (.115, -.008)], 48); brim.scale = (.95, 1.08, 1); brim.location = (0, head.y - .005, eye.z + .02)
+    mod(brim, 'SOLIDIFY', thickness=.002); bake_mods(brim); add(brim, m_bronze('Gilt', .05, 256), 'head')
+    pil = lathe('L1_Pilos', [(0, .175), (.03, .165), (.065, .11), (.09, .05), (.1, 0), (.103, -.012)], 48)
+    pil.location = (0, head.y + .008, eye.z + .026); pil.scale = (1.04, 1.15, 1); mod(pil, 'SOLIDIFY', thickness=.004); bake_mods(pil)
+    add(pil, m_cloth('Felt', '#7d5a36', 250, .1, 512, .95), 'head')
+    # Crests: horsehair on a bronze stilt
+    def crest(name, hexa, hexb, z0, length=.36, tall=.13, width=.04, tail=.18):
+        bm = bmesh.new(); n = 24; rows = []
+        for i in range(n + 1):
+            t = i / n; y = (t - .42) * length
+            h = tall * math.sin(min(1, t * 1.35) * math.pi / 2) ** .7 * (1 - .15 * t)
+            drop = max(0, t - .85) / .15 * tail
+            rows.append([bm.verts.new((sx * width / 2 * (1 - .4 * t), y, (h - drop) * kk + (-drop * .6 if kk == 0 else 0))) for sx in (-1, 1) for kk in (0, 1)])
+        for i in range(n):
+            a, b = rows[i], rows[i + 1]
+            for q in ((a[0], b[0], b[1], a[1]), (a[2], a[3], b[3], b[2]), (a[1], b[1], b[3], a[3]), (a[0], a[2], b[2], b[0])): bm.faces.new(q)
+        ob = obj_from_bm(name, bm); mod(ob, 'SUBSURF', levels=2, render_levels=2); bake_mods(ob)
+        ob.location = (0, head.y + .01, z0)
+        add(ob, m_hair(name + 'Mat', hexa), 'head')
+        st = lathe(name + 'Stilt', [(.008, -.04), (.01, 0), (.014, .012), (.008, .02)], 16); st.location = (0, head.y + .0, z0)
+        add(st, bronze, 'head')
+    top = max((body.matrix_world @ v.co).z for v in body.data.vertices) + .016
+    crest('L2_Crest', '#1d1712', '#e8e0d0', top + .025)
+    crest('L3_Crest', '#8e1a14', '#8e1a14', top + .03, .4, .16, .045)
 
-def attic():
-    """Attic helmet: open face, brow peak, hinged cheek guards, tall red crest and a gilded brow band."""
-    prof = [(0, .15), (.055, .143), (.1, .11), (.125, .055), (.132, 0), (.128, -.03), (.136, -.05)]
-    h = lathe('L3_Helmet', prof, 56, mat('Bronze', C['bronze'], .85, .32)); h.scale = (.9, 1.0, 1.0); h.location = HEAD_C + V((0, 0, .04))
-    solidify(h, .008); subsurf(h, 1)
-    parts = [h]
-    peak = lathe('L3_Peak', [(.118, .0), (.15, -.012), (.155, -.016)], 40, mat('Gold', C['gold'], 1, .25))
-    peak.location = HEAD_C + V((0, -.012, .055)); peak.scale = (.92, 1.02, 1)
-    parts.append(peak)
-    for s in (-1, 1):
+    # Body armour ------------------------------------------------------------
+    torso = lambda z0, z1, w: (lambda c: z0 < c.z < z1 and abs(c.x) < w)
+    cuirass = region_shell('L3_Cuirass', body, torso(.93, sh_z + .035, .2), .018, 3, .5, guard=.015)
+    mod(cuirass, 'SOLIDIFY', thickness=.003, offset=1); mod(cuirass, 'SUBSURF', levels=1, render_levels=1); bake_mods(cuirass)
+    add(cuirass, m_bronze('BronzeCuirass', .25, 1024), 'skin')
+    lino = region_shell('L2_Linothorax', body, torso(.9, sh_z + .03, .205), .024, 14, .6, guard=.02)
+    mod(lino, 'SOLIDIFY', thickness=.005, offset=1); bake_mods(lino)
+    add(lino, m_linen_band('Linothorax', '#e4dbc4', '#2b4d8f', 1.0, sh_z - .02), 'skin')
+    tunic = region_shell('L1_Tunic', body, torso(.9, sh_z + .03, .21), .008, 6, .5, guard=.006)
+    mod(tunic, 'SOLIDIFY', thickness=.002, offset=1); bake_mods(tunic)
+    add(tunic, m_cloth('Tunic', '#cdbf9c', 500, .08), 'skin')
+    for name, z0 in (('L23_Greaves', 0),):
+        for side in ('l', 'r'):
+            kz, az = J[f'{side}-knee'].z, J[f'{side}-ankle'].z
+            g = region_shell(f'L23_Greave{side.upper()}', body, (lambda kz, az, sx: lambda c: az + .05 < c.z < kz + .05 and c.x * sx > .03)(kz, az, 1 if side == 'l' else -1), .0045, 1, .4, guard=.0035)
+            mod(g, 'SOLIDIFY', thickness=.002, offset=1); mod(g, 'SUBSURF', levels=1, render_levels=1); bake_mods(g)
+            add(g, bronze, f'shin.{side.upper()}')
+    # Pteruges: two layers of strips around the hips
+    def pteruges(name, hexcol, z=.94, n=28, length=.17):
+        bvh = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
         bm = bmesh.new()
-        pts = [(0, 0), (.0, -.11), (-.03, -.135), (-.07, -.12), (-.085, -.04), (-.07, 0)]
-        vs = [bm.verts.new((s * .118, y + .02, z)) for y, z in [(p[0] * -1 - .0, p[1]) for p in pts]]
-        bm.faces.new(vs)
-        ch = obj_from_bm(f'L3_Cheek{"RL"[s > 0]}', bm, mat('Bronze', C['bronze']))
-        ch.location = HEAD_C + V((0, -.05, .02)); solidify(ch, .007); subsurf(ch, 1)
-        parts.append(ch)
-    parts += crest_mesh('L3_Crest', C['crestRed'], C['crestRed'], h.location + V((0, .0, .145)), length=.4, tall=.2, width=.055)
-    return parts
+        for L in range(2):
+            for i in range(n):
+                a = (i + L * .5) / n * 2 * math.pi
+                d = V((math.cos(a), math.sin(a), 0))
+                hit = bvh.ray_cast(V((0, 0, z - L * .04)) + d * .6, -d)
+                r = (hit[0] - V((0, 0, z - L * .04))).length if hit[0] else .18
+                c = V((0, 0, z - L * .04)) + d * (r + .03 + L * .008)
+                ln = length + L * .045
+                m = Matrix.Translation(c - V((0, 0, ln / 2))) @ Matrix.Rotation(math.atan2(d.y, d.x) - math.pi / 2, 4, 'Z') @ Matrix.Rotation(-.1 - L * .04, 4, 'X') @ Matrix.Diagonal((.036, .004, ln, 1))
+                bmesh.ops.create_cube(bm, size=1, matrix=m)
+        ob = obj_from_bm(name, bm, smooth=False)
+        mod(ob, 'BEVEL', width=.0015, segments=1); bake_mods(ob)
+        return ob
+    add(pteruges('L2_Pteruges', '#e4dbc4'), m_cloth('Strips', '#e2d6bc', 400, .05), 'skin')
+    add(pteruges('L3_Pteruges', '#7a2a1c'), m_leather('RedLeather', '#7c2a1c'), 'skin')
 
-def pilos():
-    p = lathe('L1_Pilos', [(0, .2), (.03, .19), (.07, .13), (.1, .06), (.112, .0), (.116, -.02)], 40, mat('Felt', C['felt'], 0, .9))
-    p.location = HEAD_C + V((0, 0, .05)); solidify(p, .006)
-    return [p]
-
-def torso_shell(name, grow, material, z0=.93, z1=1.52, abs_=True):
-    el = [E((0, 0, 1.0), .16 * K + grow, (.95, .75, .8)), E((0, .005, 1.14), .135 * K + grow, (.9, .72, .9)),
-          E((0, 0, 1.32), .19 * K + grow, (1.2, .74, .85), 2.2)]
-    for s in (-1, 1):
-        el += [E((s * .085, -.07, 1.37), .09 * K + grow, (1, .55, .7), 3.5), E((s * .11, .02, 1.49), .075 * K + grow * .5, (1.2, .8, .7), 3),
-               E((s * .12, .07, 1.32), .095 * K + grow, (.8, .5, 1.2), 3)]
-        if abs_:
-            for z in (1.2, 1.12, 1.04):
-                el.append(E((s * .045, -.105, z), .038 * K, (1, .55, .7), 5))
-    ob = metaballs(name, el, .014, material=material)
-    bm = bmesh.new(); bm.from_mesh(ob.data)
-    for co, no in ((V((0, 0, z0)), V((0, 0, -1))), (V((0, 0, z1)), V((0, 0, 1)))):
-        bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co, plane_no=no, clear_outer=True)
-    # arm holes
-    for s in (-1, 1):
-        res = bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(s * .25, 0, 0), plane_no=(s, 0, 0), clear_outer=True)
-    bm.to_mesh(ob.data); bm.free()
-    return solidify(ob, .01, 1)
-
-def muscle_cuirass():
-    c = torso_shell('L3_Cuirass', .012, mat('Bronze', C['bronze'], .85, .32))
-    for z, r in ((.935, .17), (1.515, .085)):
-        band = lathe('L3_CuirassLip' + str(z), [(r * 1.02 + .012, z - .008), (r * 1.02 + .016, z), (r * 1.02 + .012, z + .008)], 48, mat('Gold', C['gold'], 1, .25))
-        band.scale = (1.15 if z < 1 else 1.0, .8, 1)
-    return [c]
-
-def linothorax():
-    m = mat('Linen', C['linen'], 0, .85)
-    body_ = lathe('L2_Linothorax', [(.18, .93), (.175, 1.0), (.168, 1.1), (.18, 1.25), (.2, 1.38), (.19, 1.46), (.12, 1.53)], 48, m)
-    body_.scale = (1.12, .85, 1)
-    band = lathe('L2_LinoBand', [(.184, 1.06), (.186, 1.1), (.184, 1.14)], 48, mat('Meander', C['blue'], 0, .8)); band.scale = (1.12, .85, 1)
-    scales = lathe('L2_LinoScales', [(.183, 1.15), (.188, 1.2), (.19, 1.26)], 48, mat('BronzeDk', C['bronzeDk'], .8, .4)); scales.scale = (1.12, .85, 1)
-    out = [body_, band, scales]
-    for s in (-1, 1):   # shoulder yoke flaps
+    # Sandals --------------------------------------------------------------
+    leather = m_leather('Leather', '#6a4022')
+    for side in ('l', 'r'):
+        S = side.upper(); an = J[f'{side}-ankle']
+        foot_pts = [(body.matrix_world @ v.co) for v in body.data.vertices if (body.matrix_world @ v.co).z < .03 and abs((body.matrix_world @ v.co).x - an.x) < .09]
         bm = bmesh.new()
-        bmesh.ops.create_cube(bm, size=1, matrix=Matrix.Translation((s * .14, 0, 1.5)) @ Matrix.Diagonal((.13, .28, .03, 1)))
-        f = obj_from_bm(f'L2_Yoke{"RL"[s > 0]}', bm, m); f.rotation_euler.y = s * -.35
-        bev = f.modifiers.new('b', 'BEVEL'); bev.width = .012; bev.segments = 2; bake_mods(f)
-        out.append(f)
+        for p in foot_pts: bm.verts.new((p.x, p.y, 0.0)); bm.verts.new((p.x, p.y, .012))
+        bmesh.ops.convex_hull(bm, input=bm.verts)
+        so = obj_from_bm(f'Sole{S}', bm, False); mod(so, 'BEVEL', width=.003, segments=2); bake_mods(so)
+        so.scale = (1.06, 1.04, 1); add(so, leather, f'foot.{S}')
+        for zz, yy, rr in ((an.z + .015, an.y + .01, .047), (.045, an.y - .1, .045)):
+            st = lathe(f'Strap{S}{zz:.2f}', [(rr, -.006), (rr + .002, 0), (rr, .006)], 24); st.location = (an.x, yy, zz); st.scale = (1, 1.15, 1)
+            add(st, leather, f'foot.{S}')
+
+    # Shield, spear, sword -------------------------------------------------
+    for lv in (1, 2, 3):
+        R, rim = .45, .045
+        face = lathe(f'L{lv}_ShieldFace', [(0, .12), (.15, .113), (.28, .09), (.37, .055), (R - rim, .01)], 64)
+        me = face.data; uvl = me.uv_layers.new(name='UV')
+        for poly in me.polygons:
+            for li in poly.loop_indices:
+                co = me.vertices[me.loops[li].vertex_index].co
+                uvl.data[li].uv = (co.x / (2 * (R - rim)) + .5, co.y / (2 * (R - rim)) + .5)
+        rimo = lathe(f'L{lv}_ShieldRim', [(R - rim, .01), (R - rim * .5, .02), (R, .012), (R + .004, -.005), (R - .006, -.012)], 64)
+        back = lathe(f'L{lv}_ShieldBack', [(0, .1), (.2, .085), (R - .01, -.012)], 48)
+        for o in (face, rimo, back): o.rotation_euler.x = math.pi / 2; o.location = SHIELD_C
+        add(face, m_painted(f'Blazon{lv}', blazon(lv)), 'shield'); add(rimo, bronze, 'shield'); add(back, m_wood('ShieldWood'), 'shield')
+        por = lathe(f'L{lv}_Porpax', [(.05, -.012), (.055, 0), (.05, .012)], 24); por.rotation_euler.x = math.pi / 2; por.location = SHIELD_C + V((0, .14, 0)); por.scale = (1, .6, 1)
+        add(por, bronze, 'shield')
+    ash, iron = m_wood('Ash'), m_iron()
+    L0, L1 = .8, 1.45
+    shaft = lathe('SpearShaft', [(0, -L0), (.013, -L0 + .01), (.0145, 0), (.013, L1), (0, L1 + .005)], 12)
+    head_ = lathe('SpearHead', [(.013, L1 - .03), (.026, L1 + .05), (.022, L1 + .16), (0, L1 + .27)], 8); head_.scale = (1, .3, 1)
+    butt = lathe('SpearButt', [(0, -L0 - .2), (.014, -L0 - .02), (.0135, -L0 + .02)], 8)
+    for o, mt in ((shaft, ash), (head_, iron), (butt, bronze)):
+        o.rotation_euler = (-math.pi / 2 + .06, 0, 0); o.location = SPEAR_GRIP; add(o, mt, 'spear')
     return out
 
-def skirt(name, color, top=.99, bottom=.74, r0=.17, r1=.24, folds=14):
-    o = lathe(name, [(r0, top), (r0 * .5 + r1 * .5, (top + bottom) / 2), (r1, bottom)], 64, mat('Cloth' + name, color, 0, .9))
-    for v in o.data.vertices:
-        a = math.atan2(v.co.y, v.co.x); k = (top - v.co.z) / (top - bottom)
-        f = 1 + .06 * math.sin(a * folds) * k
-        v.co.x *= f; v.co.y *= f * .82
-    return o
 
-def pteruges(name, color, z=.94, n=26, length=.17, r=.2, layers=2):
-    obs = []
-    bm = bmesh.new()
-    for L in range(layers):
-        for i in range(n):
-            a = (i + L * .5) / n * 2 * math.pi
-            c = V((math.cos(a) * (r + L * .008) * 1.12, math.sin(a) * (r + L * .008) * .86, z - L * .05))
-            ln = length + L * .04
-            m = Matrix.Translation(c - V((0, 0, ln / 2))) @ Matrix.Rotation(-a + math.pi / 2, 4, 'Z') @ Matrix.Rotation(.12 + L * .05, 4, 'X') @ Matrix.Diagonal((.035, .008, ln, 1))
-            bmesh.ops.create_cube(bm, size=1, matrix=m)
-    ob = obj_from_bm(name, bm, mat('Ptery' + name, color, 0, .75), smooth=False)
+# ── Cloth: drape the chiton skirt and the cloaks with the cloth simulator ───
+def drape(name, src_ob, pin_fn, collider, frames=45, mass=.3, thickness=.004):
+    co = mod(collider, 'COLLISION'); collider.collision.thickness_outer = .006
+    cl = mod(src_ob, 'CLOTH'); s = cl.settings
+    s.quality = 8; s.mass = mass; s.tension_stiffness = 10; s.compression_stiffness = 10; s.bending_stiffness = .08
+    s.air_damping = 1.5
+    vg = src_ob.vertex_groups.new(name='pin')
+    vg.add([v.index for v in src_ob.data.vertices if pin_fn(v.co)], 1.0, 'REPLACE')
+    s.vertex_group_mass = 'pin'
+    cl.collision_settings.distance_min = .006; cl.collision_settings.use_self_collision = False
+    cl.point_cache.frame_start = 1; cl.point_cache.frame_end = frames
+    for f in range(1, frames + 1): SC.frame_set(f)
+    bake_mods(src_ob)
+    src_ob.vertex_groups.clear()
+    collider.modifiers.remove(collider.modifiers['collision'])
+    SC.frame_set(1)
+    mod(src_ob, 'SOLIDIFY', thickness=thickness, offset=1); bake_mods(src_ob)
+    return src_ob
+
+def chiton(name, hexcol, z0=1.0, z1=.68):
+    bm = bmesh.new(); nr, nz = 56, 18
+    rows = []
+    for j in range(nz + 1):
+        z = z0 - (z0 - z1) * j / nz; r = .17 + .08 * j / nz
+        rows.append([bm.verts.new((math.cos(a) * r * 1.12, math.sin(a) * r * .9, z)) for a in [2 * math.pi * i / nr for i in range(nr)]])
+    for j in range(nz):
+        for i in range(nr): bm.faces.new((rows[j][i], rows[j][(i + 1) % nr], rows[j + 1][(i + 1) % nr], rows[j + 1][i]))
+    ob = obj_from_bm(name, bm)
     return ob
 
-def greaves():
-    out = []
-    for s in (-1, 1):
-        g = lathe(f'L23_Greave{"RL"[s > 0]}', [(.052, .13), (.06, .2), (.075, .3), (.072, .4), (.066, .48), (.07, .53)], 32, mat('Bronze', C['bronze'], .85, .32))
-        g.location = (s * .12, .025, 0); g.scale = (1, .95, 1)
-        solidify(g, .006)
-        out.append(g)
-    return out
-
-def sandals():
-    out = []
-    for s in (-1, 1):
-        bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1, matrix=Matrix.Translation((s * .12, -.05, .008)) @ Matrix.Diagonal((.1, .27, .016, 1)))
-        so = obj_from_bm(f'Sandal{"RL"[s > 0]}', bm, mat('Leather', C['leather'], 0, .7), smooth=False)
-        bev = so.modifiers.new('b', 'BEVEL'); bev.width = .006; bev.segments = 2; bake_mods(so)
-        out.append(so)
-        for zz in (.07, .11):
-            st = lathe(f'SandalStrap{"RL"[s > 0]}{zz}', [(.052, zz - .008), (.054, zz), (.052, zz + .008)], 20, mat('Leather', C['leather']))
-            st.location = (s * .12, .02, 0); out.append(st)
-    return out
-
-def blazon_image(kind):
-    """Paint a shield face in the Heroes III manner: flat colour, bold shapes, dark outline."""
-    from PIL import Image, ImageDraw
-    S = 512; im = Image.new('RGBA', (S, S)); d = ImageDraw.Draw(im); m = S / 2
-    if kind == 'L1':
-        d.ellipse((0, 0, S, S), fill=(198, 152, 74)); d.ellipse((60, 60, S - 60, S - 60), outline=(40, 26, 14), width=16)
-        d.polygon([(m, 120), (m + 120, 380), (m + 70, 380), (m, 220), (m - 70, 380), (m - 120, 380)], fill=(40, 26, 14))   # lambda for Lakedaimon-style recruits
-    elif kind == 'L2':
-        d.ellipse((0, 0, S, S), fill=(214, 160, 80))
-        for k in range(16):
-            a = k / 16 * 2 * math.pi
-            x0, y0 = m + math.cos(a) * 90, m + math.sin(a) * 90
-            x1, y1 = m + math.cos(a + .35) * 150, m + math.sin(a + .35) * 150
-            d.line((x0, y0, x1, y1), fill=(30, 20, 14), width=16); d.ellipse((x1 - 13, y1 - 13, x1 + 13, y1 + 13), fill=(30, 20, 14))
-        d.ellipse((m - 95, m - 95, m + 95, m + 95), fill=(30, 20, 14))
-        for dx in (-38, 38):
-            d.ellipse((m + dx - 20, m - 40, m + dx + 20, m), fill=(240, 232, 214)); d.ellipse((m + dx - 9, m - 29, m + dx + 9, m - 11), fill=(160, 20, 20))
-        d.chord((m - 50, m + 10, m + 50, m + 70), 0, 180, fill=(240, 232, 214)); d.ellipse((m - 14, m + 35, m + 14, m + 85), fill=(170, 24, 24))
-    else:
-        d.ellipse((0, 0, S, S), fill=(238, 230, 212)); d.ellipse((24, 24, S - 24, S - 24), outline=(150, 22, 24), width=26)
-        cx, cy = m, m
-        pts = [(cx - 22, cy + 160), (cx + 22, cy + 160), (cx + 62, cy - 150), (cx, cy - 190), (cx - 62, cy - 150)]
-        d.polygon(pts, fill=(30, 22, 16))
-        for k in range(9):
-            t = k / 8; y = cy + 130 - t * 300; w = 26 + 34 * t
-            d.ellipse((cx + (w if k % 2 else -w) - 18, y - 18, cx + (w if k % 2 else -w) + 18, y + 18), fill=(30, 22, 16))
-    path = os.path.join(OUT, f'blazon_{kind}.png'); im.save(path)
-    img = bpy.data.images.load(path); img.pack()
-    return img
-
-SHIELD_C = V((-.14, -.36, 1.17))
-def aspis(level):
-    R, rim = .5, .06
-    tag = f'L{level}_'
-    face = lathe(tag + 'ShieldFace', [(0, .1), (.15, .095), (.3, .075), (.4, .045), (R - rim, .0)], 64, None)
-    # planar UVs for the painted blazon
-    me = face.data; uv = me.uv_layers.new(name='UV')
-    for poly in me.polygons:
-        for li in poly.loop_indices:
-            co = me.vertices[me.loops[li].vertex_index].co
-            uv.data[li].uv = (co.x / (2 * (R - rim)) + .5, co.y / (2 * (R - rim)) + .5)
-    me.materials.append(mat(f'Blazon{level}', (1, 1, 1), .25 if level == 2 else 0, .45, blazon_image(f'L{level}')))
-    rimo = lathe(tag + 'ShieldRim', [(R - rim, .0), (R - rim * .5, .012), (R, .0), (R + .006, -.02), (R - .01, -.03)], 64, mat('Bronze', C['bronze'], .85, .32))
-    back = lathe(tag + 'ShieldBack', [(0, .07), (.25, .05), (R - .01, -.03)], 48, mat('Wood', C['wood'], 0, .8))
-    for o in (face, rimo, back):   # face the enemy: the dome points along -Y
-        o.rotation_euler.x = math.pi / 2; o.location = SHIELD_C
-    return [face, rimo, back]
-
-SPEAR_GRIP = V((.3, -.1, 1.52))
-def spear():
-    m_ash = mat('Ash', C['wood'], 0, .7)
-    L0, L1 = .95, 1.55   # behind and in front of the grip
-    shaft = lathe('SpearShaft', [(0, -L0), (.016, -L0 + .01), (.018, 0), (.016, L1), (0, L1 + .01)], 10, m_ash)
-    head_ = lathe('SpearHead', [(.016, L1 - .02), (.034, L1 + .06), (.03, L1 + .16), (.0, L1 + .3)], 4, mat('Iron', C['iron'], .9, .35))
-    head_.scale = (1, .35, 1)
-    butt = lathe('SpearButt', [(.0, -L0 - .16), (.02, -L0 - .02), (.017, -L0 + .02)], 8, mat('Bronze', C['bronze']))
-    out = [shaft, head_, butt]
-    for o in out:   # lay the spear along -Y (forward), tip slightly down
-        o.rotation_euler = (-math.pi / 2 + .08, 0, 0); o.location = SPEAR_GRIP
-    return out
-
-def cloak(name, color):
-    bm = bmesh.new(); w, h, nx, nz = .5, .85, 12, 14
-    grid = [[bm.verts.new(((i / nx - .5) * w, 0, -j / nz * h)) for i in range(nx + 1)] for j in range(nz + 1)]
+def cloak(name, z_top, w=.56, h=1.0):
+    bm = bmesh.new(); nx, nz = 26, 32
+    def at(i, j):
+        u = i / nx - .5; t = j / nz
+        return ((u * w) * (1 + .25 * t), .14 + .22 * u * u * (1 - t * .5), z_top - .07 * (2 * u) ** 2 - t * h)
+    g = [[bm.verts.new(at(i, j)) for i in range(nx + 1)] for j in range(nz + 1)]
     for j in range(nz):
-        for i in range(nx):
-            bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
-    ob = obj_from_bm(name, bm, mat('Cloak' + name, color, 0, .9))
-    for v in ob.data.vertices:
-        d = -v.co.z / h; x = v.co.x
-        v.co.x = x * (1 + d * .35)
-        v.co.y = .2 * (2 * x / w) ** 2 * (1 - d * .6) + .05 * math.sin(x * 30 + d * 3) * d + d * .12
-    ob.location = (0, .17, 1.52)
-    return solidify(ob, .01)
+        for i in range(nx): bm.faces.new((g[j][i], g[j][i + 1], g[j + 1][i + 1], g[j + 1][i]))
+    return obj_from_bm(name, bm)
 
 
-# ── Skeleton ────────────────────────────────────────────────────────────────
-BONES = [  # name, head, tail, parent, deform
-    ('root', (0, 0, 0), (0, .3, 0), None, False),
-    ('hips', (0, .0, .97), (0, 0, 1.1), 'root', True),
-    ('spine', (0, 0, 1.1), (0, 0, 1.28), 'hips', True),
-    ('chest', (0, 0, 1.28), (0, 0, 1.48), 'spine', True),
-    ('neck', (0, 0, 1.5), (0, -.01, 1.62), 'chest', True),
-    ('head', (0, -.01, 1.62), (0, -.01, 1.86), 'neck', True),
-]
-for s, n in ((1, 'L'), (-1, 'R')):
-    BONES += [
-        (f'shoulder.{n}', (s * .05, 0, 1.46), (s * .2, 0, 1.445), 'chest', True),
-        (f'upperarm.{n}', (s * .2, 0, 1.445), (s * .4, .01, 1.22), f'shoulder.{n}', True),
-        (f'forearm.{n}', (s * .4, .01, 1.22), (s * .54, -.02, 1.03), f'upperarm.{n}', True),
-        (f'hand.{n}', (s * .54, -.02, 1.03), (s * .62, -.03, .92), f'forearm.{n}', True),
-        (f'thigh.{n}', (s * .1, 0, .95), (s * .12, -.01, .52), 'hips', True),
-        (f'shin.{n}', (s * .12, -.01, .52), (s * .12, .02, .1), f'thigh.{n}', True),
-        (f'ik_foot.{n}', (s * .12, .02, .1), (s * .12, .12, .1), 'root', False),
-        (f'foot.{n}', (s * .12, .02, .1), (s * .12, -.13, .03), f'ik_foot.{n}', True),   # feet stay level, driven by the foot control
-        (f'pole_knee.{n}', (s * .14, -.6, .55), (s * .14, -.5, .55), 'root', False),
-    ]
-BONES += [
-    ('spear', tuple(SPEAR_GRIP), tuple(SPEAR_GRIP + V((0, .2, 0))), 'chest', True),
-    ('shield', tuple(SHIELD_C), tuple(SHIELD_C + V((0, .2, 0))), 'chest', True),
-    ('ik_hand.R', tuple(SPEAR_GRIP), tuple(SPEAR_GRIP + V((0, .1, 0))), 'spear', False),
-    ('ik_hand.L', tuple(SHIELD_C + V((-.17, .09, -.02))), tuple(SHIELD_C + V((-.17, .19, -.02))), 'shield', False),
-    ('pole_elbow.R', (-.7, .45, 1.55), (-.7, .55, 1.55), 'chest', False),
-    ('pole_elbow.L', (.75, .2, 1.05), (.75, .3, 1.05), 'chest', False),
-]
+# ── Skeleton from the MakeHuman joints ──────────────────────────────────────
+SPEAR_GRIP = V((0, 0, 0)); SHIELD_C = V((0, 0, 0))
+def skeleton_spec(J):
+    sp = sorted([J[k] for k in J if k.startswith('spine-')], key=lambda v: v.z)
+    mean = lambda ks: sum((J[k] for k in ks), V()) / len(ks)
+    B = [('root', (0, 0, 0), (0, .3, 0), None, False),
+         ('hips', J['pelvis'], sp[1], 'root', True), ('spine', sp[1], sp[2], 'hips', True),
+         ('chest', sp[2], J['neck'], 'spine', True), ('neck', J['neck'], J['head'], 'chest', True),
+         ('head', J['head'], J['head'] + V((0, 0, .2)), 'neck', True)]
+    for s, n in (('l', 'L'), ('r', 'R')):
+        knuck = mean([f'{s}-finger-{k}-2' for k in (2, 3, 4, 5)]); tips = mean([f'{s}-finger-{k}-4' for k in (2, 3, 4, 5)])
+        mid = mean([f'{s}-finger-{k}-3' for k in (2, 3, 4, 5)])
+        B += [(f'shoulder.{n}', J[f'{s}-clavicle'], J[f'{s}-shoulder'], 'chest', True),
+              (f'upperarm.{n}', J[f'{s}-shoulder'], J[f'{s}-elbow'], f'shoulder.{n}', True),
+              (f'forearm.{n}', J[f'{s}-elbow'], J[f'{s}-hand'], f'upperarm.{n}', True),
+              (f'hand.{n}', J[f'{s}-hand'], knuck, f'forearm.{n}', True),
+              (f'fingers.{n}', knuck, mid, f'hand.{n}', True), (f'fingertips.{n}', mid, tips, f'fingers.{n}', True),
+              (f'thumb.{n}', J[f'{s}-finger-1-2'], J[f'{s}-finger-1-4'], f'hand.{n}', True),
+              (f'thigh.{n}', J[f'{s}-upper-leg'], J[f'{s}-knee'], 'hips', True),
+              (f'shin.{n}', J[f'{s}-knee'], J[f'{s}-ankle'], f'thigh.{n}', True),
+              (f'ik_foot.{n}', J[f'{s}-ankle'], J[f'{s}-ankle'] + V((0, .12, 0)), 'root', False),
+              (f'foot.{n}', J[f'{s}-ankle'], J[f'{s}-foot-2'], f'ik_foot.{n}', True),
+              (f'pole_knee.{n}', J[f'{s}-knee'] + V((0, -.6, 0)), J[f'{s}-knee'] + V((0, -.5, 0)), 'root', False)]
+    sx = 1 if True else -1
+    B += [('spear', SPEAR_GRIP, SPEAR_GRIP + V((0, .2, 0)), 'chest', True),
+          ('shield', SHIELD_C, SHIELD_C + V((0, .2, 0)), 'chest', True),
+          ('ik_hand.R', SPEAR_GRIP, SPEAR_GRIP + V((0, .1, 0)), 'spear', False),
+          ('ik_hand.L', SHIELD_C + V((-.15, .13, -.02)), SHIELD_C + V((-.15, .23, -.02)), 'shield', False),
+          ('pole_elbow.R', J['r-shoulder'] + V((-.5, .45, .15)), J['r-shoulder'] + V((-.5, .55, .15)), 'chest', False),
+          ('pole_elbow.L', J['l-shoulder'] + V((.55, .25, -.35)), J['l-shoulder'] + V((.55, .35, -.35)), 'chest', False)]
+    return B
 
-def build_armature():
+def build_armature(B):
     arm = bpy.data.armatures.new('HopliteRig'); ob = link(bpy.data.objects.new('HopliteRig', arm))
-    bpy.context.view_layer.objects.active = ob; bpy.ops.object.mode_set(mode='EDIT')
-    for name, h, t, parent, deform in BONES:
+    activate(ob); bpy.ops.object.mode_set(mode='EDIT')
+    for name, h, t, parent, deform in B:
         b = arm.edit_bones.new(name); b.head = h; b.tail = t; b.roll = 0; b.use_deform = deform
         if parent: b.parent = arm.edit_bones[parent]
     bpy.ops.object.mode_set(mode='POSE')
@@ -458,202 +588,189 @@ def build_armature():
     return ob
 
 def bind_rigid(ob, rig, bone):
-    mw = ob.matrix_world.copy()
-    ob.parent = rig; ob.parent_type = 'BONE'; ob.parent_bone = bone
+    mw = ob.matrix_world.copy(); ob.parent = rig; ob.parent_type = 'BONE'; ob.parent_bone = bone
     bpy.context.view_layer.update(); ob.matrix_world = mw
 
-def bind_skin(ob, rig, body_ob):
-    """Copy skin weights from the nearest point on the body (for cloth and armour that bends)."""
-    bvh = BVHTree.FromObject(body_ob, bpy.context.evaluated_depsgraph_get())
-    groups = {g.index: g.name for g in body_ob.vertex_groups}
-    for g in body_ob.vertex_groups: ob.vertex_groups.new(name=g.name)
-    bme = body_ob.data
+def bind_skin(ob, rig, body):
+    bvh = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
+    names = {g.index: g.name for g in body.vertex_groups}
+    for g in body.vertex_groups: ob.vertex_groups.new(name=g.name)
+    bme = body.data
     for v in ob.data.vertices:
-        co = ob.matrix_world @ v.co
-        loc, no, fi, dist = bvh.find_nearest(body_ob.matrix_world.inverted() @ co)
+        loc, no, fi, d = bvh.find_nearest(ob.matrix_world @ v.co)
         if fi is None: continue
         acc = {}
         for vi in bme.polygons[fi].vertices:
-            for ge in bme.vertices[vi].groups:
-                acc[ge.group] = acc.get(ge.group, 0) + ge.weight
+            for ge in bme.vertices[vi].groups: acc[ge.group] = acc.get(ge.group, 0) + ge.weight
         tot = sum(acc.values()) or 1
         for gi, w in acc.items():
-            ob.vertex_groups[groups[gi]].add([v.index], w / tot, 'REPLACE')
-    ob.parent = rig
+            if w / tot > .02: ob.vertex_groups[names[gi]].add([v.index], w / tot, 'REPLACE')
+    mw = ob.matrix_world.copy(); ob.parent = rig; ob.matrix_world = mw
     m = ob.modifiers.new('Armature', 'ARMATURE'); m.object = rig
 
 
-# ── Animation ───────────────────────────────────────────────────────────────
-def key(rig, frame, pose):
-    """pose: {bone: dict(loc=(x,y,z), rot=(x,y,z))}; unspecified bones return to rest."""
+# ── Animations (same names and timing as the game expects) ──────────────────
+def key(rig, f, pose):
     for pb in rig.pose.bones:
         p = pose.get(pb.name, {})
         pb.location = p.get('loc', (0, 0, 0)); pb.rotation_euler = p.get('rot', (0, 0, 0))
-        pb.keyframe_insert('location', frame=frame); pb.keyframe_insert('rotation_euler', frame=frame)
+        pb.keyframe_insert('location', frame=f); pb.keyframe_insert('rotation_euler', frame=f)
 
-def make_action(rig, name, frames, loop=False):
-    rig.animation_data_create()
-    act = bpy.data.actions.new(name); act.use_fake_user = True
+def make_action(rig, name, frames):
+    rig.animation_data_create(); act = bpy.data.actions.new(name); act.use_fake_user = True
     rig.animation_data.action = act
-    for f, pose in frames:
-        key(rig, f, pose)
-    act.frame_range = (frames[0][0], frames[-1][0])
+    for f, pose in frames: key(rig, f, pose)
     return act
 
+FCURL = 1.25
+GRIP = {'fingers.R': {'rot': (FCURL, 0, 0)}, 'fingertips.R': {'rot': (1.1, 0, 0)}, 'thumb.R': {'rot': (.5, 0, 0)},
+        'fingers.L': {'rot': (FCURL, 0, 0)}, 'fingertips.L': {'rot': (1.1, 0, 0)}, 'thumb.L': {'rot': (.5, 0, 0)}}
+
 def stance(**over):
-    """The guard stance: left foot forward, knees soft, spear overhand, shield up."""
-    p = {
-        'hips': {'loc': (0, 0, -.06)},
-        'chest': {'rot': (.04, 0, .12)},
-        'head': {'rot': (-.04, 0, -.1)},
-        'ik_foot.L': {'loc': (0, -.2, 0)}, 'ik_foot.R': {'loc': (.02, .2, 0)},
-    }
-    for k, v in over.items():
-        p.setdefault(k, {}); p[k] = {**p[k], **v}
+    p = {'hips': {'loc': (0, 0, -.05)}, 'chest': {'rot': (.03, 0, .1)}, 'head': {'rot': (-.03, 0, -.08)},
+         'ik_foot.L': {'loc': (-.02, -.2, 0)}, 'ik_foot.R': {'loc': (.02, .18, 0)}, **{k: dict(v) for k, v in GRIP.items()}}
+    for k, v in over.items(): p[k] = {**p.get(k, {}), **v}
     return p
 
 def actions(rig):
-    acts = []
-    acts.append(make_action(rig, 'Idle', [
-        (1, stance()), (24, stance(hips={'loc': (0, 0, -.072)}, chest={'rot': (.06, 0, .12)}, spear={'loc': (0, 0, -.012)})), (48, stance())]))
-    W = lambda fl, fr, zl, zr, hz: stance(**{'ik_foot.L': {'loc': (0, fl, zl)}, 'ik_foot.R': {'loc': (.02, fr, zr)}, 'hips': {'loc': (0, 0, -.06 + hz)}})
-    acts.append(make_action(rig, 'Walk', [
-        (1, W(-.24, .22, 0, 0, -.015)), (7, W(-.02, -.02, 0, .1, .02)), (13, W(.22, -.24, 0, 0, -.015)), (19, W(-.02, -.02, .1, 0, .02)), (25, W(-.24, .22, 0, 0, -.015))]))
-    acts.append(make_action(rig, 'Thrust', [
+    A = []
+    A.append(make_action(rig, 'Idle', [(1, stance()), (24, stance(hips={'loc': (0, 0, -.06)}, chest={'rot': (.045, 0, .1)}, spear={'loc': (0, 0, -.01)})), (48, stance())]))
+    W = lambda fl, fr, zl, zr, hz: stance(**{'ik_foot.L': {'loc': (-.02, fl, zl)}, 'ik_foot.R': {'loc': (.02, fr, zr)}, 'hips': {'loc': (0, 0, -.05 + hz)}})
+    A.append(make_action(rig, 'Walk', [(1, W(-.22, .2, 0, 0, -.012)), (7, W(-.01, -.01, 0, .09, .018)), (13, W(.2, -.22, 0, 0, -.012)), (19, W(-.01, -.01, .09, 0, .018)), (25, W(-.22, .2, 0, 0, -.012))]))
+    A.append(make_action(rig, 'Thrust', [
         (1, stance()),
-        (7, stance(spear={'loc': (.02, .26, .04), 'rot': (-.12, 0, 0)}, chest={'rot': (-.06, 0, .3)}, hips={'loc': (0, .05, -.06)})),
-        (11, stance(spear={'loc': (-.04, -.55, -.1), 'rot': (.12, 0, -.06)}, chest={'rot': (.22, 0, -.08)}, hips={'loc': (0, -.14, -.11)},
-                    **{'ik_foot.L': {'loc': (0, -.42, 0)}}, shield={'loc': (.02, .06, -.04)})),
-        (16, stance(spear={'loc': (-.04, -.5, -.1), 'rot': (.1, 0, -.06)}, chest={'rot': (.2, 0, -.06)}, hips={'loc': (0, -.13, -.11)},
-                    **{'ik_foot.L': {'loc': (0, -.42, 0)}})),
+        (7, stance(spear={'loc': (.02, .24, .04), 'rot': (-.1, 0, 0)}, chest={'rot': (-.05, 0, .26)}, hips={'loc': (0, .04, -.05)})),
+        (11, stance(spear={'loc': (-.03, -.5, -.08), 'rot': (.1, 0, -.05)}, chest={'rot': (.2, 0, -.06)}, hips={'loc': (0, -.13, -.1)}, **{'ik_foot.L': {'loc': (-.02, -.4, 0)}}, shield={'loc': (.02, .05, -.03)})),
+        (16, stance(spear={'loc': (-.03, -.46, -.08), 'rot': (.08, 0, -.05)}, chest={'rot': (.18, 0, -.05)}, hips={'loc': (0, -.12, -.1)}, **{'ik_foot.L': {'loc': (-.02, -.4, 0)}})),
         (25, stance())]))
-    acts.append(make_action(rig, 'Block', [
-        (1, stance()),
-        (6, stance(shield={'loc': (.06, -.14, .12), 'rot': (-.2, 0, -.15)}, hips={'loc': (0, .02, -.13)}, chest={'rot': (.12, 0, .2)}, head={'rot': (.1, 0, -.1)}, spear={'loc': (0, .1, -.05)})),
-        (14, stance(shield={'loc': (.06, -.14, .12), 'rot': (-.2, 0, -.15)}, hips={'loc': (0, .02, -.13)}, chest={'rot': (.12, 0, .2)}, head={'rot': (.1, 0, -.1)}, spear={'loc': (0, .1, -.05)})),
-        (20, stance())]))
-    acts.append(make_action(rig, 'Hit', [
-        (1, stance()),
-        (4, stance(chest={'rot': (-.28, 0, .25)}, head={'rot': (-.35, 0, .1)}, hips={'loc': (0, .1, -.08)}, shield={'loc': (0, .12, .04), 'rot': (.15, 0, 0)}, spear={'loc': (0, .12, .08)})),
-        (9, stance(chest={'rot': (-.12, 0, .16)}, head={'rot': (-.15, 0, 0)}, hips={'loc': (0, .05, -.07)})),
-        (17, stance())]))
-    acts.append(make_action(rig, 'Death', [
-        (1, stance()),
-        (8, stance(chest={'rot': (.35, 0, .2)}, head={'rot': (.3, 0, 0)}, hips={'loc': (0, .02, -.24)}, spear={'loc': (0, .1, -.1), 'rot': (.3, 0, .2)})),
-        (20, stance(root={'loc': (0, .28, 0), 'rot': (-1.38, 0, .08)}, chest={'rot': (-.15, 0, .1)}, head={'rot': (-.3, 0, .2)}, hips={'loc': (0, 0, -.1)},
-                    spear={'loc': (.1, .2, -.05), 'rot': (-.8, .4, .5)}, shield={'loc': (-.05, .1, .05), 'rot': (.6, 0, .3)})),
-        (25, stance(root={'loc': (0, .3, 0), 'rot': (-1.52, 0, .08)}, chest={'rot': (-.1, 0, .1)}, head={'rot': (-.4, 0, .2)}, hips={'loc': (0, 0, -.1)},
-                    spear={'loc': (.1, .2, -.05), 'rot': (-.8, .4, .5)}, shield={'loc': (-.05, .1, .05), 'rot': (.6, 0, .3)})),
-        (40, stance(root={'loc': (0, .3, 0), 'rot': (-1.5, 0, .08)}, chest={'rot': (-.1, 0, .1)}, head={'rot': (-.45, 0, .25)}, hips={'loc': (0, 0, -.1)},
-                    spear={'loc': (.1, .2, -.05), 'rot': (-.8, .4, .5)}, shield={'loc': (-.05, .1, .05), 'rot': (.6, 0, .3)}))]))
-    for a in acts:   # crisp, game-like timing
-        for fc in a.fcurves if hasattr(a, 'fcurves') else []:
-            for kp in fc.keyframe_points: kp.interpolation = 'BEZIER'
-    rig.animation_data.action = acts[0]
-    return acts
+    blk = dict(shield={'loc': (.05, -.12, .1), 'rot': (-.18, 0, -.12)}, hips={'loc': (0, .02, -.12)}, chest={'rot': (.11, 0, .18)}, head={'rot': (.08, 0, -.08)}, spear={'loc': (0, .08, -.04)})
+    A.append(make_action(rig, 'Block', [(1, stance()), (6, stance(**blk)), (14, stance(**blk)), (20, stance())]))
+    A.append(make_action(rig, 'Hit', [(1, stance()),
+        (4, stance(chest={'rot': (-.25, 0, .22)}, head={'rot': (-.3, 0, .1)}, hips={'loc': (0, .09, -.07)}, shield={'loc': (0, .1, .03), 'rot': (.12, 0, 0)}, spear={'loc': (0, .1, .06)})),
+        (9, stance(chest={'rot': (-.1, 0, .14)}, head={'rot': (-.12, 0, 0)}, hips={'loc': (0, .04, -.06)})), (17, stance())]))
+    fall = dict(chest={'rot': (-.1, 0, .1)}, hips={'loc': (0, 0, -.1)}, spear={'loc': (.1, .2, -.05), 'rot': (-.8, .4, .5)}, shield={'loc': (-.05, .1, .05), 'rot': (.6, 0, .3)})
+    A.append(make_action(rig, 'Death', [(1, stance()),
+        (8, stance(chest={'rot': (.32, 0, .18)}, head={'rot': (.28, 0, 0)}, hips={'loc': (0, .02, -.22)}, spear={'loc': (0, .1, -.1), 'rot': (.3, 0, .2)})),
+        (20, stance(root={'loc': (0, .27, 0), 'rot': (-1.38, 0, .08)}, head={'rot': (-.3, 0, .2)}, **fall)),
+        (25, stance(root={'loc': (0, .29, 0), 'rot': (-1.52, 0, .08)}, head={'rot': (-.4, 0, .2)}, **fall)),
+        (40, stance(root={'loc': (0, .29, 0), 'rot': (-1.5, 0, .08)}, head={'rot': (-.45, 0, .25)}, **fall))]))
+    rig.animation_data.action = A[0]
+    return A
 
 
-# ── Painted shading: bake ambient occlusion into vertex colours ─────────────
-def bake_ao(objs):
-    SC.render.engine = 'CYCLES'; SC.cycles.samples = 48; SC.cycles.device = 'CPU'
-    SC.render.bake.target = 'VERTEX_COLORS'
-    for ob in objs:
-        if ob.type != 'MESH': continue
-        me = ob.data
-        if not me.color_attributes:
-            me.color_attributes.new('Col', 'BYTE_COLOR', 'CORNER')
-        me.color_attributes.active_color = me.color_attributes[0]
-        bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); bpy.context.view_layer.objects.active = ob
-        try:
-            bpy.ops.object.bake(type='AO', target='VERTEX_COLORS')
-        except Exception as e:
-            print('AO bake failed for', ob.name, e)
-        # Lift the shadows a little and warm them, like a painted sprite.
-        ca = me.color_attributes[0]
-        for d in ca.data:
-            a = d.color[0]; a = .35 + .65 * a
-            d.color = (min(1, a * 1.04), a, a * .94, 1)
+# ── Bake procedural materials to textures ───────────────────────────────────
+def bake_textures(items):
+    SC.cycles.samples = 4; SC.render.bake.use_selected_to_active = False; SC.render.bake.margin = 6
+    done = {}
+    for name, (ob, mt, bind) in items.items():
+        if mt.res == 0:   # flat colours need no texture
+            ob.data.materials.clear(); ob.data.materials.append(mt.m); continue
+        if not ob.data.uv_layers: smart_uv(ob)
+        key_ = (mt.m.name, ob.name)
+        imgs = {}
+        for kind in ('color', 'rough', 'normal'):
+            if kind == 'rough' and not mt.bsdf.inputs['Roughness'].links: continue
+            r = mt.res if kind == 'color' else max(128, mt.res // 2)
+            img = bpy.data.images.new(f'{ob.name}_{kind}', r, r, alpha=False)
+            img.colorspace_settings.name = 'sRGB' if kind == 'color' else 'Non-Color'
+            imgs[kind] = img
+        m = mt.m.copy(); m.name = f'{mt.m.name}_{ob.name}'
+        ob.data.materials.clear(); ob.data.materials.append(m)
+        nt = m.node_tree; N = nt.nodes; Lk = nt.links
+        bsdf = N['Principled BSDF']; outn = N['Material Output']
+        tex = N.new('ShaderNodeTexImage'); N.active = tex
+        activate(ob)
+        for kind, img in imgs.items():
+            tex.image = img; N.active = tex
+            if kind == 'normal':
+                Lk.new(bsdf.outputs['BSDF'], outn.inputs['Surface'])
+                bpy.ops.object.bake(type='NORMAL', normal_space='TANGENT')
+            else:
+                src = bsdf.inputs['Base Color' if kind == 'color' else 'Roughness']
+                em = N.new('ShaderNodeEmission')
+                if src.links: Lk.new(src.links[0].from_socket, em.inputs['Color'])
+                else:
+                    v = src.default_value; em.inputs['Color'].default_value = tuple(v) if kind == 'color' else (v, v, v, 1)
+                Lk.new(em.outputs['Emission'], outn.inputs['Surface'])
+                bpy.ops.object.bake(type='EMIT')
+                N.remove(em)
+            img.pack()
+        # Final, export-friendly material: textures straight into the BSDF.
+        for n in list(N):
+            if n not in (bsdf, outn): N.remove(n)
+        Lk.new(bsdf.outputs['BSDF'], outn.inputs['Surface'])
+        for kind, img in imgs.items():
+            t = N.new('ShaderNodeTexImage'); t.image = img
+            if kind == 'color': Lk.new(t.outputs['Color'], bsdf.inputs['Base Color'])
+            elif kind == 'rough': Lk.new(t.outputs['Color'], bsdf.inputs['Roughness'])
+            else:
+                nm = N.new('ShaderNodeNormalMap'); Lk.new(t.outputs['Color'], nm.inputs['Color']); Lk.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
+        print('baked', ob.name, list(imgs))
 
 
 # ── Build ───────────────────────────────────────────────────────────────────
 def build():
-    rig = build_armature()
-    bod = body(); hd = head()
-    kit = {'rigid': [], 'skin': []}
-    eyes = [o for o in SC.objects if o.name.startswith(('EyeW', 'Iris'))]
-    hr = hair(); bd = beard()
-    helm2 = corinthian(); helm3 = attic(); helm1 = pilos()
-    for o in [hd, hr, bd, *eyes, *helm1, helm2[0], *helm2[1], *helm3]:
-        kit['rigid'].append((o, 'head'))
-    tunic = skirt('L1_Tunic', C['tunic'], top=1.5, bottom=.74, r0=.2, r1=.25, folds=18)
-    for v in tunic.data.vertices:   # follow the torso a little
-        z = v.co.z; k = 1 if z > 1.2 else .9
-        v.co.x *= k * 1.0; v.co.y *= .85
-    chiton = skirt('L23_Chiton', C['linen'], top=1.0, bottom=.76)
-    pt2 = pteruges('L2_Pteruges', C['linen']); pt3 = pteruges('L3_Pteruges', C['leatherRed'])
-    kit['skin'] += [tunic, chiton, pt2, pt3]
-    for o in linothorax(): kit['rigid'].append((o, 'chest'))
-    for o in muscle_cuirass(): kit['rigid'].append((o, 'chest'))
-    for o in [x for x in SC.objects if x.name.startswith('L3_CuirassLip')]: kit['rigid'].append((o, 'chest'))
-    for o in greaves(): kit['rigid'].append((o, 'shin.' + o.name[-1]))
-    for o in sandals(): kit['rigid'].append((o, 'foot.' + ('L' if o.name.startswith(('SandalL', 'SandalStrapL')) else 'R')))
-    for lv in (1, 2, 3):
-        for o in aspis(lv): kit['rigid'].append((o, 'shield'))
-    for o in spear(): kit['rigid'].append((o, 'spear'))
-    kit['rigid'] += [(cloak('L1_Cloak', C['black']), 'chest'), (cloak('L3_Cloak', C['crimson']), 'chest')]
-    # Bake AO with everything in place (rest pose), then bind.
-    objs = [o for o in SC.objects if o.type == 'MESH']
-    bake_ao(objs)
-    # Bind in the true rest pose (IK off) so kit sits where it was modelled.
+    global SPEAR_GRIP, SHIELD_C
+    body, J = build_body()
+    SPEAR_GRIP = J['r-shoulder'] + V((-.06, -.11, .1))
+    SHIELD_C = V((J['l-shoulder'].x * .55, J['l-shoulder'].y - .4, J['l-shoulder'].z - .27))
+    items = kit(body, J)
+    items['Body'] = (body, m_skin(J['l-eye']), 'body')
+    # cloth
+    sk = chiton('L23_Chiton', '#e6dcc4'); drape('L23_Chiton', sk, lambda c: c.z > .985, body)
+    items['L23_Chiton'] = (sk, m_cloth('Chiton', '#e6dcc4', 600), 'skin')
+    sk1 = chiton('L1_Skirt', '#cdbf9c', .97, .66); drape('L1_Skirt', sk1, lambda c: c.z > .955, body)
+    items['L1_Skirt'] = (sk1, m_cloth('TunicSkirt', '#cdbf9c', 500, .08), 'skin')
+    top = J['l-shoulder'].z + .04
+    for nm, col in (('L1_Cloak', '#1e1a18'), ('L3_Cloak', '#7a1414')):
+        ck = cloak(nm, top); drape(nm, ck, lambda c, t=top: c.z > t - .016, body, 70, .2)   # pinned across the upper back; the sides fall free
+        items[nm] = (ck, m_cloth(nm + 'Wool', col, 300, .12, 1024), 'skin')
+    bake_textures(items)
+    B = skeleton_spec(J); rig = build_armature(B)
     rig.data.pose_position = 'REST'; bpy.context.view_layer.update()
-    # Skin the body to the deform bones (spear and shield excluded).
     for n in ('spear', 'shield'): rig.data.bones[n].use_deform = False
-    bpy.ops.object.select_all(action='DESELECT'); bod.select_set(True); rig.select_set(True); bpy.context.view_layer.objects.active = rig
+    activate(body); rig.select_set(True); bpy.context.view_layer.objects.active = rig
     bpy.ops.object.parent_set(type='ARMATURE_AUTO')
     for n in ('spear', 'shield'): rig.data.bones[n].use_deform = True
-    print('body groups', len(bod.vertex_groups), 'weighted verts', sum(1 for v in bod.data.vertices if v.groups))
-    for o in kit['skin']: bind_skin(o, rig, bod)
-    for o, bone in kit['rigid']: bind_rigid(o, rig, bone)
+    print('weighted', sum(1 for v in body.data.vertices if v.groups), '/', len(body.data.vertices))
+    for name, (ob, mt, bind) in items.items():
+        if ob is body: continue
+        if bind == 'skin': bind_skin(ob, rig, body)
+        else: bind_rigid(ob, rig, bind)
     rig.data.pose_position = 'POSE'; bpy.context.view_layer.update()
-    acts = actions(rig)
-    return rig, acts
+    return rig, actions(rig)
 
 def export(rig, path):
-    bpy.ops.object.select_all(action='DESELECT')
-    rig.select_set(True)
+    bpy.ops.object.select_all(action='DESELECT'); rig.select_set(True)
     for o in rig.children_recursive: o.select_set(True)
     rig.animation_data.action = bpy.data.actions['Idle']; SC.frame_set(1)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_animation_mode='ACTIONS',
-                              export_vertex_color='ACTIVE', export_def_bones=False, export_force_sampling=True,
-                              export_optimize_animation_size=True, export_image_format='AUTO', export_yup=True)
+                              export_def_bones=False, export_force_sampling=True, export_optimize_animation_size=True,
+                              export_image_format='JPEG', export_jpeg_quality=85, export_yup=True)
     print('exported', path, os.path.getsize(path) // 1024, 'KB')
 
-def render(rig, path, action='Idle', frame=1, level=2, cam=((2.2, -3.4, 1.45), (84, 0, 33)), res=(420, 560)):
+def render(rig, path, action='Idle', frame=1, level=2, cam=((2.0, -3.1, 1.4), (85, 0, 33)), res=(420, 560), samples=32, hide=()):
     for o in SC.objects:
         if o.type == 'MESH':
             tag = o.name.split('_')[0]
-            show = not tag.startswith('L') or not tag[1:].isdigit() or str(level) in tag[1:]
-            o.hide_render = not show
+            o.hide_render = (tag[:1] == 'L' and tag[1:].isdigit() and str(level) not in tag[1:]) or any(h in o.name for h in hide)
     rig.animation_data.action = bpy.data.actions[action]; SC.frame_set(frame)
     if 'Cam' not in bpy.data.objects:
-        bpy.ops.object.camera_add(); c = bpy.context.object; c.name = 'Cam'; c.data.lens = 50; SC.camera = c
-        bpy.ops.object.light_add(type='SUN', rotation=(math.radians(50), 0, math.radians(-30))); bpy.context.object.data.energy = 3.2
-        bpy.ops.object.light_add(type='SUN', rotation=(math.radians(70), 0, math.radians(150))); bpy.context.object.data.energy = 1.2
-        w = bpy.data.worlds.new('W'); w.use_nodes = True; w.node_tree.nodes['Background'].inputs['Color'].default_value = (.32, .36, .4, 1); w.node_tree.nodes['Background'].inputs['Strength'].default_value = .8; SC.world = w
-        bpy.ops.mesh.primitive_plane_add(size=6); g = bpy.context.object; g.name = 'Ground'; g.data.materials.append(mat('Ground', srgb('#6f8f4a'), 0, .9))
+        bpy.ops.object.camera_add(); c = bpy.context.object; c.name = 'Cam'; c.data.lens = 55; SC.camera = c
+        bpy.ops.object.light_add(type='SUN', rotation=(math.radians(52), 0, math.radians(-35))); l = bpy.context.object; l.data.energy = 3.4; l.data.angle = math.radians(2)
+        bpy.ops.object.light_add(type='SUN', rotation=(math.radians(75), 0, math.radians(150))); bpy.context.object.data.energy = 1.0
+        w = bpy.data.worlds.new('W'); w.use_nodes = True; w.node_tree.nodes['Background'].inputs['Color'].default_value = (.36, .42, .5, 1); SC.world = w
+        bpy.ops.mesh.primitive_plane_add(size=8); g = bpy.context.object; g.name = 'Ground'
+        gm = bpy.data.materials.new('Ground'); gm.use_nodes = True; gm.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*srgb('#7a7458'), 1); g.data.materials.append(gm)
     c = bpy.data.objects['Cam']; c.location = cam[0]; c.rotation_euler = [math.radians(a) for a in cam[1]]
-    SC.render.engine = 'CYCLES'; SC.cycles.samples = 24; SC.render.resolution_x, SC.render.resolution_y = res
-    SC.render.film_transparent = False; SC.render.filepath = path
+    SC.cycles.samples = samples; SC.render.resolution_x, SC.render.resolution_y = res; SC.render.filepath = path
+    SC.view_settings.view_transform = 'AgX'
     bpy.ops.render.render(write_still=True)
 
 if __name__ == '__main__':
     rig, acts = build()
     export(rig, os.path.join(OUT, 'hoplite.glb'))
-    if '--blend' in sys.argv:
-        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'hoplite.blend'))
-    if '--renders' in sys.argv:   # preview stills of each animation
-        shots = [('Idle', 1, 2, 'a'), ('Walk', 7, 2, 'b'), ('Thrust', 7, 3, 'b'), ('Thrust', 11, 3, 'b'), ('Block', 8, 1, 'b'), ('Death', 30, 2, 'b')]
-        cams = {'a': ((2.2, -3.4, 1.45), (84, 0, 33)), 'b': ((-2.9, -2.6, 1.35), (84, 0, -48))}
-        for act, f, lv, cv in shots:
-            render(rig, os.path.join(OUT, f'shot_{act}_{f}_L{lv}.png'), act, f, lv, cam=cams[cv], res=(340, 460))
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'hoplite_real.blend'))
+    if '--renders' in sys.argv:
+        for lv in (1, 2, 3): render(rig, os.path.join(OUT, f'real_L{lv}.png'), 'Idle', 1, lv)
     print('built', [a.name for a in acts])

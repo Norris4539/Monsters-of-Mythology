@@ -68,12 +68,16 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 
 ## 3D models (Blender)
 
-The Hoplite line is modelled, rigged and animated by a Blender script in a Heroes III style: heroic proportions, bold silhouettes, a big painted shield and saturated colours.
+The Hoplite line is modelled, rigged and animated by a Blender script in a realistic style.
 
-- `tools/blender/hoplite.py` builds the model with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`.
-- One body and skeleton carry all three levels. Each piece of kit is a separate node named after its level (`L1_` Ephebe, `L2_` Hoplite, `L3_` Sacred Band, `L23_` shared by levels 2 and 3), so a renderer shows one level by toggling nodes by name.
-- Animations: Idle, Walk, Thrust, Block, Hit and Death. The spear and shield are bones that the hands reach by IK.
-- Shading is baked into the vertex colours as ambient occlusion, for a painted look without extra textures.
+- `tools/blender/fetch_makehuman.py` downloads the MakeHuman base mesh and shape targets (CC0 1.0, public domain) into `third_party/makehuman`.
+- `tools/blender/hoplite.py` runs with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`:
+  - the body is the MakeHuman base mesh shaped into a young, athletic Mediterranean man at 1.76 m;
+  - the muscle cuirass, linothorax and greaves are grown from the body's surface, helmets are smooth hulls over the skull, and the chiton and cloaks are draped with the cloth simulator;
+  - procedural materials (skin, hammered bronze with patina, painted shields, linen, leather, wool, ash) are baked into colour, roughness and normal textures;
+  - one skeleton carries all three levels; kit nodes are named `L1_` (Ephebe), `L2_` (Hoplite), `L3_` (Sacred Band) or `L23_` (levels 2 and 3), so a renderer shows one level by name;
+  - animations: Idle, Walk, Thrust, Block, Hit and Death, with the hands reaching the spear and shield by IK.
+- `tools/blender/glb2json.py` turns the `.glb` into a self-contained `.json` glTF for hosts that cannot serve binary files.
 
 The game still draws units as emoji; the models are used by the 3D preview while the art direction is settled.
 
