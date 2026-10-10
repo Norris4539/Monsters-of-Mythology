@@ -660,7 +660,8 @@ def drape(name, src_ob, pin_fn, collider, frames=45, mass=.3, thickness=.004):
     src_ob.vertex_groups.clear()
     collider.modifiers.remove(collider.modifiers['collision'])
     SC.frame_set(1)
-    mod(src_ob, 'SOLIDIFY', thickness=thickness, offset=1); bake_mods(src_ob)
+    if thickness:   # 0 leaves the cloth open, for work along its edges before thickening it
+        mod(src_ob, 'SOLIDIFY', thickness=thickness, offset=1); bake_mods(src_ob)
     return src_ob
 
 def chiton(name, hexcol, z0=1.0, z1=.68):
@@ -751,6 +752,7 @@ def bind_skin(ob, rig, body):
 
 # ── Posing: limbs solved directly, keyed as plain rotations (no IK at runtime) ─
 HAND_REF = {}
+FOREARM_N = {}   # a strapped shield's facing in each forearm's frame, set when the shield is placed
 def _upd(): bpy.context.view_layer.update()
 
 def two_bone(S, T, a, b, hint):
@@ -813,6 +815,11 @@ def pose(rig, P):
         S = up.head.copy(); W = D @ V(a['w'])
         E = two_bone(S, W, up.bone.length, fo.bone.length, D3 @ V(a['hint']))
         swing(rig, f'upperarm.{n}', E - S); swing(rig, f'forearm.{n}', W - PB[f'forearm.{n}'].head)
+        if 'face' in a and n in FOREARM_N:   # turn the forearm about its own axis so a strapped shield faces this way
+            ax = (fo.tail - fo.head).normalized()
+            cur = fo.matrix.to_3x3() @ FOREARM_N[n]; tgt = D3 @ V(a['face'])
+            cur = (cur - ax * cur.dot(ax)).normalized(); tgt = (tgt - ax * tgt.dot(ax)).normalized()
+            swing(rig, f'forearm.{n}', W - fo.head, math.atan2(ax.dot(cur.cross(tgt)), cur.dot(tgt)))
         fdir = (W - E).normalized()
         if 'spear' in a:   # overhand grip: knuckle line along the shaft, towards the point
             sd = (D3 @ V(a['spear'])).normalized()

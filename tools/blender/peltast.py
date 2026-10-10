@@ -310,19 +310,13 @@ def javelin(prefix, mats, loop=True):
     return list(zip(parts, add_m))
 
 
-# ── Kit ─────────────────────────────────────────────────────────────────────
-bronze_ = None
-def kit(body, J):
-    global bronze_
-    out = {}
-    def add(ob, mt, bind): out[ob.name] = (ob, mt, bind); return ob
+# ── Shared light-infantry kit ───────────────────────────────────────────────
+def head_kit(body, J, add, beards, hair_col='#1d130c', volume=1.0, edge_hops=4):
+    """Face kit shared by the light infantry: a beard per level (name, thickness,
+    chin growth, colour), curly hair and eyes; beards thin out over edge_hops rings of
+    vertices at their edge. Returns the hair, which helmets clear."""
     head, neck, eye, jaw = J['head'], J['neck'], J['l-eye'], J['jaw']
-    sh_z = J['l-shoulder'].z
-    bronze_ = m_bronze('Bronze', .3, 512)
-    hc = V((0, eye.y + .085, eye.z - .005))
     bvh_b = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
-
-    # Face: curly hair, eyes, and a beard per level (stubble / full / short)
     def beard(name, thick, chin, col):
         """A beard shell with a drawn outline: moustache, bare lips and cheeks, sideburns
         up to the ear. Cut from a subdivided patch so the edge is smooth, then grown
@@ -360,7 +354,7 @@ def kit(body, J):
             front = nxt
         nz = lambda p: math.sin(p.x * 310) * math.sin(p.z * 270 + p.x * 90) * math.sin(p.y * 330)
         for v in bm.verts:
-            k = min(1, dist.get(v.index, 0) / 4)
+            k = min(1, dist.get(v.index, 0) / edge_hops)
             ch = max(0, (mz - .02 - v.co.z)) * chin
             loc, no, fi, d = bvh_b.find_nearest(v.co)
             nrm = no if no is not None else v.normal
@@ -368,19 +362,17 @@ def kit(body, J):
         bm.to_mesh(bd.data); bm.free()
         for pl in bd.data.polygons: pl.use_smooth = True
         add(bd, m_hair(name + 'Hair', col), 'head')
-    beard('L1_Stubble', .0005, .0, '#6e5240')
-    beard('L2_Beard', .0048, .3, '#4a3322')
-    beard('L3_Beard', .0026, .12, '#4a3526')
+    for b in beards: beard(*b)
     hair = region_shell('Hair', body, lambda c: (c.z > eye.z + .04 and c.y > eye.y + .05) or (c.z > eye.z + .08) or (c.z > jaw.z - .005 and c.y > head.y + .03 and c.z > neck.z + .04), .007, 3, .5, guard=.006)
     bm = bmesh.new(); bm.from_mesh(hair.data); bm.normal_update()
     bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=1, use_grid_fill=True); bm.normal_update()
     curls = lambda p: (math.sin(p.x * 120 + math.sin(p.z * 100) * 2.5) * math.sin(p.z * 115 + math.sin(p.y * 105) * 2.5) * math.sin(p.y * 118 + p.x * 50))
     for v in bm.verts:
         edge = 0 if v.is_boundary else 1
-        v.co += v.normal * edge * (.006 + .007 * curls(v.co))
+        v.co += v.normal * edge * (.006 + .007 * curls(v.co)) * volume
     bm.to_mesh(hair.data); bm.free()
     mod(hair, 'SUBSURF', levels=1, render_levels=1); bake_mods(hair)
-    add(hair, m_hair('CurlyHair', '#1d130c'), 'head')
+    add(hair, m_hair('CurlyHair', hair_col), 'head')
     for side in ('l', 'r'):
         e = J[f'{side}-eye']
         bpy.ops.mesh.primitive_uv_sphere_add(radius=.0118, segments=24, ring_count=16, location=e + V((0, .004, 0)))
@@ -392,6 +384,45 @@ def kit(body, J):
         col = em.ramp(grad.outputs['Fac'], [(.0, srgb('#efe8de')), (.55, srgb('#efe8de')), (.6, srgb('#3a2414')), (.85, srgb('#22140a')), (.88, (0.01, .01, .01))])
         em.set(col.outputs['Color'], .15)
         add(ob, em, 'head')
+    return hair
+
+def on_arm(J, t0, t1, rad, seg='upper'):
+    """Faces along the upper arm (shoulder to elbow) or forearm, between fractions t0 and t1."""
+    def f(c):
+        for sd in ('l', 'r'):
+            if seg == 'upper': S, E = J[f'{sd}-shoulder'], J[f'{sd}-elbow']
+            else: S, E = J[f'{sd}-elbow'], J[f'{sd}-hand']
+            u = E - S; t = (c - S).dot(u) / u.length_squared
+            if t0 < t < t1 and (c - (S + u * t)).length < rad: return True
+        return False
+    return f
+
+def sheath(tag, ln, bend, at, rot, mats, add, width=.024, bone='hips', hilt_scale=1.0, radii=None):
+    """A blade in its scabbard (curved by bend, 0 for straight) with its hilt, hung at
+    `at` with rotation `rot` and bound rigidly to a bone. `radii` shapes the scabbard
+    along its length (default: tapering to the tip)."""
+    pts = [(math.sin(t * bend) * ln / bend * .4 if bend else 0, 0, -t * ln) for t in [i / 12 for i in range(13)]]
+    sc = curve_mesh(f'{tag}Scabbard', [pts], width, radii=radii or (lambda t: 1 - .55 * t ** 2))
+    sc.scale = (1, .32, 1); bake_mods(sc)
+    hilt = lathe(f'{tag}Hilt', [(0, .11), (.018, .105), (.02, .09), (.012, .08), (.013, .02), (.034, .01), (.03, 0)], 14)
+    hilt.scale = (hilt_scale, .5 * hilt_scale, hilt_scale)
+    for o, mt in zip((sc, hilt), mats):
+        o.rotation_euler = rot; o.location = at; bpy.context.view_layer.update(); bake_obj_xform(o); add(o, mt, bone)
+    return sc, hilt
+
+
+# ── Kit ─────────────────────────────────────────────────────────────────────
+bronze_ = None
+def kit(body, J):
+    global bronze_
+    out = {}
+    def add(ob, mt, bind): out[ob.name] = (ob, mt, bind); return ob
+    head, neck, eye, jaw = J['head'], J['neck'], J['l-eye'], J['jaw']
+    sh_z = J['l-shoulder'].z
+    bronze_ = m_bronze('Bronze', .3, 512)
+    hc = V((0, eye.y + .085, eye.z - .005))
+    bvh_b = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
+    hair = head_kit(body, J, add, [('L1_Stubble', .0005, .0, '#6e5240'), ('L2_Beard', .0048, .3, '#4a3322'), ('L3_Beard', .0026, .12, '#4a3526')])
 
     # L2: the alopekis, a fox-skin cap with ear flaps, the fox's mask on the brow
     fox = m_fur('Fox', '#a8582a', '#e8d8bc')
@@ -474,25 +505,16 @@ def kit(body, J):
     tunic_pat = m_pattern('AgrianianWeave', [(0, '#b9772e'), (.18, '#5a3418'), (.3, '#c88a3c'), (.55, '#2b2a3a'), (.62, '#c88a3c'), (.85, '#6b4020')], 7.5, 36, .05)
     tun3 = region_shell('L3_Tunic', body, torso(.9, sh_z + .04, .21), .008, 6, .5, guard=.006)
     mod(tun3, 'SOLIDIFY', thickness=.0025, offset=1); bake_mods(tun3); add(tun3, tunic_pat, 'skin')
-    def on_arm(t0, t1, rad, seg='upper'):
-        def f(c):
-            for sd in ('l', 'r'):
-                if seg == 'upper': S, E = J[f'{sd}-shoulder'], J[f'{sd}-elbow']
-                else: S, E = J[f'{sd}-elbow'], J[f'{sd}-hand']
-                u = E - S; t = (c - S).dot(u) / u.length_squared
-                if t0 < t < t1 and (c - (S + u * t)).length < rad: return True
-            return False
-        return f
-    sl2 = region_shell('L2_Sleeves', body, lambda c: on_arm(-.2, 1.05, .09)(c) or on_arm(-.05, .85, .07, 'fore')(c), .006, 2, .5, guard=.005)
+    sl2 = region_shell('L2_Sleeves', body, lambda c: on_arm(J, -.2, 1.05, .09)(c) or on_arm(J, -.05, .85, .07, 'fore')(c), .006, 2, .5, guard=.005)
     mod(sl2, 'SOLIDIFY', thickness=.002, offset=1); bake_mods(sl2); add(sl2, m_cloth('SleeveTan', '#8c7550', 500, .08), 'skin')
-    sl3 = region_shell('L3_Sleeves', body, on_arm(-.2, .5, .09), .007, 2, .5, guard=.005)
+    sl3 = region_shell('L3_Sleeves', body, on_arm(J, -.2, .5, .09), .007, 2, .5, guard=.005)
     mod(sl3, 'SOLIDIFY', thickness=.002, offset=1); bake_mods(sl3); add(sl3, tunic_pat, 'skin')
     # L2: the zeira mantle over shoulders and upper arms, open down the breast
     zeira = m_pattern('Zeira', [(0, '#5e1c22'), (.14, '#1e2440'), (.26, '#5e1c22'), (.4, '#b08440'), (.46, '#5e1c22'), (.62, '#1e2440'), (.74, '#d9c8a4'), (.78, '#3a1418')], 11, 52, .05)
     def in_mantle(c):
         if c.z < sh_z - .24 or c.z < .95 or c.z > neck.z + .015: return False
         if c.y < 0 and abs(c.x) < .055 and c.z < sh_z - .03: return False   # open at the breast
-        if abs(c.x) > .2: return on_arm(-.2, .55, .1)(c)
+        if abs(c.x) > .2: return on_arm(J, -.2, .55, .1)(c)
         return c.z > neck.z - .06 or abs(c.x) > .045
     mantle = region_shell('L2_Zeira', body, in_mantle, .03, 5, .5, guard=.026)
     mod(mantle, 'SOLIDIFY', thickness=.006, offset=1); bake_mods(mantle); add(mantle, zeira, 'skin')
@@ -569,12 +591,7 @@ def dress(body, J, items):
             if len(row) > 2: add(ribbon(f'L{lv}_Baldric{"FB"[not front]}', row, .03), m_leather(f'Baldric{lv}', '#4a2c18'), 'skin')
     leather_sc = m_leather('Scabbard', '#3a2414')
     for lv, ln, bend, at, rot in ((2, .36, .5, (.13, -.12, .98), (math.radians(-75), 0, math.radians(-20))), (3, .5, .25, (.2, .03, .96), (0, 0, 0))):
-        pts = [(math.sin(t * bend) * ln / bend * .4 if bend else 0, 0, -t * ln) for t in [i / 12 for i in range(13)]]
-        sc = curve_mesh(f'L{lv}_Scabbard', [pts], .024, radii=lambda t: 1 - .55 * t ** 2)
-        sc.scale = (1, .32, 1); bake_mods(sc)
-        hilt = lathe(f'L{lv}_Hilt', [(0, .11), (.018, .105), (.02, .09), (.012, .08), (.013, .02), (.034, .01), (.03, 0)], 14); hilt.scale = (1, .5, 1)
-        for o, mt in ((sc, leather_sc), (hilt, m_wood('HiltWood', 256))):
-            o.rotation_euler = rot; o.location = at; bpy.context.view_layer.update(); bake_obj_xform(o); add(o, mt, 'hips')
+        sheath(f'L{lv}_', ln, bend, at, rot, (leather_sc, m_wood('HiltWood', 256)), add)
     # L2 fox tail down the back, over the zeira
     sf = Surf([body, items['L2_Zeira'][0], zb]); eye = J['l-eye']; pts = []
     for i in range(16):

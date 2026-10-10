@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hellenic Unit Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a gallery stage (the 3D view) beside a catalogue column of museum labels;
+   the transport bar rides the stage's lower edge. On phones: title, stage, then labels. */
+:root {
+  --bg: #e4e6e1; --panel: #f2f3ef; --glass: rgba(242, 243, 239, .9); --ink: #1c211e; --muted: #5a615b;
+  --line: #cbcfc6; --chip: #e8eae4; --accent: #8a5a1f; --accent-ink: #fffaf0;
+  --scene-top: #94abbd; --scene-horizon: #dce0d9; --scene-floor: #b8b2a3; --scene-plinth: #ebe8df;
+  --scene-key: #fff0d8; --scene-fill: #cbd9e5; --scene-dark: 0;
+  --display: 'Marcellus', 'Trajan Pro', Georgia, serif;
+  --body: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111412; --panel: #181c1a; --glass: rgba(24, 28, 26, .88); --ink: #e6e4dc; --muted: #9ba199;
+    --line: #2c322e; --chip: #212623; --accent: #d4a45b; --accent-ink: #1a140a;
+    --scene-top: #0a0e12; --scene-horizon: #1d2226; --scene-floor: #2a2b28; --scene-plinth: #8e8a80;
+    --scene-key: #ffd6a0; --scene-fill: #3b526b; --scene-dark: 1; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111412; --panel: #181c1a; --glass: rgba(24, 28, 26, .88); --ink: #e6e4dc; --muted: #9ba199;
+  --line: #2c322e; --chip: #212623; --accent: #d4a45b; --accent-ink: #1a140a;
+  --scene-top: #0a0e12; --scene-horizon: #1d2226; --scene-floor: #2a2b28; --scene-plinth: #8e8a80;
+  --scene-key: #ffd6a0; --scene-fill: #3b526b; --scene-dark: 1; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1rem/1.5 var(--body); }
+.app {
+  height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 390px; grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "stage head" "stage panel";
+}
+.stage { grid-area: stage; position: relative; min-height: 0; overflow: hidden; background: var(--scene-horizon); }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+.head { grid-area: head; padding: 22px 24px 14px; border-left: 1px solid var(--line); background: var(--panel); display: grid; gap: 6px; }
+.panel { grid-area: panel; overflow-y: auto; padding: 0 24px 24px; border-left: 1px solid var(--line); background: var(--panel); display: grid; gap: 18px; align-content: start; }
+.eyebrow { margin: 0; font: 500 .74rem/1.3 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font: 400 2.5rem/1.05 var(--display); letter-spacing: .02em; text-wrap: balance; }
+.greek { margin: 0; font: italic 400 1.02rem/1.35 var(--body); color: var(--muted); }
+.lines { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 0; padding: 0; list-style: none; font-size: .9rem; }
+.lines a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.lines .here { color: var(--ink); font-weight: 700; }
+.blurb { margin: 14px 0 0; max-width: 62ch; }
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.facts div { display: grid; gap: 2px; }
+.facts dt, .stats dt { font: 500 .68rem/1.2 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.facts dd, .stats dd { margin: 0; font: 500 .92rem/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+.tiers { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.tier { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px 14px; display: grid; gap: 10px; cursor: pointer; background: var(--panel); transition: background .15s; }
+.tier:hover { background: var(--chip); }
+.tier[aria-current="true"] { background: var(--chip); border-color: var(--accent); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tname { all: unset; cursor: pointer; font: 400 1.28rem/1.15 var(--display); color: var(--ink); }
+.tname:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+.tier-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: baseline; }
+.numeral { font: 400 1.05rem/1 var(--display); color: var(--accent); min-width: 1.6em; }
+.tier h2 { margin: 0; font: inherit; }
+.tier .gk { display: block; margin-top: 2px; font: italic 400 .9rem/1.2 var(--body); color: var(--muted); }
+.stars { color: var(--accent); letter-spacing: .1em; font-size: .9rem; }
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.stats div { display: grid; gap: 2px; }
+.kit { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 6px; font-size: .9rem; color: var(--muted); }
+.kit li { white-space: normal; }
+.kit li:not(:last-child)::after { content: '·'; margin-left: 6px; color: var(--line); }
+.extra { margin: 0; font-size: .9rem; }
+.extra b { color: var(--accent); font-weight: 700; }
+.abil h3, .how h3 { margin: 0 0 6px; font: 500 .74rem/1.3 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.abil dl { margin: 0; display: grid; gap: 8px; }
+.abil dt { font-weight: 700; }
+.abil dd { margin: 0; color: var(--muted); }
+.how p { margin: 0; color: var(--muted); font-size: .92rem; }
+kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--chip); color: var(--ink); }
+
+.transport {
+  position: absolute; left: 16px; right: 16px; bottom: 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--glass); backdrop-filter: blur(6px);
+}
+.group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.group .lab { font: 500 .68rem/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+.transport button {
+  font: 500 .92rem/1 var(--body); color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 13px; cursor: pointer; min-height: 32px;
+}
+.transport button:hover { border-color: var(--muted); }
+.transport button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.status { flex-basis: 100%; margin: 0; font: 400 .8rem/1.3 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.overlay {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; pointer-events: none;
+}
+.overlay .box { pointer-events: auto; background: var(--glass); border: 1px solid var(--line); border-radius: 8px; padding: 16px 20px; display: grid; gap: 10px; width: min(340px, 100%); }
+.overlay p { margin: 0; }
+.overlay .small { font: 400 .82rem/1.3 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter { height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; border: 1px solid var(--line); }
+.meter span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  .app { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: "head" "stage" "panel"; }
+  .head, .panel { border-left: 0; padding-left: 16px; padding-right: 16px; }
+  .head { padding-top: 16px; }
+  .panel { padding-top: 18px; overflow: visible; }
+  .stage { height: auto; }
+  .stage canvas { height: 62vh; min-height: 360px; }
+  h1 { font-size: 2rem; }
+  .transport { position: static; border-radius: 0; border-width: 1px 0; padding: 10px 16px; gap: 8px; backdrop-filter: none; background: var(--panel); }
+  .transport button { padding: 6px 10px; font-size: .86rem; }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { .tier, .meter span { transition: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="stage" id="stage" aria-label="3D gallery">
+    <canvas id="c" aria-label="The three tiers of the unit on plinths. Drag to orbit, scroll or pinch to zoom."></canvas>
+    <div class="overlay" id="loading">
+      <div class="box" role="status" aria-live="polite">
+        <p id="loadmsg">Loading the models</p>
+        <div class="meter"><span id="loadbar"></span></div>
+        <p class="small" id="loadtxt">Starting</p>
+      </div>
+    </div>
+    <div class="transport" id="transport" role="toolbar" aria-label="Animation">
+      <div class="group" id="clips"><span class="lab">Move</span></div>
+      <div class="group">
+        <span class="lab">Speed</span>
+        <button type="button" id="spd-25" data-speed=".25">¼×</button>
+        <button type="button" id="spd-50" data-speed=".5">½×</button>
+        <button type="button" id="spd-100" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" id="pause" aria-pressed="false">Pause</button>
+        <button type="button" id="loop" aria-pressed="false">Loop</button>
+        <button type="button" id="spin" aria-pressed="false">Turntable</button>
+      </div>
+      <p class="status" id="status">Idle</p>
+    </div>
+  </section>
+
+  <header class="head">
+    <p class="eyebrow" id="eyebrow">Hellenes</p>
+    <h1 id="unitName">Unit</h1>
+    <p class="greek" id="unitGreek"></p>
+    <ul class="lines" id="lines" aria-label="Other unit lines"></ul>
+  </header>
+
+  <aside class="panel" id="panel">
+    <p class="blurb" id="blurb"></p>
+    <dl class="facts" id="facts"></dl>
+    <ol class="tiers" id="tiers" aria-label="Tiers"></ol>
+    <section class="abil"><h3>Abilities</h3><dl id="abil"></dl></section>
+    <section class="how"><h3>Viewing</h3>
+      <p>Drag to orbit, scroll or pinch to zoom. Pick a tier, or press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>, to step up to it; <kbd>0</kbd> shows all three. <kbd>Space</kbd> pauses.</p>
+    </section>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// Which unit this page shows and where its model lives. Published copies set these.
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi' } };
+
+// Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
+const ABIL = {
+  hitAndRun: ['Hit and run', 'May move again with any movement left after attacking.'],
+  phalanx: ['Phalanx', '+2 Defence while next to another friendly Heavy stack.'],
+  longSpear: ['Long spears', 'Its reach keeps enemies at bay: targets of its attacks cannot retaliate.'],
+  bond: ['Sacred bond', '+1 Attack and Defence for each adjacent stack of the same kind. Sacred Band only.'],
+  withHorse: ['Run with the horse', '+2 Move and +2 Attack on turns it starts next to friendly cavalry.'],
+  halfRange: ['Javelin volley', 'Can attack at range 2 for half damage, without retaliation.'],
+};
+const UNITS = {
+  hoplite: {
+    name: 'Hoplite', greek: 'ὁπλῖται', period: 'c. 500–338 BC', eyebrow: 'Hellenes · dwelling II · heavy infantry',
+    blurb: 'Citizen spearmen in bronze behind the great round aspis: the backbone of the phalanx.',
+    facts: [['Weapon', 'Spear'], ['Range', 'Melee'], ['Growth', '10 / wk'], ['Cost', '150 gold']], abil: ['phalanx', 'longSpear', 'bond'],
+    tiers: [
+      { name: 'Ephebe', gk: 'ἔφηβος', s: [4, 6, '2–3', 12, 4, 5], kit: ['Felt pilos', 'Undyed wool tunic', 'Black chlamys', 'Aspis with the city lambda', 'Ash spear, bronze butt-spike', 'Sandals'] },
+      { name: 'Hoplite', gk: 'ὁπλίτης', s: [5, 8, '2–4', 14, 4, 10], kit: ['Corinthian helmet, black crest', 'Linothorax with painted bands', 'Bronze greaves', 'Gorgoneion aspis', 'Baldric and xiphos'] },
+      { name: 'Sacred Band', gk: 'Ἱερὸς Λόχος', s: [6, 10, '3–5', 16, 5, 15], kit: ['Attic helmet, red crest', 'Bronze muscle cuirass, shoulder guards', 'Bronze greaves', 'Crimson cloak', 'Aspis with the club of Heracles'], extra: 'Sacred bond' },
+    ],
+  },
+  peltast: {
+    name: 'Peltast', greek: 'πελτασταί', period: 'c. 430–323 BC', eyebrow: 'Hellenes · dwelling I · light infantry',
+    blurb: 'Javelin skirmishers with a crescent wicker shield (pelte). They throw, then slip away.',
+    facts: [['Weapon', 'Javelin'], ['Range', '1–2'], ['Growth', '14 / wk'], ['Cost', '70 gold']], abil: ['hitAndRun'],
+    tiers: [
+      { name: 'Peltast', gk: 'πελταστής', s: [4, 3, '1–3', 6, 6, 0], kit: ['Undyed exomis, right shoulder bare', 'Rope belt', 'Barefoot', 'Wicker pelte faced with hide', '2 javelins'] },
+      { name: 'Thracian Peltast', gk: 'Θρᾷκες', s: [5, 4, '1–4', 7, 7, 5], kit: ['Fox-skin alopekis', 'Patterned zeira', 'Fringed wool tunic', 'Fur-topped fawnskin boots', 'Pelte painted with a face', 'Sica', '3 javelins'] },
+      { name: 'Agrianian', gk: 'Ἀγριᾶνες', s: [6, 5, '2–4', 8, 8, 10], kit: ['Thracian helmet with plume', 'Patterned tunic', 'Olive cloak', 'Laced boots', 'Round shield, meander border', 'Machaira', '4 javelins'] },
+    ],
+  },
+  hamippoi: {
+    name: 'Hamippoi', greek: 'ἅμιπποι', period: 'c. 424–362 BC', eyebrow: 'Hellenes · dwelling III · light infantry',
+    blurb: 'Light runners who fought among the cavalry, keeping pace by holding the horses’ manes: they throw javelins, then close in to stab horses and riders.',
+    facts: [['Weapon', 'Javelin'], ['Range', '1–2'], ['Growth', '8 / wk'], ['Cost', '250 gold']], abil: ['withHorse', 'halfRange'],
+    tiers: [
+      { name: 'Hamippoi', gk: 'ἅμιππος', s: [7, 5, '3–5', 14, 6, 5], kit: ['Ochre wool tunic, woven borders', 'Leather belt, bronze buckle', 'Knife at the hip', 'Petasos on the back', 'Barefoot', '2 javelins'] },
+      { name: 'Boeotian Hamippoi', gk: 'Βοιωτοί', s: [9, 6, '3–6', 16, 7, 10], kit: ['Madder wool tunic', 'Knotted rope belt', 'Petasos on the back', 'Baldric and xiphos', 'Wicker shield, tooled triskele boss', '3 javelins'] },
+      { name: 'Epilektoi Hamippoi', gk: 'ἐπίλεκτοι', s: [11, 8, '4–7', 18, 8, 15], kit: ['Bronze pilos, chin strap', 'Linen corselet, red-trimmed flaps', 'Red chiton', 'Baldric and xiphos', 'Bronze shield with a thunderbolt', '4 javelins'] },
+    ],
+  },
+};
+const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Throw', 'Thrust', 'Block', 'Hit', 'Death'];
+const LOOPING = new Set(['Idle', 'Walk', 'Run']);
+const RELEASE = 11 / 24;   // the Throw clip lets go of the javelin at frame 12
+const XS = [-1.8, 0, 1.8], FACE = .45, TOP = .2;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const hashKey = location.hash.slice(1);
+const KEY = !CONFIG.lockUnit && UNITS[hashKey] ? hashKey : CONFIG.defaultUnit;
+const U = UNITS[KEY];
+if (!CONFIG.lockUnit) addEventListener('hashchange', () => { if (UNITS[location.hash.slice(1)] && location.hash.slice(1) !== KEY) location.reload(); });
+
+// ── Catalogue ───────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+document.title = `${U.name} Gallery`;
+$('eyebrow').textContent = U.eyebrow; $('unitName').textContent = U.name; $('unitGreek').textContent = `${U.greek} · ${U.period}`;
+$('blurb').textContent = U.blurb;
+for (const [k, v] of U.facts) { const d = el('div'); d.append(el('dt', null, k), el('dd', null, v)); $('facts').append(d); }
+for (const k of U.abil) { $('abil').append(el('dt', null, ABIL[k][0]), el('dd', null, ABIL[k][1])); }
+for (const k of Object.keys(UNITS)) {
+  const li = el('li');
+  if (k === KEY) li.append(el('span', 'here', UNITS[k].name));
+  else { const a = el('a', null, UNITS[k].name); a.href = CONFIG.siblings[k]; if (/^https?:/.test(a.href) && CONFIG.lockUnit) a.target = '_blank'; li.append(a); }
+  $('lines').append(li);
+}
+const STAT_LABELS = ['Att', 'Def', 'Dmg', 'HP', 'Move', 'Res %'];
+const cards = U.tiers.map((t, i) => {
+  const li = el('li', 'tier'); li.dataset.tier = i + 1;
+  const top = el('div', 'tier-top');
+  const btn = el('button', 'tname', t.name); btn.type = 'button'; btn.id = 'tier-' + (i + 1); btn.setAttribute('aria-pressed', 'false');
+  const h2 = el('h2'); h2.append(btn);
+  const nm = el('div'); nm.append(h2, el('span', 'gk', t.gk));
+  top.append(el('span', 'numeral', ['I', 'II', 'III'][i]), nm, el('span', 'stars', '★'.repeat(i + 1)));
+  const st = el('dl', 'stats');
+  t.s.forEach((v, j) => { const d = el('div'); d.append(el('dt', null, STAT_LABELS[j]), el('dd', null, String(v))); st.append(d); });
+  const kit = el('ul', 'kit'); kit.setAttribute('aria-label', 'Kit');
+  for (const k of t.kit) kit.append(el('li', null, k));
+  li.append(top, st, kit);
+  if (t.extra) { const p = el('p', 'extra'); p.append('Adds ', el('b', null, t.extra)); li.append(p); }
+  li.addEventListener('click', () => focusTier(focused === i + 1 ? 0 : i + 1));
+  $('tiers').append(li);
+  return li;
+});
+
+// ── Renderer and scene ──────────────────────────────────────────────────────
+const stage = $('stage'), canvas = $('c');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
+catch (e) { $('loadmsg').textContent = 'This browser could not start WebGL, so the 3D view is unavailable.'; $('loadtxt').textContent = 'The labels on the right still list every tier.'; throw e; }
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.02;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const col = h => new THREE.Color(h).convertSRGBToLinear();
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1.6, .05, 90);
+const controls = new THREE.OrbitControls(camera, canvas);
+Object.assign(controls, { enableDamping: true, dampingFactor: .08, minDistance: 1.2, maxDistance: 16, maxPolarAngle: Math.PI * .49, enablePan: true, panSpeed: .6 });
+controls.target.set(0, 1, 0);
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, .6); scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 2.5);
+key.position.set(-4.5, 8, 6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -4.5, right: 4.5, top: 4.5, bottom: -4.5, near: .5, far: 25 });
+key.shadow.bias = -.0004; key.shadow.normalBias = .02; scene.add(key);
+const rim = new THREE.DirectionalLight(0xffffff, 0); rim.position.set(5, 4, -6); scene.add(rim);
+
+const floorMat = new THREE.MeshStandardMaterial({ roughness: .95, metalness: 0 });
+const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 72), floorMat);
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const plinthMat = new THREE.MeshStandardMaterial({ roughness: .55, metalness: 0 });
+const pmrem = new THREE.PMREMGenerator(renderer);
+
+function gradTex(stops, w, h, radial) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+  const g = radial ? x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2) : x.createLinearGradient(0, 0, 0, h);
+  for (const [p, s] of stops) g.addColorStop(p, s);
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
+}
+// Sky, floor, plinths and lights take their colours from the page's theme tokens.
+function applyTheme() {
+  const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
+  const T = { top: g('--scene-top'), hz: g('--scene-horizon'), floor: g('--scene-floor'), plinth: g('--scene-plinth'), key: g('--scene-key'), fill: g('--scene-fill'), dark: g('--scene-dark') === '1' };
+  if (scene.background) scene.background.dispose();
+  scene.background = gradTex([[0, T.top], [.62, T.hz], [1, T.hz]], 2, 256);
+  scene.fog = new THREE.Fog(col(T.hz), 11, 28);
+  if (floorMat.map) floorMat.map.dispose();
+  floorMat.map = gradTex([[0, T.floor], [.45, T.floor], [1, T.hz]], 512, 512, true); floorMat.needsUpdate = true;
+  plinthMat.color = col(T.plinth);
+  hemi.color = col(T.fill); hemi.groundColor = col(T.floor); hemi.intensity = T.dark ? .45 : .62;
+  key.color = col(T.key); key.intensity = T.dark ? 2.3 : 2.5;
+  rim.color = col(T.fill); rim.intensity = T.dark ? 1.4 : .35;
+  const sky = new THREE.Scene(), sg = new THREE.SphereGeometry(10, 32, 16), cols = [];
+  const top = col(T.top), mid = col(T.hz), bot = col(T.floor);
+  for (let i = 0; i < sg.attributes.position.count; i++) {
+    const y = sg.attributes.position.getY(i) / 10, c = y > 0 ? mid.clone().lerp(top, y) : mid.clone().lerp(bot, Math.min(1, -y * 3));
+    cols.push(c.r, c.g, c.b);
+  }
+  sg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 8), new THREE.MeshBasicMaterial({ color: col(T.key) }));
+  lamp.position.set(-5, 6, 5);
+  sky.add(new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })), lamp);
+  if (scene.environment) scene.environment.dispose();
+  scene.environment = pmrem.fromScene(sky, .02).texture;
+}
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// Plinths with a bronze name plate on the front.
+const plates = [];
+XS.forEach((x, i) => {
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.6, .64, .12, 64), plinthMat); base.position.set(x, .06, 0);
+  const slab = new THREE.Mesh(new THREE.CylinderGeometry(.55, .58, .08, 64), plinthMat); slab.position.set(x, .16, 0);
+  const c = document.createElement('canvas'); c.width = 512; c.height = 96;
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(.7, .085, .012), [0, 0, 0, 0, 1, 0].map(k => new THREE.MeshStandardMaterial(k ? { map: t, metalness: .55, roughness: .42 } : { color: col('#6b4a22'), metalness: .7, roughness: .4 })));
+  plate.position.set(x, .062, .623); plate.rotation.x = -.08;
+  for (const m of [base, slab, plate]) { m.castShadow = m.receiveShadow = true; scene.add(m); }
+  plates.push({ c, t, i });
+});
+function drawPlates() {
+  for (const { c, t, i } of plates) {
+    const g = c.getContext('2d'), w = c.width, h = c.height;
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#9c7238'); gr.addColorStop(1, '#6e4c22');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#3d2a12'; g.lineWidth = 4; g.strokeRect(6, 6, w - 12, h - 12);
+    g.fillStyle = '#f3e3c2'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = '400 38px Marcellus, Georgia, serif';
+    g.fillText(`${['I', 'II', 'III'][i]} · ${U.tiers[i].name.toUpperCase()}`, w / 2, h / 2 + 2, w - 40);
+    t.needsUpdate = true;
+  }
+}
+drawPlates();
+if (document.fonts) document.fonts.load('38px Marcellus').then(drawPlates, () => {});
+
+// Invisible columns over each plinth, so clicking a figure picks its tier.
+const pickers = XS.map((x, i) => {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 2, 12), new THREE.MeshBasicMaterial({ visible: false }));
+  m.position.set(x, 1.15, 0); m.userData.tier = i + 1; scene.add(m); return m;
+});
+
+// ── Camera framing ──────────────────────────────────────────────────────────
+let focused = 0, camTween = null;
+function frameFor(i) {
+  const aspect = Math.max(.4, canvas.clientWidth / Math.max(1, canvas.clientHeight));
+  const t16 = Math.tan(THREE.MathUtils.degToRad(16));
+  const r = i ? Math.max(4.6, .7 / (t16 * aspect)) : Math.min(15, Math.max(5.4, 2.85 / (t16 * aspect)));   // a whole figure clear of the controls, or all three plinths
+  return { target: new THREE.Vector3(i ? XS[i - 1] : 0, i ? 1.0 : .95, 0), r };
+}
+function focusTier(i) {
+  focused = i;
+  cards.forEach((c, j) => { c.setAttribute('aria-current', String(j + 1 === i)); c.querySelector('.tname').setAttribute('aria-pressed', String(j + 1 === i)); });
+  const { target, r } = frameFor(i);
+  const off = camera.position.clone().sub(controls.target), sph = new THREE.Spherical().setFromVector3(off);
+  sph.radius = r; if (!i) { sph.phi = Math.min(sph.phi, 1.36); }
+  const endPos = target.clone().add(new THREE.Vector3().setFromSpherical(sph));
+  if (reduceMotion) { controls.target.copy(target); camera.position.copy(endPos); return; }
+  camTween = { t: 0, fromT: controls.target.clone(), toT: target, fromP: camera.position.clone(), toP: endPos };
+}
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas); resize();
+{ const { target, r } = frameFor(0); controls.target.copy(target); camera.position.copy(target).add(new THREE.Vector3(.9, 1.0, r).normalize().multiplyScalar(r)); }
+
+// ── Models ──────────────────────────────────────────────────────────────────
+const tiers = [];   // { root, mixer, clips, cur, jav, axis, tipLen, prevT }
+let clipName = 'Idle', speed = 1, paused = false, looping = false, spinning = false;
+const shots = [];   // javelins in flight or stuck in the ground
+const fmtMB = b => (b / 1048576).toFixed(1);
+new THREE.GLTFLoader().load(CONFIG.modelBase + KEY + CONFIG.modelExt, gltf => {
+  XS.forEach((x, i) => {
+    const level = String(i + 1);
+    const root = THREE.SkeletonUtils.clone(gltf.scene);
+    root.traverse(o => {
+      const m = /^L(\d+)_/.exec(o.name);
+      if (m) o.visible = m[1].includes(level);
+      if (o.isMesh) {
+        o.castShadow = true; o.receiveShadow = true; if (o.isSkinnedMesh) o.frustumCulled = false;
+        if (o.material.metalness > .5) o.material.envMapIntensity = 1.8;
+      }
+    });
+    root.position.set(x, TOP, 0); root.rotation.y = FACE; scene.add(root);
+    const mixer = new THREE.AnimationMixer(root), clips = {};
+    for (const c of gltf.animations) clips[c.name] = c;
+    const u = { root, mixer, clips, cur: null, prevT: 0, jav: root.getObjectByName('ThrowJavelin') };
+    if (u.jav) {   // the javelin's own axis (grip to point), from its head, in the node's frame
+      const head = u.jav.getObjectByProperty('isMesh', true) && u.jav.children.find(o => /Head/.test(o.name));
+      const box = new THREE.Box3();
+      u.jav.updateWorldMatrix(true, true);
+      const inv = new THREE.Matrix4().copy(u.jav.matrixWorld).invert();
+      if (head) { head.geometry.computeBoundingBox(); box.copy(head.geometry.boundingBox).applyMatrix4(head.matrixWorld).applyMatrix4(inv); }
+      const c = head ? box.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 1, 0);
+      u.tipLen = c.length() + .07; u.axis = c.normalize();
+    }
+    tiers.push(u);
+  });
+  tiers[0].mixer.addEventListener('finished', () => {   // a one-shot move ends: a fresh javelin in hand, then back to Idle
+    if (looping || clipName === 'Death') return;
+    for (const u of tiers) if (u.jav) u.jav.visible = true;
+    const was = clipName;
+    setTimeout(() => { if (!looping && clipName === was) play('Idle', false, true); }, 350);
+  });
+  const names = CLIP_ORDER.filter(n => tiers[0].clips[n]).concat(Object.keys(tiers[0].clips).filter(n => !CLIP_ORDER.includes(n)));
+  for (const n of names) {
+    const b = el('button', null, n); b.type = 'button'; b.id = 'clip-' + n; b.dataset.clip = n; b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => play(n)); $('clips').append(b);
+  }
+  play('Idle', true);
+  $('loading').hidden = true;
+}, xhr => {
+  if (xhr.total) { $('loadbar').style.width = (100 * xhr.loaded / xhr.total).toFixed(1) + '%'; $('loadtxt').textContent = `${fmtMB(xhr.loaded)} of ${fmtMB(xhr.total)} MB`; }
+  else $('loadtxt').textContent = `${fmtMB(xhr.loaded)} MB`;
+}, err => {
+  $('loadmsg').textContent = 'The model file did not load.';
+  $('loadtxt').textContent = 'Reload the page to try again. The labels on the right still list every tier.';
+  console.warn('Model failed to load', err);
+});
+
+function clearShots() { for (const s of shots.splice(0)) scene.remove(s.obj); }
+function play(name, instant, auto) {
+  clipName = name;
+  for (const b of document.querySelectorAll('#clips button')) b.setAttribute('aria-pressed', String(b.dataset.clip === name));
+  if (!auto) clearShots();   // thrown javelins stay in the ground until another move is picked
+  for (const u of tiers) {
+    const clip = u.clips[name]; if (!clip) continue;
+    const a = u.mixer.clipAction(clip);
+    a.reset(); a.enabled = true; a.paused = false;
+    a.setLoop(looping || LOOPING.has(name) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity); a.clampWhenFinished = true;
+    a.play();
+    if (u.cur && u.cur !== a) { if (instant) u.cur.stop(); else u.cur.crossFadeTo(a, .2, false); }
+    u.cur = a; u.prevT = 0;
+    if (u.jav) u.jav.visible = true;
+  }
+  const d = tiers[0] && tiers[0].clips[name] ? tiers[0].clips[name].duration : 0;
+  $('status').textContent = `${name} · ${d.toFixed(2)} s` + (name === 'Throw' && tiers[0] && tiers[0].jav ? ` · the javelin leaves the hand at ${RELEASE.toFixed(2)} s` : '') + (looping || LOOPING.has(name) ? ' · looping' : '');
+}
+// The thrown javelin: a copy of the one in the hand flies along the figure's facing and sticks in the ground.
+const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+function launch(u) {
+  const src = u.jav; src.updateWorldMatrix(true, true);
+  const obj = src.clone(true); obj.visible = true;
+  src.matrixWorld.decompose(obj.position, obj.quaternion, obj.scale);
+  scene.add(obj); src.visible = false;
+  const fwd = V3(0, 0, 1).applyQuaternion(u.root.getWorldQuaternion(new THREE.Quaternion())).setY(0).normalize();
+  shots.push({ obj, u, v: fwd.multiplyScalar(4.6).add(V3(0, 2.6, 0)), stuck: false });
+  const mine = shots.filter(s => s.u === u);
+  if (mine.length > 2) { const old = mine[0]; scene.remove(old.obj); shots.splice(shots.indexOf(old), 1); }
+}
+function stepShots(dt) {
+  for (const s of shots) {
+    if (s.stuck) continue;
+    s.v.y -= 9.81 * dt; s.obj.position.addScaledVector(s.v, dt);
+    const dir = s.v.clone().normalize();
+    s.obj.quaternion.setFromUnitVectors(s.u.axis, dir);
+    const tip = s.obj.position.clone().addScaledVector(dir, s.u.tipLen);
+    if (tip.y <= 0) { s.obj.position.y -= tip.y; s.obj.position.addScaledVector(dir, .1); s.stuck = true; }
+  }
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+function setPressed(btn, on) { btn.setAttribute('aria-pressed', String(on)); }
+for (const b of document.querySelectorAll('[data-speed]')) b.addEventListener('click', () => {
+  speed = +b.dataset.speed; for (const o of document.querySelectorAll('[data-speed]')) setPressed(o, o === b);
+});
+$('pause').addEventListener('click', () => { paused = !paused; setPressed($('pause'), paused); $('pause').textContent = paused ? 'Play' : 'Pause'; });
+$('loop').addEventListener('click', () => { looping = !looping; setPressed($('loop'), looping); play(clipName); });
+$('spin').addEventListener('click', () => {
+  spinning = !spinning; setPressed($('spin'), spinning);
+  if (!spinning) for (const u of tiers) u.root.rotation.y = FACE;
+});
+addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  if (/^[0-3]$/.test(e.key)) focusTier(+e.key);
+  else if (e.key === ' ' && !e.target.closest('button, [role=button], a')) { e.preventDefault(); $('pause').click(); }
+});
+// Click (not drag) on a figure picks its tier.
+let down = null;
+canvas.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  const r = canvas.getBoundingClientRect(), p = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  const ray = new THREE.Raycaster(); ray.setFromCamera(p, camera);
+  const hit = ray.intersectObjects(pickers)[0];
+  focusTier(hit ? (focused === hit.object.userData.tier ? 0 : hit.object.userData.tier) : focused);
+});
+controls.addEventListener('start', () => { camTween = null; });
+
+// ── Loop ────────────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+function frame() {
+  requestAnimationFrame(frame);
+  const raw = Math.min(.05, clock.getDelta()), dt = paused ? 0 : raw * speed;
+  for (const u of tiers) {
+    u.mixer.update(dt);
+    if (spinning) u.root.rotation.y += raw * .5;
+    if (u.jav && clipName === 'Throw' && u.cur) {
+      const t = u.cur.time;
+      if (t < u.prevT - .01) u.jav.visible = true;               // the loop started over: a fresh javelin
+      if (u.prevT < RELEASE && t >= RELEASE && u.jav.visible) launch(u);
+      u.prevT = t;
+    }
+  }
+  stepShots(dt);
+  if (camTween) {
+    camTween.t = Math.min(1, camTween.t + raw / .7); const k = 1 - Math.pow(1 - camTween.t, 3);
+    controls.target.lerpVectors(camTween.fromT, camTween.toT, k); camera.position.lerpVectors(camTween.fromP, camTween.toP, k);
+    if (camTween.t >= 1) camTween = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+}
+frame();
+</script>
+</body>
+</html>
