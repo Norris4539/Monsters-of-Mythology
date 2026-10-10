@@ -68,7 +68,7 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 
 ## 3D models (Blender)
 
-The Hoplite line is modelled, rigged and animated by a Blender script in a realistic style.
+The Hoplite and Peltast lines are modelled, rigged and animated by Blender scripts in a realistic style.
 
 - `tools/blender/fetch_makehuman.py` downloads the MakeHuman base mesh and shape targets (CC0 1.0, public domain) into `third_party/makehuman`.
 - `tools/blender/hoplite.py` runs with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`:
@@ -77,9 +77,16 @@ The Hoplite line is modelled, rigged and animated by a Blender script in a reali
   - procedural materials (skin, hammered bronze with patina, painted shields, linen, leather, wool, ash) are baked into colour, roughness and normal textures;
   - one skeleton carries all three levels; kit nodes are named `L1_` (Ephebe), `L2_` (Hoplite), `L3_` (Sacred Band) or `L23_` (levels 2 and 3), so a renderer shows one level by name;
   - animations: Idle, Walk, Thrust, Block, Hit and Death. Arms and legs are solved in the script (shoulder to wrist target, elbow towards a natural hint) and keyed as plain rotations, so the browser plays exactly what Blender shows. The spear is held overhand through the right fist, and the shield is strapped to the left forearm by the porpax with the hand on the antilabe.
-- `tools/blender/glb2json.py` turns the `.glb` into a self-contained `.json` glTF for hosts that cannot serve binary files.
+- `tools/blender/peltast.py` reuses the Hoplite pipeline and exports `assets/models/peltast.glb`:
+  - a leaner man at 1.74 m with curly hair and a beard per level (stubble, a full Thracian beard, a trimmed one);
+  - `L1_` Peltast: undyed exomis with the right shoulder bare, fringed hem, rope belt, barefoot, a wicker pelte faced with hide;
+  - `L2_` Thracian Peltast: fox-skin alopekis with the fox's mask and tail, patterned zeira, fringed tunic, fur-topped fawnskin boots, a pelte painted with a face, a curved knife;
+  - `L3_` Agrianian: Thracian helmet with peak, cheek pieces and plume, patterned tunic, olive cloak, laced boots, a round shield with a meander border, a machaira;
+  - animations: Idle, Walk, Throw, Thrust, Block, Hit and Death. The javelin in the right hand is its own node, `ThrowJavelin`, so a renderer can hide it from the release (frame 12 of Throw) while a thrown copy flies; the spares are held behind the shield.
+- `tools/blender/render_views.py` renders inspection views (any clip, frame, level and camera) from the `.blend` that each build saves next to its `.glb`.
+- `tools/blender/glb2json.py` turns a `.glb` into a self-contained `.json` glTF for hosts that cannot serve binary files, quantizing skin weights and UVs to keep it small.
 
-The game still draws units as emoji; the models are used by the 3D preview while the art direction is settled.
+The game still draws units as emoji. The models are shown by the 3D preview, `preview/pantheon-3d.html`, while the art direction is settled. It loads the `.glb` files from `assets/models`, so serve the repository over HTTP to open it (for example `python -m http.server`, then `/preview/pantheon-3d.html`). Its tabs cover the adventure map and battle looks, the unit roster, a scripted Greek-vs-Greek battle with switchable effect styles, and the Blender Hoplite and Peltast lines.
 
 ## Code layout
 
@@ -91,6 +98,8 @@ The game still draws units as emoji; the models are used by the 3D preview while
 | `js/campaign.js` | Adventure-map state `G`: map generation, pathfinding with guard zones, interactions, towns, the day/week cycle, AI players. |
 | `js/mapview.js` | Adventure-map canvas rendering, fog of war, minimap and input. |
 | `js/ui.js` | Modals, side panel, town screen, main menu, save/load (`localStorage`, with an autosave each day). |
+| `preview/pantheon-3d.html` | The standalone three.js look-development page (map, battle, roster, battle sim, Blender model tabs). |
+| `tools/blender/` | The Blender model builds and their helpers; output goes to `assets/models/`. |
 
 ### Adding a faction
 
@@ -102,6 +111,6 @@ The game still draws units as emoji; the models are used by the 3D preview while
 
 - Multiple heroes per player, a tavern, and hero skills or spellbooks (HoMM3).
 - Pair Up / Dual Guard and support conversations (Awakening).
-- 3D models for the creature levels (see the preview artifact).
+- 3D models for the creature levels (see `preview/pantheon-3d.html`).
 - More pantheons: Aztec, Celtic, Chinese, Hindu, Mesopotamian.
 - Sprite art and sound in place of emoji, and a scripted campaign with story maps.
