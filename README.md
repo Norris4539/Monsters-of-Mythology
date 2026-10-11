@@ -68,7 +68,7 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 
 ## 3D models (Blender)
 
-The Hoplite, Peltast and Hamippoi lines are modelled, rigged and animated by Blender scripts in a realistic style.
+The Hoplite, Peltast and Hamippoi lines, the horse and the first Hippeis tier are modelled, rigged and animated by Blender scripts in a realistic style.
 
 - `tools/blender/fetch_makehuman.py` downloads the MakeHuman base mesh and shape targets (CC0 1.0, public domain) into `third_party/makehuman`.
 - `tools/blender/hoplite.py` runs with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`:
@@ -91,12 +91,21 @@ The Hoplite, Peltast and Hamippoi lines are modelled, rigged and animated by Ble
   - `L3_` Epilektoi Hamippoi: bronze pilos with a chin strap, linen corselet with red-trimmed shoulder flaps and a leather belt over a red chiton, baldric and xiphos, a small bronze shield with a thunderbolt, four javelins;
   - shields are strapped to the left forearm; when blocking, the forearm turns about its own axis so the shield faces forward (the `face` option of an arm in `hoplite.pose`);
   - animations: Idle, Walk, Run, Throw, Thrust, Block, Hit and Death, with `ThrowJavelin` released at frame 12 as for the Peltast.
+- `tools/blender/horse.py` builds the horse that every cavalry tier rides, as a module for the unit builds:
+  - a small Greek horse of about 14 hands (1.37 m at the withers): ellipsoids along the spine, neck, head and legs, merged by a voxel remesh and smoothed into one surface; a bay coat with black points, a cropped upright mane, a full tail, unshod hooves;
+  - tack: a draped sheepskin saddle cloth with a girth, and a leather bridle with bronze bit rings;
+  - its bones (`h_*`) join the unit's armature; legs are posed from hoof targets and cannon and pastern angles, and the four-beat walk and the gallop are generated from each leg's phase in the stride.
+- `tools/blender/hippeis.py` seats the rider on the horse and exports `assets/models/hippeis.glb`:
+  - one armature for horse and rider: the rider's root hangs from the horse's saddle bone, so he rides every gait, gripping with his thighs and without stirrups;
+  - `L1_` Prodromos: bronze Boeotian helmet, madder chiton with a cord belt, blue chlamys pinned at the right shoulder, open-toed endromides, two cornel-wood javelins (one to throw, one kept for close fighting);
+  - the horse and its tack are untagged and the rider is `L123_`, so level 0 shows the horse alone. It then wears `L0_Reins` lying over its withers instead of the reins that run to the rider's left fist, which hang from their own bone: keyed to the fist in every clip, it lets go when he falls;
+  - animations: Idle, Walk, Gallop, Throw, Thrust, Rear, Hit and Death. Throw and Thrust are made at the gallop, with `ThrowJavelin` released at frame 12; in Death the horse stumbles, kneels and rolls onto its left side while the rider is thrown clear to the right.
 - `tools/blender/render_views.py` renders inspection views (any clip, frame, level and camera) from the `.blend` that each build saves next to its `.glb`.
 - `tools/blender/glb2json.py` turns a `.glb` into a self-contained `.json` glTF for hosts that cannot serve binary files, quantizing skin weights and UVs to keep it small.
 
 The game still draws units as emoji. The models are shown by two preview pages while the art direction is settled. Both load the `.glb` files from `assets/models`, so serve the repository over HTTP to open them (for example `python -m http.server`):
 
-- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast` or `#hamippoi`).
+- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi` or `#hippeis`). The Hippeis page puts the horse alone on the first plinth and lists the tiers whose models are still to come, with both branches.
 - `preview/pantheon-3d.html` covers the adventure map and battle looks, the unit roster, a scripted Greek-vs-Greek battle with switchable effect styles, and the Blender Hoplite and Peltast lines.
 
 ## Code layout

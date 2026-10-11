@@ -543,26 +543,13 @@ def kit(body, J):
         sl = region_shell(tag, body, on_upper_arm, .007, 2, .5, guard=.005)
         mod(sl, 'SOLIDIFY', thickness=.002, offset=1); bake_mods(sl)
         add(sl, m_cloth(tag + 'Cloth', col, 600, .05), 'skin')
-    # Greaves: from above the knee to the ankle, tied with straps behind the calf
+    # Greaves: from above the knee to the ankle, sprung on: the bronze clips round the calf, so no straps
     leather = m_leather('Leather', '#5a3a20')
     for side in ('l', 'r'):
         kz, az = J[f'{side}-knee'].z, J[f'{side}-ankle'].z
         g = region_shell(f'L23_Greave{side.upper()}', body, (lambda kz, az, sx: lambda c: az + .05 < c.z < kz + .075 and c.x * sx > .03)(kz, az, 1 if side == 'l' else -1), .0045, 1, .4, guard=.0035)
         mod(g, 'SOLIDIFY', thickness=.002, offset=1); mod(g, 'BEVEL', width=.001, segments=2, limit_method='ANGLE'); mod(g, 'SUBSURF', levels=1, render_levels=1); bake_mods(g)
         add(g, bronze, f'shin.{side.upper()}')
-        bvh_g = BVHTree.FromObject(g, bpy.context.evaluated_depsgraph_get())
-        for k, zz in enumerate((kz - .1, az + .09)):
-            ring = []
-            for i in range(32):
-                a = i / 32 * 2 * math.pi; d = V((math.cos(a), math.sin(a), 0)); cx = V((J[f'{side}-knee'].x * .5 + J[f'{side}-ankle'].x * .5, 0, zz))
-                h = bvh_g.ray_cast(cx + d * .3, -d)
-                ring.append((h[0] + d * .002) if h[0] else cx + d * .05)
-            cu = bpy.data.curves.new('strap', 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = .0035
-            sp = cu.splines.new('POLY'); sp.points.add(len(ring) - 1); sp.use_cyclic_u = True
-            for pt, q in zip(sp.points, ring): pt.co = (q.x, q.y, q.z, 1)
-            cob = link(bpy.data.objects.new('strap', cu)); bpy.context.view_layer.update()
-            me = bpy.data.meshes.new_from_object(cob.evaluated_get(bpy.context.evaluated_depsgraph_get())); bpy.data.objects.remove(cob); bpy.data.curves.remove(cu)
-            st = link(bpy.data.objects.new(f'L23_GreaveStrap{side.upper()}{k}', me)); add(st, leather, f'shin.{side.upper()}')
     # Baldric across the chest (right shoulder to left hip) and a xiphos at the hip
     bvh_b = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
     def strap_path(front):
@@ -790,14 +777,17 @@ def curl(rig, side, fist=1.0):
         if ax.length < 1e-6: continue
         swing(rig, name, Matrix.Rotation(ang, 3, ax.normalized()) @ d0)
 
-def pose(rig, P):
-    """Apply a pose spec. Body bones take local euler rotations and offsets; feet are
-    world offsets of the foot controls; arms are wrist targets and elbow hints given
-    in the chest's rest frame, so they ride along with the torso."""
+def pose(rig, P, keep=()):
+    """Apply a pose spec. Body bones take local euler rotations and offsets (or, for
+    'root', an armature-space 'matrix'); feet are world offsets of the foot controls;
+    arms are wrist targets and elbow hints given in the chest's rest frame, so they ride
+    along with the torso. Bones named in keep (a mount's, say) are left as they are."""
     PB = rig.pose.bones
-    for pb in PB: pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0)
+    for pb in PB:
+        if pb.name not in keep: pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0)
     for name in ('root', 'hips', 'spine', 'chest', 'neck', 'head', 'ik_foot.L', 'ik_foot.R'):
         p = P.get(name, {})
+        if 'matrix' in p: _upd(); PB[name].matrix = p['matrix']; continue
         PB[name].location = p.get('loc', (0, 0, 0)); PB[name].rotation_quaternion = Euler(p.get('rot', (0, 0, 0))).to_quaternion()
     _upd()
     # Legs: hip to the foot control, knees forward.
@@ -805,7 +795,8 @@ def pose(rig, P):
     for n in 'LR':
         th, sh = PB[f'thigh.{n}'], PB[f'shin.{n}']
         S, A = th.head.copy(), PB[f'ik_foot.{n}'].head.copy()
-        E = two_bone(S, A, th.bone.length, sh.bone.length, hips_rot @ V((.15 if n == 'L' else -.15, -1, 0)))
+        kh = V(P.get('knee', (.15, -1, 0)))   # knee direction, for the left leg (mirrored for the right)
+        E = two_bone(S, A, th.bone.length, sh.bone.length, hips_rot @ V((kh.x if n == 'L' else -kh.x, kh.y, kh.z)))
         swing(rig, f'thigh.{n}', E - S); swing(rig, f'shin.{n}', A - PB[f'shin.{n}'].head)
     # Arms, relative to the chest.
     D = PB['chest'].matrix @ rig.data.bones['chest'].matrix_local.inverted(); D3 = D.to_3x3()

@@ -76,6 +76,11 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outlin
 .kit li:not(:last-child)::after { content: '·'; margin-left: 6px; color: var(--line); }
 .extra { margin: 0; font-size: .9rem; }
 .extra b { color: var(--accent); font-weight: 700; }
+.note { color: var(--muted); }
+.tier.pending { cursor: default; background: transparent; border-style: dashed; }
+.tier.pending:hover { background: transparent; }
+.tier.pending .tname { cursor: default; color: var(--muted); }
+.badge { margin: 0; justify-self: start; font: 500 .68rem/1.2 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
 .abil h3, .how h3 { margin: 0 0 6px; font: 500 .74rem/1.3 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .abil dl { margin: 0; display: grid; gap: 8px; }
 .abil dt { font-weight: 700; }
@@ -161,7 +166,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
     <ol class="tiers" id="tiers" aria-label="Tiers"></ol>
     <section class="abil"><h3>Abilities</h3><dl id="abil"></dl></section>
     <section class="how"><h3>Viewing</h3>
-      <p>Drag to orbit, scroll or pinch to zoom. Pick a tier, or press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>, to step up to it; <kbd>0</kbd> shows all three. <kbd>Space</kbd> pauses.</p>
+      <p id="howto">Drag to orbit, scroll or pinch to zoom. Pick a tier, or press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>, to step up to it; <kbd>0</kbd> shows all three. <kbd>Space</kbd> pauses.</p>
     </section>
   </aside>
 </div>
@@ -172,7 +177,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 // Which unit this page shows and where its model lives. Published copies set these.
-const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi' } };
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', hippeis: '#hippeis' } };
 
 // Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
 const ABIL = {
@@ -182,6 +187,7 @@ const ABIL = {
   bond: ['Sacred bond', '+1 Attack and Defence for each adjacent stack of the same kind. Sacred Band only.'],
   withHorse: ['Run with the horse', '+2 Move and +2 Attack on turns it starts next to friendly cavalry.'],
   halfRange: ['Javelin volley', 'Can attack at range 2 for half damage, without retaliation.'],
+  charge: ['Charge', '+5% melee damage for every tile moved this turn.'],
 };
 const UNITS = {
   hoplite: {
@@ -214,16 +220,45 @@ const UNITS = {
       { name: 'Epilektoi Hamippoi', gk: 'ἐπίλεκτοι', s: [11, 8, '4–7', 18, 8, 15], kit: ['Bronze pilos, chin strap', 'Linen corselet, red-trimmed flaps', 'Red chiton', 'Baldric and xiphos', 'Bronze shield with a thunderbolt', '4 javelins'] },
     ],
   },
+  hippeis: {
+    name: 'Hippeis', greek: 'ἱππεῖς', period: 'c. 420–300 BC', eyebrow: 'Hellenes · dwelling V · cavalry',
+    blurb: 'Greek scouts on horseback who throw javelins, then charge home with the spear. From the second tier the line splits into shock cavalry with the spear and javelin cavalry that skirmishes at range.',
+    facts: [['Weapon', 'Javelin'], ['Range', '1–2'], ['Growth', '4 / wk'], ['Cost', '800 gold']], abil: ['charge', 'halfRange', 'hitAndRun'],
+    layout: 'mounted',
+    mount: { name: 'Hippos', gk: 'ἵππος · the mount of every tier', kit: ['Small Greek horse, about 14 hands', 'Bay coat, black points', 'Cropped upright mane', 'Unshod hooves', 'Sheepskin saddle cloth and girth', 'Leather bridle, bronze bit rings'] },
+    tiers: [
+      { name: 'Prodromos', gk: 'πρόδρομος', s: [15, 10, '12–20', 55, 8, 5], kit: ['Bronze Boeotian helmet', 'Madder chiton, cord belt', 'Blue chlamys pinned at the right shoulder', 'Open-toed endromides', 'Bareback, no stirrups', '2 cornel-wood javelins'] },
+      { lvl: 2, name: 'Hippeus', gk: 'ἱππεύς', branch: 'Spear', pending: true, s: [21, 15, '15–24', 66, 9, 10], kit: ['Attic helmet', 'Linothorax over a short chiton', 'Chlamys', 'High riding boots', 'Cornel-wood spear, bronze butt-spike'], note: 'Range 1. Keeps Charge.' },
+      { lvl: 2, name: 'Hippakontistes', gk: 'ἱππακοντιστής', branch: 'Javelin', pending: true, s: [17, 11, '11–18', 56, 10, 10], kit: ['Felt petasos', 'Short chiton', 'Chlamys', 'Soft boots', '3 javelins'], note: 'Range 1–3. Hit and run instead of Charge.' },
+      { lvl: 3, name: 'Hetairos', gk: 'ἑταῖρος', branch: 'Spear', pending: true, s: [26, 18, '18–28', 76, 10, 15], kit: ['Boeotian helmet, white plume', 'Linothorax with bronze scales', 'Purple chlamys, yellow border', 'High boots', 'Xyston lance', 'Kopis on a baldric'], note: 'Range 1. Keeps Charge.' },
+      { lvl: 3, name: 'Tarantine', gk: 'Ταραντῖνος', branch: 'Javelin', pending: true, s: [21, 14, '13–21', 62, 11, 15], kit: ['Laurel wreath', 'Short chiton', 'Chlamys', 'Soft boots', 'Small round shield', '3 javelins'], note: 'Range 1–3. Hit and run instead of Charge.' },
+    ],
+  },
 };
-const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Throw', 'Thrust', 'Block', 'Hit', 'Death'];
-const LOOPING = new Set(['Idle', 'Walk', 'Run']);
+const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Throw', 'Thrust', 'Block', 'Rear', 'Hit', 'Death'];
+const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop']);
 const RELEASE = 11 / 24;   // the Throw clip lets go of the javelin at frame 12
-const XS = [-1.8, 0, 1.8], FACE = .45, TOP = .2;
+// Stage layouts: plinth spacing, radius and base height, name plate size, the figures' facing,
+// the model's middle (a horse's origin is under the saddle, not its middle), and the camera
+// for one figure or the whole row.
+const LAYOUTS = {
+  foot:    { gap: 1.8, plinth: .6, base: .12, plate: [.7, .085], face: .45, centre: 0, cy: 1.0, halfW: .7, near: 4.6, rowCy: .95, rowHalfW: 2.85, rowMin: 5.4, far: 15, pickR: .5, pickH: 2 },
+  mounted: { gap: 3.0, plinth: 1.3, base: .15, plate: [1.15, .105], face: 1.15, centre: .3, cy: 1.45, halfW: 1.45, near: 7.5, rowCy: 1.3, rowHalfW: 3.2, rowMin: 7.8, far: 20, pickR: 1.1, pickH: 2.8 },
+};
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const hashKey = location.hash.slice(1);
 const KEY = !CONFIG.lockUnit && UNITS[hashKey] ? hashKey : CONFIG.defaultUnit;
 const U = UNITS[KEY];
+const LY = LAYOUTS[U.layout || 'foot'], TOP = LY.base + .08;
+// The catalogue lists the mount (cavalry) and every tier; the stands are the entries with a
+// model to show, each on its own plinth. Tiers still waiting for their model have no stand.
+const NUM = ['', 'I', 'II', 'III'];
+const ENTRIES = [...(U.mount ? [{ ...U.mount, mount: true, level: 0 }] : []),
+  ...U.tiers.map((t, i) => ({ ...t, lvl: t.lvl || i + 1, level: t.pending ? null : t.lvl || i + 1 }))];
+const STANDS = ENTRIES.filter(e => e.level != null);
+STANDS.forEach((e, i) => { e.stand = i + 1; });
+const XS = STANDS.map((_, i) => (i - (STANDS.length - 1) / 2) * LY.gap);
 if (!CONFIG.lockUnit) addEventListener('hashchange', () => { if (UNITS[location.hash.slice(1)] && location.hash.slice(1) !== KEY) location.reload(); });
 
 // ── Catalogue ───────────────────────────────────────────────────────────────
@@ -241,26 +276,40 @@ for (const k of Object.keys(UNITS)) {
   $('lines').append(li);
 }
 const STAT_LABELS = ['Att', 'Def', 'Dmg', 'HP', 'Move', 'Res %'];
-const cards = U.tiers.map((t, i) => {
-  const li = el('li', 'tier'); li.dataset.tier = i + 1;
+const cards = ENTRIES.map(t => {
+  const li = el('li', 'tier' + (t.pending ? ' pending' : ''));
   const top = el('div', 'tier-top');
-  const btn = el('button', 'tname', t.name); btn.type = 'button'; btn.id = 'tier-' + (i + 1); btn.setAttribute('aria-pressed', 'false');
-  const h2 = el('h2'); h2.append(btn);
-  const nm = el('div'); nm.append(h2, el('span', 'gk', t.gk));
-  top.append(el('span', 'numeral', ['I', 'II', 'III'][i]), nm, el('span', 'stars', '★'.repeat(i + 1)));
-  const st = el('dl', 'stats');
-  t.s.forEach((v, j) => { const d = el('div'); d.append(el('dt', null, STAT_LABELS[j]), el('dd', null, String(v))); st.append(d); });
+  let name;
+  if (t.stand) { name = el('button', 'tname', t.name); name.type = 'button'; name.id = 'tier-' + t.stand; name.setAttribute('aria-pressed', 'false'); }
+  else name = el('span', 'tname', t.name);
+  const h2 = el('h2'); h2.append(name);
+  const nm = el('div'); nm.append(h2, el('span', 'gk', t.branch ? `${t.gk} · ${t.branch.toLowerCase()} branch` : t.gk));
+  top.append(el('span', 'numeral', t.mount ? '' : NUM[t.lvl]), nm, el('span', 'stars', t.mount ? '' : '★'.repeat(t.lvl)));
+  li.append(top);
+  if (t.s) {
+    const st = el('dl', 'stats');
+    t.s.forEach((v, j) => { const d = el('div'); d.append(el('dt', null, STAT_LABELS[j]), el('dd', null, String(v))); st.append(d); });
+    li.append(st);
+  }
   const kit = el('ul', 'kit'); kit.setAttribute('aria-label', 'Kit');
   for (const k of t.kit) kit.append(el('li', null, k));
-  li.append(top, st, kit);
+  li.append(kit);
   if (t.extra) { const p = el('p', 'extra'); p.append('Adds ', el('b', null, t.extra)); li.append(p); }
-  li.addEventListener('click', () => focusTier(focused === i + 1 ? 0 : i + 1));
+  if (t.note) li.append(el('p', 'extra note', t.note));
+  if (t.pending) li.append(el('p', 'badge', 'Model to come'));
+  if (t.stand) li.addEventListener('click', () => focusTier(focused === t.stand ? 0 : t.stand));
   $('tiers').append(li);
   return li;
 });
+{ // the viewing help names this page's keys
+  const p = $('howto'); p.textContent = 'Drag to orbit, scroll or pinch to zoom. Pick ' + (U.mount ? 'the horse or a tier' : 'a tier') + ', or press ';
+  STANDS.forEach((s, j) => { if (j) p.append(' '); p.append(el('kbd', null, String(s.stand))); });
+  p.append(', to step up to it; ', el('kbd', null, '0'), ` shows ${STANDS.length === 2 ? 'both' : 'all ' + ['', 'one', 'two', 'three', 'four', 'five'][STANDS.length]}. `, el('kbd', null, 'Space'), ' pauses.');
+}
 
 // ── Renderer and scene ──────────────────────────────────────────────────────
 const stage = $('stage'), canvas = $('c');
+if (U.mount) canvas.setAttribute('aria-label', 'The horse alone, then each finished tier mounted, on plinths. Drag to orbit, scroll or pinch to zoom.');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
 catch (e) { $('loadmsg').textContent = 'This browser could not start WebGL, so the 3D view is unavailable.'; $('loadtxt').textContent = 'The labels on the right still list every tier.'; throw e; }
@@ -272,7 +321,7 @@ const col = h => new THREE.Color(h).convertSRGBToLinear();
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(32, 1.6, .05, 90);
 const controls = new THREE.OrbitControls(camera, canvas);
-Object.assign(controls, { enableDamping: true, dampingFactor: .08, minDistance: 1.2, maxDistance: 16, maxPolarAngle: Math.PI * .49, enablePan: true, panSpeed: .6 });
+Object.assign(controls, { enableDamping: true, dampingFactor: .08, minDistance: 1.2, maxDistance: LY.far + 1, maxPolarAngle: Math.PI * .49, enablePan: true, panSpeed: .6 });
 controls.target.set(0, 1, 0);
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, .6); scene.add(hemi);
@@ -328,12 +377,13 @@ new MutationObserver(applyTheme).observe(document.documentElement, { attributes:
 // Plinths with a bronze name plate on the front.
 const plates = [];
 XS.forEach((x, i) => {
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(.6, .64, .12, 64), plinthMat); base.position.set(x, .06, 0);
-  const slab = new THREE.Mesh(new THREE.CylinderGeometry(.55, .58, .08, 64), plinthMat); slab.position.set(x, .16, 0);
-  const c = document.createElement('canvas'); c.width = 512; c.height = 96;
+  const R = LY.plinth, B = LY.base, [PW, PH] = LY.plate;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(R, R + .04, B, 64), plinthMat); base.position.set(x, B / 2, 0);
+  const slab = new THREE.Mesh(new THREE.CylinderGeometry(R - .05, R - .02, .08, 64), plinthMat); slab.position.set(x, B + .04, 0);
+  const c = document.createElement('canvas'); c.width = Math.round(96 * PW / PH / 1.54); c.height = 96;   // lettering a little wide, as cast
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(.7, .085, .012), [0, 0, 0, 0, 1, 0].map(k => new THREE.MeshStandardMaterial(k ? { map: t, metalness: .55, roughness: .42 } : { color: col('#6b4a22'), metalness: .7, roughness: .4 })));
-  plate.position.set(x, .062, .623); plate.rotation.x = -.08;
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(PW, PH, .012), [0, 0, 0, 0, 1, 0].map(k => new THREE.MeshStandardMaterial(k ? { map: t, metalness: .55, roughness: .42 } : { color: col('#6b4a22'), metalness: .7, roughness: .4 })));
+  plate.position.set(x, B / 2 + .002, R + .023); plate.rotation.x = -.08;
   for (const m of [base, slab, plate]) { m.castShadow = m.receiveShadow = true; scene.add(m); }
   plates.push({ c, t, i });
 });
@@ -345,7 +395,7 @@ function drawPlates() {
     g.strokeStyle = '#3d2a12'; g.lineWidth = 4; g.strokeRect(6, 6, w - 12, h - 12);
     g.fillStyle = '#f3e3c2'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = '400 38px Marcellus, Georgia, serif';
-    g.fillText(`${['I', 'II', 'III'][i]} · ${U.tiers[i].name.toUpperCase()}`, w / 2, h / 2 + 2, w - 40);
+    const s = STANDS[i]; g.fillText(s.mount ? `${s.name.toUpperCase()} · THE MOUNT` : `${NUM[s.lvl]} · ${s.name.toUpperCase()}`, w / 2, h / 2 + 2, w - 40);
     t.needsUpdate = true;
   }
 }
@@ -354,8 +404,8 @@ if (document.fonts) document.fonts.load('38px Marcellus').then(drawPlates, () =>
 
 // Invisible columns over each plinth, so clicking a figure picks its tier.
 const pickers = XS.map((x, i) => {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 2, 12), new THREE.MeshBasicMaterial({ visible: false }));
-  m.position.set(x, 1.15, 0); m.userData.tier = i + 1; scene.add(m); return m;
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(LY.pickR, LY.pickR, LY.pickH, 12), new THREE.MeshBasicMaterial({ visible: false }));
+  m.position.set(x, LY.pickH / 2 + .15, 0); m.userData.tier = i + 1; scene.add(m); return m;
 });
 
 // ── Camera framing ──────────────────────────────────────────────────────────
@@ -363,12 +413,15 @@ let focused = 0, camTween = null;
 function frameFor(i) {
   const aspect = Math.max(.4, canvas.clientWidth / Math.max(1, canvas.clientHeight));
   const t16 = Math.tan(THREE.MathUtils.degToRad(16));
-  const r = i ? Math.max(4.6, .7 / (t16 * aspect)) : Math.min(15, Math.max(5.4, 2.85 / (t16 * aspect)));   // a whole figure clear of the controls, or all three plinths
-  return { target: new THREE.Vector3(i ? XS[i - 1] : 0, i ? 1.0 : .95, 0), r };
+  const r = i ? Math.max(LY.near, LY.halfW / (t16 * aspect)) : Math.min(LY.far, Math.max(LY.rowMin, LY.rowHalfW / (t16 * aspect)));   // a whole figure clear of the controls, or the row of plinths
+  return { target: new THREE.Vector3(i ? XS[i - 1] : 0, i ? LY.cy : LY.rowCy, 0), r };
 }
 function focusTier(i) {
   focused = i;
-  cards.forEach((c, j) => { c.setAttribute('aria-current', String(j + 1 === i)); c.querySelector('.tname').setAttribute('aria-pressed', String(j + 1 === i)); });
+  cards.forEach((c, j) => {
+    const on = ENTRIES[j].stand === i, b = c.querySelector('button.tname');
+    c.setAttribute('aria-current', String(on)); if (b) b.setAttribute('aria-pressed', String(on));
+  });
   const { target, r } = frameFor(i);
   const off = camera.position.clone().sub(controls.target), sph = new THREE.Spherical().setFromVector3(off);
   sph.radius = r; if (!i) { sph.phi = Math.min(sph.phi, 1.36); }
@@ -384,15 +437,15 @@ new ResizeObserver(resize).observe(canvas); resize();
 { const { target, r } = frameFor(0); controls.target.copy(target); camera.position.copy(target).add(new THREE.Vector3(.9, 1.0, r).normalize().multiplyScalar(r)); }
 
 // ── Models ──────────────────────────────────────────────────────────────────
-const tiers = [];   // { root, mixer, clips, cur, jav, axis, tipLen, prevT }
+const tiers = [];   // one per stand: { root, mixer, clips, cur, jav, axis, tipLen, prevT }
 let clipName = 'Idle', speed = 1, paused = false, looping = false, spinning = false;
 const shots = [];   // javelins in flight or stuck in the ground
 const fmtMB = b => (b / 1048576).toFixed(1);
 new THREE.GLTFLoader().load(CONFIG.modelBase + KEY + CONFIG.modelExt, gltf => {
-  XS.forEach((x, i) => {
-    const level = String(i + 1);
-    const root = THREE.SkeletonUtils.clone(gltf.scene);
-    root.traverse(o => {
+  STANDS.forEach((s, i) => {
+    const level = String(s.level), x = XS[i];
+    const model = THREE.SkeletonUtils.clone(gltf.scene);
+    model.traverse(o => {
       const m = /^L(\d+)_/.exec(o.name);
       if (m) o.visible = m[1].includes(level);
       if (o.isMesh) {
@@ -400,10 +453,13 @@ new THREE.GLTFLoader().load(CONFIG.modelBase + KEY + CONFIG.modelExt, gltf => {
         if (o.material.metalness > .5) o.material.envMapIntensity = 1.8;
       }
     });
-    root.position.set(x, TOP, 0); root.rotation.y = FACE; scene.add(root);
-    const mixer = new THREE.AnimationMixer(root), clips = {};
+    model.position.z = -LY.centre;
+    const root = new THREE.Group(); root.position.set(x, TOP, 0); root.rotation.y = LY.face; root.add(model); scene.add(root);
+    const mixer = new THREE.AnimationMixer(model), clips = {};
     for (const c of gltf.animations) clips[c.name] = c;
-    const u = { root, mixer, clips, cur: null, prevT: 0, jav: root.getObjectByName('ThrowJavelin') };
+    let jav = model.getObjectByName('ThrowJavelin'), shown = false;   // the horse alone has no javelin to throw
+    if (jav) jav.traverse(o => { if (o.isMesh && o.visible) shown = true; });
+    const u = { root, mixer, clips, cur: null, prevT: 0, jav: shown ? jav : null };
     if (u.jav) {   // the javelin's own axis (grip to point), from its head, in the node's frame
       const head = u.jav.getObjectByProperty('isMesh', true) && u.jav.children.find(o => /Head/.test(o.name));
       const box = new THREE.Box3();
@@ -453,7 +509,7 @@ function play(name, instant, auto) {
     if (u.jav) u.jav.visible = true;
   }
   const d = tiers[0] && tiers[0].clips[name] ? tiers[0].clips[name].duration : 0;
-  $('status').textContent = `${name} · ${d.toFixed(2)} s` + (name === 'Throw' && tiers[0] && tiers[0].jav ? ` · the javelin leaves the hand at ${RELEASE.toFixed(2)} s` : '') + (looping || LOOPING.has(name) ? ' · looping' : '');
+  $('status').textContent = `${name} · ${d.toFixed(2)} s` + (name === 'Throw' && tiers.some(u => u.jav) ? ` · the javelin leaves the hand at ${RELEASE.toFixed(2)} s` : '') + (looping || LOOPING.has(name) ? ' · looping' : '');
 }
 // The thrown javelin: a copy of the one in the hand flies along the figure's facing and sticks in the ground.
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -487,11 +543,11 @@ $('pause').addEventListener('click', () => { paused = !paused; setPressed($('pau
 $('loop').addEventListener('click', () => { looping = !looping; setPressed($('loop'), looping); play(clipName); });
 $('spin').addEventListener('click', () => {
   spinning = !spinning; setPressed($('spin'), spinning);
-  if (!spinning) for (const u of tiers) u.root.rotation.y = FACE;
+  if (!spinning) for (const u of tiers) u.root.rotation.y = LY.face;
 });
 addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, textarea')) return;
-  if (/^[0-3]$/.test(e.key)) focusTier(+e.key);
+  if (/^[0-9]$/.test(e.key) && +e.key <= STANDS.length) focusTier(+e.key);
   else if (e.key === ' ' && !e.target.closest('button, [role=button], a')) { e.preventDefault(); $('pause').click(); }
 });
 // Click (not drag) on a figure picks its tier.
