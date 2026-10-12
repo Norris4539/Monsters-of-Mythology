@@ -177,7 +177,7 @@ def reins(rig, horse_body, grip):
     bvh = BVHTree.FromObject(horse_body, bpy.context.evaluated_depsgraph_get())
     rc = ring_centres(); back = V((0, .02, .004))   # the reins buckle to the back of the rings
     held = [rein_path(bvh, rc[k] + back, grip + V((sx * .012, 0, 0)), sx) for k, sx in (('L', 1), ('R', -1))]
-    top = bvh.ray_cast(V((0, -.37, 3)), V((0, 0, -1)), 5)[0] + V((0, 0, .012))
+    top = bvh.ray_cast(V((0, -.27, 3)), V((0, 0, -1)), 5)[0] + V((0, 0, .012))   # over the withers, behind the mane
     lying = [rein_path(bvh, rc[k] + back, top + V((sx * .01, 0, 0)), sx, 30, .05) for k, sx in (('L', 1), ('R', -1))]
     lying = lying[0] + lying[1][::-1]
     drop = bvh.ray_cast(grip, V((0, 0, -1)), 2)[0] + V((0, 0, .02))   # where the hand end falls when he lets go
@@ -219,7 +219,7 @@ def rider_poses(J):
     def armR(w, hint=(-.4, .6, -.4), jav=(0, -1, .1), **kw): return {'w': SR + V(w), 'hint': hint, 'spear': jav, **kw}
     def armL(w, hint=(.4, .6, -.4), grip=(0, -.1, -1), **kw): return {'w': SL + V(w), 'hint': hint, 'spear': grip, **kw}
     base = {'root': {'loc': tuple(SEAT)}, 'hips': {'rot': (-.08, 0, 0)}, 'chest': {'rot': (.06, 0, 0)}, 'head': {'rot': (.03, 0, 0)},
-            'ik_foot.L': {'loc': foot('l', (.3, -.17, .8))}, 'ik_foot.R': {'loc': foot('r', (-.3, -.17, .8))}, 'knee': (.8, -1, 0),
+            'ik_foot.L': {'loc': foot('l', (.27, -.15, .64))}, 'ik_foot.R': {'loc': foot('r', (-.27, -.15, .64))}, 'knee': (.8, -1, 0),
             'armR': armR((-.05, -.24, -.33)), 'armL': armL((-.09, -.3, -.27))}
     def st(**over):
         P_ = {k: (dict(v) if isinstance(v, dict) else v) for k, v in base.items()}

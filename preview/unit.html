@@ -225,7 +225,7 @@ const UNITS = {
     blurb: 'Greek scouts on horseback who throw javelins, then charge home with the spear. From the second tier the line splits into shock cavalry with the spear and javelin cavalry that skirmishes at range.',
     facts: [['Weapon', 'Javelin'], ['Range', '1–2'], ['Growth', '4 / wk'], ['Cost', '800 gold']], abil: ['charge', 'halfRange', 'hitAndRun'],
     layout: 'mounted',
-    mount: { name: 'Hippos', gk: 'ἵππος · the mount of every tier', kit: ['Small Greek horse, about 14 hands', 'Bay coat, black points', 'Cropped upright mane', 'Unshod hooves', 'Sheepskin saddle cloth and girth', 'Leather bridle, bronze bit rings'] },
+    mount: { name: 'Hippos', gk: 'ἵππος · the mount of every tier', kit: ['Small Greek horse, about 13½ hands', 'Dark brown coat, black points', 'Cropped upright mane', 'Unshod hooves', 'Sheepskin with a braided girth and breast strap', 'Leather bridle, bronze bit rings'] },
     tiers: [
       { name: 'Prodromos', gk: 'πρόδρομος', s: [15, 10, '12–20', 55, 8, 5], kit: ['Bronze Boeotian helmet', 'Madder chiton, cord belt', 'Blue chlamys pinned at the right shoulder', 'Open-toed endromides', 'Bareback, no stirrups', '2 cornel-wood javelins'] },
       { lvl: 2, name: 'Hippeus', gk: 'ἱππεύς', branch: 'Spear', pending: true, s: [21, 15, '15–24', 66, 9, 10], kit: ['Attic helmet', 'Linothorax over a short chiton', 'Chlamys', 'High riding boots', 'Cornel-wood spear, bronze butt-spike'], note: 'Range 1. Keeps Charge.' },
@@ -243,7 +243,7 @@ const RELEASE = 11 / 24;   // the Throw clip lets go of the javelin at frame 12
 // for one figure or the whole row.
 const LAYOUTS = {
   foot:    { gap: 1.8, plinth: .6, base: .12, plate: [.7, .085], face: .45, centre: 0, cy: 1.0, halfW: .7, near: 4.6, rowCy: .95, rowHalfW: 2.85, rowMin: 5.4, far: 15, pickR: .5, pickH: 2 },
-  mounted: { gap: 3.0, plinth: 1.3, base: .15, plate: [1.15, .105], face: 1.15, centre: .3, cy: 1.45, halfW: 1.45, near: 7.5, rowCy: 1.3, rowHalfW: 3.2, rowMin: 7.8, far: 20, pickR: 1.1, pickH: 2.8 },
+  mounted: { gap: 2.6, plinth: 1.1, base: .14, plate: [1.05, .1], face: 1.15, centre: .22, cy: 1.45, halfW: 1.25, near: 7.2, rowCy: 1.3, rowHalfW: 2.8, rowMin: 7.4, far: 20, pickR: .95, pickH: 2.8 },
 };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 

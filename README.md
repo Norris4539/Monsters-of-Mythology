@@ -92,8 +92,9 @@ The Hoplite, Peltast and Hamippoi lines, the horse and the first Hippeis tier ar
   - shields are strapped to the left forearm; when blocking, the forearm turns about its own axis so the shield faces forward (the `face` option of an arm in `hoplite.pose`);
   - animations: Idle, Walk, Run, Throw, Thrust, Block, Hit and Death, with `ThrowJavelin` released at frame 12 as for the Peltast.
 - `tools/blender/horse.py` builds the horse that every cavalry tier rides, as a module for the unit builds:
-  - a small Greek horse of about 14 hands (1.37 m at the withers): ellipsoids along the spine, neck, head and legs, merged by a voxel remesh and smoothed into one surface; a bay coat with black points, a cropped upright mane, a full tail, unshod hooves;
-  - tack: a draped sheepskin saddle cloth with a girth, and a leather bridle with bronze bit rings;
+  - a small Greek horse of about 13½ hands (1.37 m at the withers), traced from the side view of the reference sheet: the outline is inflated into round sections (a Poisson solve inside it), scaled to the widths measured on the sheet's front and back views, with the legs laid joint to joint at the sheet's joints and a voxel remesh fusing it all;
+  - a dark brown coat with black points, a cropped upright mane, a full tail, unshod hooves;
+  - tack: a draped sheepskin with a fur fringe, a braided girth and breast strap, and a leather bridle with bronze bit rings;
   - its bones (`h_*`) join the unit's armature; legs are posed from hoof targets and cannon and pastern angles, and the four-beat walk and the gallop are generated from each leg's phase in the stride.
 - `tools/blender/hippeis.py` seats the rider on the horse and exports `assets/models/hippeis.glb`:
   - one armature for horse and rider: the rider's root hangs from the horse's saddle bone, so he rides every gait, gripping with his thighs and without stirrups;
