@@ -104,6 +104,19 @@ The Hoplite, Peltast and Hamippoi lines, the horse and the first Hippeis tier ar
 - `tools/blender/render_views.py` renders inspection views (any clip, frame, level and camera) from the `.blend` that each build saves next to its `.glb`.
 - `tools/blender/glb2json.py` turns a `.glb` into a self-contained `.json` glTF for hosts that cannot serve binary files, quantizing skin weights and UVs to keep it small.
 
+### Reference sheets
+
+Each model is built from a turnaround sheet: one image per tier with the subject in front, side and back views on a plain background. `tools/refs/roster.py` holds the 100 sheets still to make (the rest of the Greek roster, Kemet, the Norsemen, Yamato and the neutral creatures), each with its prompt; `tools/refs/generate.py` makes them with an image API, checks each one (plain background, nothing cut off, three separate views), retries failures and saves them under `refs/` with a manifest. Riders are sent the horse sheet in `refs/hippeis/`, and tiers 2 and 3 are sent tier 1's sheet, so a line keeps one look.
+
+```
+python3 tools/refs/generate.py --list            # every sheet and its state
+python3 tools/refs/generate.py --dry-run hydra   # read the prompts without calling anything
+python3 tools/refs/generate.py greek             # a faction, a line or sheet ids; "all" for everything
+python3 tools/refs/generate.py --contact sheets.jpg
+```
+
+It uses Google's Gemini (`GEMINI_API_KEY`) by default, or xAI's Grok with `--provider xai` (`XAI_API_KEY`; text prompts only, and `api.x.ai` must be allowed by the network policy). `--models` lists the image models a provider offers and `--model` picks one.
+
 The game still draws units as emoji. The models are shown by two preview pages while the art direction is settled. Both load the `.glb` files from `assets/models`, so serve the repository over HTTP to open them (for example `python -m http.server`):
 
 - `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi` or `#hippeis`). The Hippeis page puts the horse alone on the first plinth and lists the tiers whose models are still to come, with both branches.
