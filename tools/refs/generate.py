@@ -44,6 +44,8 @@ def call(url, headers, body=None, timeout=300):
             with urllib.request.urlopen(req, timeout=timeout) as r: return json.loads(r.read())
         except urllib.error.HTTPError as e:
             text = e.read().decode('utf-8', 'replace')
+            if e.code == 429 and 'limit: 0' in text:   # no quota at all (a free-tier key): waiting will not help
+                raise ApiError(e.code, text)
             if e.code in (429, 500, 502, 503, 504) and attempt < 4:
                 wait = float(e.headers.get('Retry-After') or 10 * 2 ** attempt)
                 print(f'    HTTP {e.code}, waiting {wait:.0f} s'); time.sleep(wait); continue
@@ -208,6 +210,9 @@ def run(entries, provider, tries, force, delay):
             except ApiError as ex:
                 if ex.status in (401, 403) or 'API_KEY_INVALID' in ex.body:
                     sys.exit(f'The provider refused the key: {ex}')
+                if ex.status == 429 and 'limit: 0' in ex.body:
+                    sys.exit(f'The key has no quota for {provider.model}: image models need billing enabled '
+                             f'on the key\'s project (the free tier allows none).\n{ex}')
                 print(f'    attempt {t + 1}: {ex}'); time.sleep(delay); continue
             except Exception as ex:
                 print(f'    attempt {t + 1}: {ex}'); time.sleep(delay); continue
