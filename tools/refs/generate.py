@@ -179,7 +179,7 @@ def references(e):
     """(images to attach as (bytes, mime, relative path), id of the line's first tier or None)."""
     files = list(e.get('ref', []))
     tier = e['id'].split('-')[1]; same = None
-    if tier != '1':
+    if tier != '1' and e.get('tier1', True):
         for ext in ('.png', '.jpg'):
             rel = f'{line(e)}/{line(e)}-1{ext}'
             if os.path.exists(os.path.join(REFS, rel)):

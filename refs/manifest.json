@@ -1,4 +1,126 @@
 {
+ "hippeis-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "hippeis/hippeis-2.png",
+  "made": "2026-10-14T06:27:35+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Hippeus",
+  "ok": true,
+  "prompt": "A turnaround sheet of horse and rider together: three full views side by side, left to right: front view, side view with the horse facing right, back view. The horse stands square with all four legs visible; the rider sits upright without stirrups, legs hanging long, reins in the left hand, weapons held upright and clear of the horse.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: An Athenian citizen cavalryman (hippeus) c. 420 BC, as on the Parthenon frieze: bronze Attic helmet with hinged cheek pieces, a linothorax over a short chiton, a flowing chlamys, high soft riding boots; no shield; a cornel-wood cavalry spear about 2.5 m long with an iron head and a bronze butt-spike, held upright in the right hand.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe horse must match the attached sheet exactly (build, colour, mane, tail, sheepskin, bridle).",
+  "prompt_sha": "d9fe990400303e72",
+  "provider": "gemini",
+  "references": [
+   "hippeis/horse.jpg"
+  ]
+ },
+ "hippeis-2r": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "hippeis/hippeis-2r.png",
+  "made": "2026-10-14T06:27:57+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Hippakontistes",
+  "ok": true,
+  "prompt": "A turnaround sheet of horse and rider together: three full views side by side, left to right: front view, side view with the horse facing right, back view. The horse stands square with all four legs visible; the rider sits upright without stirrups, legs hanging long, reins in the left hand, weapons held upright and clear of the horse.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: A Greek mounted javelin thrower (hippakontistes) c. 400 BC: wide-brimmed felt petasos, short chiton, chlamys pinned at the right shoulder, soft boots; no armour, no shield; three javelins about 1.6 m long with leather throwing loops, one upright in the right hand and two held with the reins in the left.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe horse must match the attached sheet exactly (build, colour, mane, tail, sheepskin, bridle).",
+  "prompt_sha": "8b9e9c6ce696e48a",
+  "provider": "gemini",
+  "references": [
+   "hippeis/horse.jpg"
+  ]
+ },
+ "hippeis-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "hippeis/hippeis-3.png",
+  "made": "2026-10-14T06:22:24+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Hetairos",
+  "ok": true,
+  "prompt": "A turnaround sheet of horse and rider together: three full views side by side, left to right: front view, side view with the horse facing right, back view. The horse stands square with all four legs visible; the rider sits upright without stirrups, legs hanging long, reins in the left hand, weapons held upright and clear of the horse.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: A Macedonian Companion cavalryman (hetairos) of Alexander c. 333 BC: bronze Boeotian helmet with a white plume, a linothorax reinforced with bronze scales, a purple chlamys with a yellow border, high leather boots; no shield; a xyston lance about 3.5 m long of cornel wood with an iron blade at each end, held upright in the right hand; a kopis sword on a baldric at the left hip.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe horse must match the first attached sheet exactly (build, colour, mane, tail, sheepskin, bridle). The second attached sheet shows the tier one rider on it: match only its rendering style and how the rider sits. The rider's helmet, clothing, armour and weapons are a different unit's: make them exactly as this prompt describes, not as on that sheet, and copy none of its text.",
+  "prompt_sha": "958c6384dfb3e4fe",
+  "provider": "gemini",
+  "references": [
+   "hippeis/horse.jpg",
+   "hippeis/hippeis-1.jpg"
+  ]
+ },
+ "hippeis-3r": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "hippeis/hippeis-3r.png",
+  "made": "2026-10-14T06:23:13+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Tarantine",
+  "ok": true,
+  "prompt": "A turnaround sheet of horse and rider together: three full views side by side, left to right: front view, side view with the horse facing right, back view. The horse stands square with all four legs visible; the rider sits upright without stirrups, legs hanging long, reins in the left hand, weapons held upright and clear of the horse.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: A Tarantine light cavalryman c. 300 BC, as on the silver coins of Taras: bareheaded with a laurel wreath, short chiton, chlamys, soft boots; no body armour; a small round shield about 60 cm across on the left arm; three javelins with leather throwing loops, one upright in the right hand and two held behind the shield.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe horse must match the first attached sheet exactly (build, colour, mane, tail, sheepskin, bridle). The second attached sheet shows the tier one rider on it: match only its rendering style and how the rider sits. The rider's helmet, clothing, armour and weapons are a different unit's: make them exactly as this prompt describes, not as on that sheet, and copy none of its text.",
+  "prompt_sha": "2bfec3faf67fb5a6",
+  "provider": "gemini",
+  "references": [
+   "hippeis/horse.jpg",
+   "hippeis/hippeis-1.jpg"
+  ]
+ },
+ "hydra-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "hydra/hydra-1.png",
+  "made": "2026-10-14T06:16:40+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Marsh Hydra",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: A marsh hydra about 6 m long: a heavy, low, scaly body on four short splayed legs like a giant monitor lizard, a long tapering tail, and five long snake necks rising from the shoulders, each with a serpent head; olive green and mud-brown scales. The necks spread apart so that every head shows in outline.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "a1dbe1c7eaf36ee7",
+  "provider": "gemini",
+  "references": []
+ },
+ "hydra-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "hydra/hydra-2.png",
+  "made": "2026-10-14T06:28:16+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Lernaean Hydra",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: The Hydra of Lerna, larger than a marsh hydra: a heavy, low, scaly body on four short splayed legs like a giant monitor lizard, a long tapering tail, and exactly seven long snake necks rising from the shoulders, each with a serpent head; dark green-black scales with a bronze sheen, a ridge of spines along the back. The necks spread apart so that all seven heads show in outline.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "96f7ee8b7b570444",
+  "provider": "gemini",
+  "references": []
+ },
+ "hydra-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "hydra/hydra-3.png",
+  "made": "2026-10-14T06:31:12+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Hydra Matriarch",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: The hydra matriarch, largest of all: a heavy, low, scaly body on four short splayed legs like a giant monitor lizard, a long tapering tail, and nine long snake necks rising from the shoulders, each with a serpent head: one central neck, longer and thicker with a larger head (the immortal head of the myth), and four necks on each side of it; scarred black-green hide, pale gold eyes. The necks fan out like the fingers of two hands either side of the central one, so that all nine heads show in outline.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "cd6f1d4915127ff6",
+  "provider": "gemini",
+  "references": []
+ },
  "minotaur-1": {
   "checks": {
    "cut_off": false,
@@ -14,5 +136,93 @@
   "prompt_sha": "db0027b434048e98",
   "provider": "gemini",
   "references": []
+ },
+ "minotaur-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "minotaur/minotaur-2.png",
+  "made": "2026-10-14T06:21:18+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Labrys Guard",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: The same bull-headed creature as a guard of the palace of Knossos, c. 1450 BC: a padded linen kilt, a wide bronze belt, bronze armbands, a figure-of-eight oxhide shield on the back, and a long-hafted bronze labrys with an engraved head held upright in the right hand.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (minotaur-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "00f7f8f89adff3a2",
+  "provider": "gemini",
+  "references": [
+   "minotaur/minotaur-1.png"
+  ]
+ },
+ "minotaur-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "minotaur/minotaur-3.png",
+  "made": "2026-10-14T06:21:41+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Asterion",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: Asterion, the Minotaur at his most terrible, larger than before: near-black hide with pale flecks like stars, gilded horn tips, a bronze plate corselet with shoulder guards like the Dendra panoply, bronze greaves, a crimson kilt, gold armlets, and a huge two-handed ceremonial labrys held upright.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (minotaur-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "e602a9a462b11826",
+  "provider": "gemini",
+  "references": [
+   "minotaur/minotaur-1.png"
+  ]
+ },
+ "talos-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "talos/talos-1.png",
+  "made": "2026-10-14T06:17:45+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Bronze Automaton",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: A bronze automaton forged by Hephaestus, about 2.6 m tall: an athletic cast-bronze body like the Riace bronzes, dark bronze with green patina in the recesses, joints shown as clean seams, inlaid stone eyes, a single bronze vein running from the neck down to the right ankle where a bronze nail closes it; fists clenched.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "44547386ed865ce6",
+  "provider": "gemini",
+  "references": []
+ },
+ "talos-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "talos/talos-2.png",
+  "made": "2026-10-14T06:24:19+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Talos",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: Talos, the bronze giant who guarded Crete, as on the Talos vase from Ruvo, about 3 m tall: polished bronze with darker patina, sculpted short curly hair and beard, the ichor vein to the nail at the right ankle, a boulder held in the right hand.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (talos-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "6f13747fb10a1916",
+  "provider": "gemini",
+  "references": [
+   "talos/talos-1.png"
+  ]
+ },
+ "talos-3": {
+  "checks": {
+   "cut_off": true,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "talos/talos-3.png",
+  "made": "2026-10-14T06:25:42+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Colossus",
+  "ok": false,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: A colossal bronze statue come to life, about 4 m tall, in the manner of the Colossus of Rhodes: gleaming polished bronze, a radiate crown of sun rays, a cloak of hammered bronze over the left shoulder and arm, the ichor vein to the nail at the right ankle, fists clenched.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (talos-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "22cd5645960f2252",
+  "provider": "gemini",
+  "references": [
+   "talos/talos-1.png"
+  ]
  }
 }

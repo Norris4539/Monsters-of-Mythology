@@ -106,7 +106,7 @@ The Hoplite, Peltast and Hamippoi lines, the horse and the first Hippeis tier ar
 
 ### Reference sheets
 
-Each model is built from a turnaround sheet: one image per tier with the subject in front, side and back views on a plain background. `tools/refs/roster.py` holds the 100 sheets still to make (the rest of the Greek roster, Kemet, the Norsemen, Yamato and the neutral creatures), each with its prompt; `tools/refs/generate.py` makes them with an image API, checks each one (plain background, nothing cut off, three separate views), retries failures and saves them under `refs/` with a manifest. Riders are sent the horse sheet in `refs/hippeis/`, and tiers 2 and 3 are sent tier 1's sheet, so a line keeps one look.
+Each model is built from a turnaround sheet: one image per tier with the subject in front, side and back views on a plain background. `tools/refs/roster.py` holds the 100 sheets the remaining units need (the rest of the Greek roster, now made, then Kemet, the Norsemen, Yamato and the neutral creatures), each with its prompt; `tools/refs/generate.py` makes them with an image API, checks each one (plain background, nothing cut off, three separate views), retries failures and saves them under `refs/` with a manifest. Riders are sent the horse sheet in `refs/hippeis/`, and tiers 2 and 3 are sent tier 1's sheet, so a line keeps one look. The models edit an attached sheet rather than redraw it, so a tier that changes the anatomy (the hydras' heads) or would come back as a copy of tier 1 (two of the riders) sets `tier1=False` and describes the whole subject instead.
 
 ```
 python3 tools/refs/generate.py --list            # every sheet and its state
@@ -115,7 +115,7 @@ python3 tools/refs/generate.py greek             # a faction, a line or sheet id
 python3 tools/refs/generate.py --contact sheets.jpg
 ```
 
-It uses Google's Gemini (`GEMINI_API_KEY`) by default, or xAI's Grok with `--provider xai` (`XAI_API_KEY`; text prompts only, and `api.x.ai` must be allowed by the network policy). `--models` lists the image models a provider offers and `--model` picks one.
+It uses Google's Gemini (`GEMINI_API_KEY`) by default, or xAI's Grok with `--provider xai` (`XAI_API_KEY`; text prompts only, and `api.x.ai` must be allowed by the network policy). `--models` lists the image models a provider offers and `--model` picks one. Gemini's image models need billing enabled on the key's project; the free tier allows none. The Greek sheets were made with `--model gemini-3-pro-image`, which follows the prompts far better than the default `gemini-2.5-flash-image` (the nine-headed hydra took `gemini-3.1-flash-image`, the only one that counted the heads).
 
 The game still draws units as emoji. The models are shown by two preview pages while the art direction is settled. Both load the `.glb` files from `assets/models`, so serve the repository over HTTP to open them (for example `python -m http.server`):
 

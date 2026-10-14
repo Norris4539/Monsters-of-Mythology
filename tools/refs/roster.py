@@ -8,7 +8,10 @@ action poses are asked for.
 Each entry: id (line-tier; the Hippeis javelin branch is 2r and 3r), faction, the kind of
 subject (it sets the views and pose), the subject itself, and optional reference images
 under refs/ to attach (providers that take images use them; the others ignore them).
-Tiers 2 and 3 of a line are also sent tier 1's sheet, so a line keeps one look.
+Tiers 2 and 3 of a line are also sent tier 1's sheet, so a line keeps one look, unless the
+entry sets tier1=False: the image models edit an attached sheet rather than redraw it, so a
+tier that changes the anatomy (more heads) or looks too like tier 1 comes back as a copy.
+Such entries describe the whole subject instead of saying "the same build".
 """
 
 STYLE = {
@@ -59,7 +62,12 @@ RULES = ('Photorealistic. Plain light grey seamless background, even soft studio
 
 HORSE = ['hippeis/horse.jpg', 'hippeis/hippeis-1.jpg']
 HORSE_NOTE = ('The horse must match the first attached sheet exactly (build, colour, mane, tail, sheepskin, bridle). '
-              'The second attached sheet shows the tier one rider on it: match its rendering style and seat.')
+              'The second attached sheet shows the tier one rider on it: match only its rendering style and how the '
+              'rider sits. The rider\'s helmet, clothing, armour and weapons are a different unit\'s: make them exactly '
+              'as this prompt describes, not as on that sheet, and copy none of its text.')
+# The horse alone, for riders the model would otherwise draw as the tier one rider.
+HORSE_ALONE = HORSE[:1]
+HORSE_ALONE_NOTE = 'The horse must match the attached sheet exactly (build, colour, mane, tail, sheepskin, bridle).'
 
 ROSTER = [
     # ── Hellenes ──────────────────────────────────────────────────────────────
@@ -76,7 +84,8 @@ ROSTER = [
         'Asterion, the Minotaur at his most terrible, larger than before: near-black hide with pale flecks like stars, '
         'gilded horn tips, a bronze plate corselet with shoulder guards like the Dendra panoply, bronze greaves, a '
         'crimson kilt, gold armlets, and a huge two-handed ceremonial labrys held upright.')),
-    dict(id='hippeis-2', faction='greek', kind='mounted', name='Hippeus', ref=HORSE, note=HORSE_NOTE, subject=(
+    dict(id='hippeis-2', faction='greek', kind='mounted', name='Hippeus', ref=HORSE_ALONE, note=HORSE_ALONE_NOTE,
+         tier1=False, subject=(
         'An Athenian citizen cavalryman (hippeus) c. 420 BC, as on the Parthenon frieze: bronze Attic helmet with '
         'hinged cheek pieces, a linothorax over a short chiton, a flowing chlamys, high soft riding boots; no shield; '
         'a cornel-wood cavalry spear about 2.5 m long with an iron head and a bronze butt-spike, held upright in the right hand.')),
@@ -85,7 +94,8 @@ ROSTER = [
         'plume, a linothorax reinforced with bronze scales, a purple chlamys with a yellow border, high leather boots; '
         'no shield; a xyston lance about 3.5 m long of cornel wood with an iron blade at each end, held upright in the '
         'right hand; a kopis sword on a baldric at the left hip.')),
-    dict(id='hippeis-2r', faction='greek', kind='mounted', name='Hippakontistes', ref=HORSE, note=HORSE_NOTE, subject=(
+    dict(id='hippeis-2r', faction='greek', kind='mounted', name='Hippakontistes', ref=HORSE_ALONE, note=HORSE_ALONE_NOTE,
+         tier1=False, subject=(
         'A Greek mounted javelin thrower (hippakontistes) c. 400 BC: wide-brimmed felt petasos, short chiton, chlamys '
         'pinned at the right shoulder, soft boots; no armour, no shield; three javelins about 1.6 m long with leather '
         'throwing loops, one upright in the right hand and two held with the reins in the left.')),
@@ -97,13 +107,17 @@ ROSTER = [
         'A marsh hydra about 6 m long: a heavy, low, scaly body on four short splayed legs like a giant monitor lizard, '
         'a long tapering tail, and five long snake necks rising from the shoulders, each with a serpent head; olive '
         'green and mud-brown scales. The necks spread apart so that every head shows in outline.')),
-    dict(id='hydra-2', faction='greek', kind='beast', name='Lernaean Hydra', subject=(
-        'The Hydra of Lerna, larger: the same build with seven necks and heads, dark green-black scales with a bronze '
-        'sheen, a ridge of spines along the back. The necks spread apart so that every head shows in outline.')),
-    dict(id='hydra-3', faction='greek', kind='beast', name='Hydra Matriarch', subject=(
-        'The hydra matriarch, largest of all: nine necks, the middle one longer and thicker with a larger head (the '
-        'immortal head of the myth), scarred black-green hide, pale gold eyes. The necks spread apart so that every '
-        'head shows in outline.')),
+    dict(id='hydra-2', faction='greek', kind='beast', name='Lernaean Hydra', tier1=False, subject=(
+        'The Hydra of Lerna, larger than a marsh hydra: a heavy, low, scaly body on four short splayed legs like a '
+        'giant monitor lizard, a long tapering tail, and exactly seven long snake necks rising from the shoulders, '
+        'each with a serpent head; dark green-black scales with a bronze sheen, a ridge of spines along the back. '
+        'The necks spread apart so that all seven heads show in outline.')),
+    dict(id='hydra-3', faction='greek', kind='beast', name='Hydra Matriarch', tier1=False, subject=(
+        'The hydra matriarch, largest of all: a heavy, low, scaly body on four short splayed legs like a giant '
+        'monitor lizard, a long tapering tail, and nine long snake necks rising from the shoulders, each with a '
+        'serpent head: one central neck, longer and thicker with a larger head (the immortal head of the myth), and '
+        'four necks on each side of it; scarred black-green hide, pale gold eyes. The necks fan out like the fingers '
+        'of two hands either side of the central one, so that all nine heads show in outline.')),
     dict(id='talos-1', faction='greek', kind='figure', name='Bronze Automaton', subject=(
         'A bronze automaton forged by Hephaestus, about 2.6 m tall: an athletic cast-bronze body like the Riace '
         'bronzes, dark bronze with green patina in the recesses, joints shown as clean seams, inlaid stone eyes, a single '
@@ -375,5 +389,7 @@ def prompt(entry, refs=(), same_line=None):
     if refs and entry.get('note'): parts.append(entry['note'])
     if same_line:
         parts.append(f'The last attached sheet is the first tier of this line ({same_line}): keep the same build, '
-                     'proportions, skin and rendering style, and change only what this prompt describes.')
+                     'proportions, skin and rendering style, and change only what this prompt describes. Where this '
+                     'prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, '
+                     'weapons), follow this prompt.')
     return '\n\n'.join(parts)
