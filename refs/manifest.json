@@ -1,0 +1,18 @@
+{
+ "minotaur-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "minotaur/minotaur-1.png",
+  "made": "2026-10-14T06:12:55+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Minotaur",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for ancient Greece, based on archaeological finds, Greek vase painting and sculpture; mythological creatures as Greek art shows them, made believably real.\n\nThe subject: The Minotaur of Crete, about 2.3 m tall: the head and thick neck of a dark brown Cretan bull with long forward-curving horns, on a massively muscled man's body with short dark body hair, human legs and bare feet, and a short bull's tail. Minoan loincloth with a wide leather belt. A bronze double axe (labrys) about 1 m long in the right hand, head down beside the leg.\n\nDo not include: Roman armour, transverse crests, studded leather, \"300\"-movie or fantasy armour, ornate gold filigree, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "db0027b434048e98",
+  "provider": "gemini",
+  "references": []
+ }
+}
