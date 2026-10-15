@@ -383,7 +383,8 @@ function applyTheme() {
   const T = { top: g('--scene-top'), hz: g('--scene-horizon'), floor: g('--scene-floor'), plinth: g('--scene-plinth'), key: g('--scene-key'), fill: g('--scene-fill'), dark: g('--scene-dark') === '1' };
   if (scene.background) scene.background.dispose();
   scene.background = gradTex([[0, T.top], [.62, T.hz], [1, T.hz]], 2, 256);
-  scene.fog = new THREE.Fog(col(T.hz), 11, 28);
+  const fk = Math.max(1, ROW_HALF / 4);   // a long row is seen from further away: keep it clear of the haze
+  scene.fog = new THREE.Fog(col(T.hz), 11 * fk, 28 * fk);
   if (floorMat.map) floorMat.map.dispose();
   floorMat.map = gradTex([[0, T.floor], [.45, T.floor], [1, T.hz]], 512, 512, true); floorMat.needsUpdate = true;
   plinthMat.color = col(T.plinth);
