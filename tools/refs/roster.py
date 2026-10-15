@@ -133,9 +133,9 @@ ROSTER = [
 
     # ── Kemet ─────────────────────────────────────────────────────────────────
     dict(id='medjay-1', faction='egypt', kind='figure', name='Medjay', subject=(
-        'A Medjay desert scout and policeman of Nubian origin, c. 1300 BC: dark skin, short cropped hair with an '
-        'ostrich feather, a white linen kilt with a leather belt, sandals; a spear about 2 m long with a bronze leaf '
-        'blade and a small cowhide shield.')),
+        'A Medjay desert scout and policeman, c. 1300 BC: a man of Arab appearance with medium olive-brown skin, short '
+        'cropped dark hair with an ostrich feather, a white linen kilt with a leather belt, sandals; a spear about 2 m '
+        'long with a bronze leaf blade and a small cowhide shield.')),
     dict(id='medjay-2', faction='egypt', kind='figure', name='Veteran Medjay', subject=(
         'A veteran Medjay: a leather corselet sewn with bronze scales over the kilt, a cowhide shield with a rounded '
         'top, a bronze khopesh at the belt, and the spear.')),
