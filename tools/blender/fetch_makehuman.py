@@ -9,7 +9,7 @@ BASE = 'https://raw.githubusercontent.com/makehumancommunity/makehuman/master/ma
 FILES = ['3dobjs/base.obj'] + ['targets/macrodetails/' + f for f in (
     'caucasian-male-young.target', 'african-male-young.target', 'asian-male-young.target',
     'universal-male-young-maxmuscle-averageweight.target', 'universal-male-young-averagemuscle-minweight.target',
-    'universal-male-young-maxmuscle-minweight.target')]
+    'universal-male-young-maxmuscle-minweight.target', 'universal-male-young-maxmuscle-maxweight.target')]
 
 out = sys.argv[1] if len(sys.argv) > 1 else 'third_party/makehuman'
 os.makedirs(out, exist_ok=True)

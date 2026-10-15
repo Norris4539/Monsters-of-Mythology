@@ -177,7 +177,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 // Which unit this page shows and where its model lives. Published copies set these.
-const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', hippeis: '#hippeis', talos: '#talos' } };
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', talos: '#talos' } };
 
 // Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
 const ABIL = {
@@ -226,6 +226,17 @@ const UNITS = {
       { name: 'Epilektoi Hamippoi', gk: 'ἐπίλεκτοι', s: [11, 8, '4–7', 18, 8, 15], kit: ['Bronze pilos, chin strap', 'Linen corselet, red-trimmed flaps', 'Red chiton', 'Baldric and xiphos', 'Bronze shield with a thunderbolt', '4 javelins'] },
     ],
   },
+  minotaur: {
+    name: 'Minotaur', greek: 'Μινώταυρος', period: 'Knossos, c. 1450 BC', eyebrow: 'Hellenes · dwelling IV · heavy',
+    blurb: 'The bull of Minos, kept in the Labyrinth at Knossos: a giant man with the head and neck of a Cretan bull, swinging the double axe (labrys) of the Minoan palaces.',
+    facts: [['Weapon', 'Labrys'], ['Range', 'Melee'], ['Growth', '4 / wk'], ['Cost', '550 gold']], abil: ['cleave'],
+    layout: 'tall',
+    tiers: [
+      { name: 'Minotaur', gk: 'Μινώταυρος', s: [13, 12, '10–18', 45, 5, 15], kit: ['About 2.3 m to the poll', 'Dark brown hide, a bull’s head and neck', 'Minoan loincloth with a patterned flap', 'Wide leather belt', 'Bronze labrys, about 1 m'] },
+      { name: 'Labrys Guard', gk: 'λάβρυς', s: [16, 15, '12–20', 50, 5, 20], kit: ['Bronze belt and armbands', 'Crossed leather harness', 'Figure-of-eight oxhide shield on the back', 'Long-hafted engraved labrys'] },
+      { name: 'Asterion', gk: 'Ἀστερίων', scale: 1.08, s: [20, 19, '14–24', 60, 6, 30], kit: ['Near-black hide flecked like the stars', 'Gilded horn tips', 'Bronze corselet with shoulder guards, after the Dendra panoply', 'Bronze greaves', 'Crimson kilt, gold armlets', 'Gilded ceremonial double labrys'] },
+    ],
+  },
   hippeis: {
     name: 'Hippeis', greek: 'ἱππεῖς', period: 'c. 420–300 BC', eyebrow: 'Hellenes · dwelling V · cavalry',
     blurb: 'Greek scouts on horseback who throw javelins, then charge home with the spear. From the second tier the line splits into shock cavalry with the spear and javelin cavalry that skirmishes at range.',
@@ -252,7 +263,7 @@ const UNITS = {
     ],
   },
 };
-const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Throw', 'Thrust', 'Smash', 'Block', 'Rear', 'Hit', 'Death'];
+const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Throw', 'Thrust', 'Cleave', 'Gore', 'Smash', 'Block', 'Rear', 'Hit', 'Death'];
 const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop']);
 const RELEASE = 11 / 24;   // the Throw clip lets go of the javelin at frame 12
 // Stage layouts: plinth spacing, radius and base height, name plate size, the figures' facing,
@@ -260,6 +271,7 @@ const RELEASE = 11 / 24;   // the Throw clip lets go of the javelin at frame 12
 // for one figure or the whole row.
 const LAYOUTS = {
   foot:    { gap: 1.8, plinth: .6, base: .12, plate: [.7, .085], face: .45, centre: 0, cy: 1.0, halfW: .7, near: 4.6, rowCy: .95, rowHalfW: 2.85, rowMin: 5.4, far: 15, pickR: .5, pickH: 2 },
+  tall:    { gap: 2.4, plinth: .75, base: .13, plate: [.85, .09], face: .45, centre: 0, cy: 1.25, halfW: .95, near: 4.6, rowCy: 1.3, rowHalfW: 4.1, rowMin: 8.8, far: 20, pickR: .65, pickH: 2.7, shadow: 6 },
   giant:   { gap: 3.4, plinth: 1.05, base: .16, plate: [1.05, .1], face: .45, centre: 0, cy: 1.35, halfW: .95, near: 5.4, rowCy: 2.1, rowHalfW: 4.6, rowMin: 11, far: 30, pickR: .9, pickH: 4.4, shadow: 8 },
   mounted: { gap: 2.6, plinth: 1.1, base: .14, plate: [1.05, .1], face: 1.15, centre: .22, cy: 1.45, halfW: 1.25, near: 7.2, rowCy: 1.3, rowHalfW: 2.8, rowMin: 7.4, far: 20, pickR: .95, pickH: 2.8 },
 };
