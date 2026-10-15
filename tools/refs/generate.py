@@ -193,7 +193,10 @@ def references(e):
 
 def run(entries, provider, tries, force, delay):
     man = load_manifest(); made = review = skipped = failed = 0
+    lost = set()   # lines whose first tier failed in this run: their later tiers would not match it
     for i, e in enumerate(entries):
+        if line(e) in lost and e['id'].split('-')[1] != '1' and e.get('tier1', True):
+            print(f'[{i + 1}/{len(entries)}] {e["id"]}: skipped, its first tier failed'); failed += 1; continue
         refs, same = references(e)
         if not provider.takes_images: refs, same = [], None
         text = prompt(e, [r[2] for r in refs], same)
@@ -222,7 +225,9 @@ def run(entries, provider, tries, force, delay):
             if ok: break
             time.sleep(delay)
         if best is None:
-            failed += 1; print('    no image'); continue
+            failed += 1; print('    no image')
+            if e['id'].split('-')[1] == '1': lost.add(line(e))
+            continue
         _, img, ok, details = best
         os.makedirs(os.path.dirname(path_of(e)), exist_ok=True)
         img.convert('RGB').save(path_of(e), optimize=True)

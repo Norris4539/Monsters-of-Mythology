@@ -1,4 +1,160 @@
 {
+ "anubite-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "anubite/anubite-1.png",
+  "made": "2026-10-15T14:15:30+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Anubite Warden",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A jackal-headed guardian of the underworld, about 2.1 m tall: a lean muscular man's body with black skin as Anubis is painted in tombs, the head of a black jackal with tall pointed ears, a white pleated kilt, a broad bead collar, and a single bronze khopesh in the right hand; the left hand empty and open.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "99d81744af20aa28",
+  "provider": "gemini",
+  "references": []
+ },
+ "anubite-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "anubite/anubite-2.png",
+  "made": "2026-10-15T14:15:46+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Veteran Anubite Warden",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The same jackal-headed guardian in a corselet of overlapping feather-shaped scales, gold armlets, a cowhide shield on the left arm and a single long bronze khopesh in the right hand; nothing else in the hands.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (anubite-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "494ddb44fd6a4723",
+  "provider": "gemini",
+  "references": [
+   "anubite/anubite-1.png"
+  ]
+ },
+ "anubite-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "anubite/anubite-3.png",
+  "made": "2026-10-15T14:16:00+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Elite Anubite Warden",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The jackal-headed guardian at its grandest: a gilded scale corselet, a broad collar of gold and lapis lazuli, a single khopesh with a gilded blade in the right hand and a was-sceptre in the left; nothing else in the hands.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (anubite-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "8ddd247c5e1cd7b2",
+  "provider": "gemini",
+  "references": [
+   "anubite/anubite-1.png"
+  ]
+ },
+ "bennu-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "bennu/bennu-1.png",
+  "made": "2026-10-15T14:12:02+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Bennu Firebird",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The Bennu bird of Heliopolis, a giant heron about 2 m tall as tomb paintings show it: long legs and neck, a two-feathered crest, grey plumage that shades to fiery red and orange at the wing tips (colour only, no flames).\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "392445c85be8e6c8",
+  "provider": "gemini",
+  "references": []
+ },
+ "bennu-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "bennu/bennu-2.png",
+  "made": "2026-10-15T14:12:19+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Veteran Bennu Firebird",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A larger Bennu heron wearing the white atef crown with its two plumes, its plumage red-gold across the wings.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (bennu-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "f445fada7b6c3970",
+  "provider": "gemini",
+  "references": [
+   "bennu/bennu-1.png"
+  ]
+ },
+ "bennu-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "bennu/bennu-3.png",
+  "made": "2026-10-15T14:12:37+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Elite Bennu Firebird",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The greatest Bennu heron: the atef crown edged in gold, gold and crimson plumage, a long trailing crest.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (bennu-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "fceea12db676bb4f",
+  "provider": "gemini",
+  "references": [
+   "bennu/bennu-1.png"
+  ]
+ },
+ "chariot-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "chariot/chariot-1.png",
+  "made": "2026-10-15T14:09:24+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Chariot Archer",
+  "ok": true,
+  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A New Kingdom war chariot c. 1300 BC, as in the reliefs of Ramesses II and the chariots of Tutankhamun: a light wooden car with a floor of woven leather straps and six-spoked wheels set at the back of the car, drawn by two small horses with tall plumes; a crew of two in linen kilts: a driver holding the reins and a shield, and an archer holding a composite bow at his side, with a bow case and quiver on the side of the car.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "73b85da8e03c222b",
+  "provider": "gemini",
+  "references": []
+ },
+ "chariot-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "chariot/chariot-2.png",
+  "made": "2026-10-15T14:09:38+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Veteran Chariot Archer",
+  "ok": true,
+  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The same chariot with a veteran crew in bronze scale corselets, the horses in red and blue painted trappings with tall ostrich plumes, and gilded fittings on the car.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (chariot-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "e146cda74181e58d",
+  "provider": "gemini",
+  "references": [
+   "chariot/chariot-1.png"
+  ]
+ },
+ "chariot-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "chariot/chariot-3.png",
+  "made": "2026-10-15T14:09:51+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Elite Chariot Archer",
+  "ok": true,
+  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A chariot of the royal guard: the car sheathed in gold with relief decoration like Tutankhamun's state chariot, the horses in gilded harness with tall plumes, the crew in bronze scale corselets with broad collars.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (chariot-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "9dadbac7242c0aae",
+  "provider": "gemini",
+  "references": [
+   "chariot/chariot-1.png"
+  ]
+ },
  "hippeis-2": {
   "checks": {
    "cut_off": false,
@@ -121,6 +277,58 @@
   "provider": "gemini",
   "references": []
  },
+ "medjay-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "medjay/medjay-1.png",
+  "made": "2026-10-15T14:06:52+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Medjay",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A Medjay desert scout and policeman of Nubian origin, c. 1300 BC: dark skin, short cropped hair with an ostrich feather, a white linen kilt with a leather belt, sandals; a spear about 2 m long with a bronze leaf blade and a small cowhide shield.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "0781615298f29b0b",
+  "provider": "gemini",
+  "references": []
+ },
+ "medjay-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "medjay/medjay-2.png",
+  "made": "2026-10-15T14:07:21+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Veteran Medjay",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A veteran Medjay: a leather corselet sewn with bronze scales over the kilt, a cowhide shield with a rounded top, a bronze khopesh at the belt, and the spear.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (medjay-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "7f4d14982fea5bbc",
+  "provider": "gemini",
+  "references": [
+   "medjay/medjay-1.png"
+  ]
+ },
+ "medjay-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "medjay/medjay-3.png",
+  "made": "2026-10-15T14:07:58+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Elite Medjay",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A Medjay officer: a pleated linen kilt with a triangular apron, a broad bead collar, a bronze scale corselet, gold armlets, a cowhide shield, a khopesh at the belt and the spear.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (medjay-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "1a062ed2b51079f8",
+  "provider": "gemini",
+  "references": [
+   "medjay/medjay-1.png"
+  ]
+ },
  "minotaur-1": {
   "checks": {
    "cut_off": false,
@@ -171,6 +379,162 @@
   "provider": "gemini",
   "references": [
    "minotaur/minotaur-1.png"
+  ]
+ },
+ "priest-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "priest/priest-1.png",
+  "made": "2026-10-15T14:10:08+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Priest of Thoth",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A priest of Thoth: shaven head, a long white pleated linen robe, sandals, a scribal palette at the belt, a papyrus scroll in the left hand and a wooden staff topped with a carved ibis head in the right.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "0f6c371445ff27a5",
+  "provider": "gemini",
+  "references": []
+ },
+ "priest-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "priest/priest-2.png",
+  "made": "2026-10-15T14:10:23+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Veteran Priest of Thoth",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A lector priest of Thoth: shaven head, the broad sash of the lector priest across the chest over the white robe, an open papyrus roll in the left hand and the ibis staff in the right.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (priest-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "1a3405278022ba3a",
+  "provider": "gemini",
+  "references": [
+   "priest/priest-1.png"
+  ]
+ },
+ "priest-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "priest/priest-3.png",
+  "made": "2026-10-15T14:15:13+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Elite Priest of Thoth",
+  "ok": true,
+  "prompt": "A character turnaround sheet: three full-body views of the same figure side by side, left to right: front view, side view facing right, back view. Neutral modelling pose: standing straight, arms held a little away from the body, legs slightly apart, weapons held clear of the body so every limb shows in outline.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The high priest of Thoth at Hermopolis: shaven head, a mantle of a single leopard skin, its one head lying over the left shoulder and the hide hanging down the back to the tail (no second head), a gold broad collar, the white robe, and a staff topped with a gilded ibis and a moon disc.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (priest-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "f415306e535884d0",
+  "provider": "gemini",
+  "references": [
+   "priest/priest-1.png"
+  ]
+ },
+ "scorpion-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "scorpion/scorpion-1.png",
+  "made": "2026-10-15T14:08:23+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Serket Scorpion",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A giant desert scorpion sacred to Serket, about 2.5 m long with the tail: sand-yellow chitin like a deathstalker, pincers held forward, the segmented tail arched over the back with the sting.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "5108dc832afde76c",
+  "provider": "gemini",
+  "references": []
+ },
+ "scorpion-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "scorpion/scorpion-2.png",
+  "made": "2026-10-15T14:08:40+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Veteran Serket Scorpion",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A larger temple scorpion: dark amber-brown chitin, a band of hammered gold round one tail segment and faience beads strung across its back.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (scorpion-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "7bfc703e1a423b24",
+  "provider": "gemini",
+  "references": [
+   "scorpion/scorpion-1.png"
+  ]
+ },
+ "scorpion-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "scorpion/scorpion-3.png",
+  "made": "2026-10-15T14:08:54+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Elite Serket Scorpion",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The largest temple scorpion: black-brown chitin with a bronze sheen, the tail and pincers banded with gold and inlaid lapis lazuli plaques bearing the scorpion emblem of Serket.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (scorpion-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "3498e4da727b64a5",
+  "provider": "gemini",
+  "references": [
+   "scorpion/scorpion-1.png"
+  ]
+ },
+ "sphinx-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "sphinx/sphinx-1.png",
+  "made": "2026-10-15T14:16:14+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Sphinx",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A living Egyptian sphinx about 3.5 m long: a tawny lion's body and the head of a man wearing the nemes headcloth striped in plain ochre and cream like the Great Sphinx of Giza, with no cobra on the brow, and a false beard; standing on all fours, a calm face.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "6eb5a443116fd39c",
+  "provider": "gemini",
+  "references": []
+ },
+ "sphinx-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "sphinx/sphinx-2.png",
+  "made": "2026-10-15T14:16:28+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Veteran Sphinx",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A larger sphinx, the same plain ochre and cream nemes with no cobra, with a broad collar of gold and lapis lazuli and gilded claws.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (sphinx-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "4672f78e72831710",
+  "provider": "gemini",
+  "references": [
+   "sphinx/sphinx-1.png"
+  ]
+ },
+ "sphinx-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "sphinx/sphinx-3.png",
+  "made": "2026-10-15T14:16:41+00:00",
+  "model": "gemini-3.1-flash-image",
+  "name": "Elite Sphinx",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A royal sphinx: the nemes striped blue and gold, a rearing cobra on the brow, a gold collar and pectoral, and gold-sheathed claws.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (sphinx-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "d4ef6b2e430506c9",
+  "provider": "gemini",
+  "references": [
+   "sphinx/sphinx-1.png"
   ]
  },
  "talos-1": {

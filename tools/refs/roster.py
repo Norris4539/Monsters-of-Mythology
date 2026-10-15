@@ -169,18 +169,19 @@ ROSTER = [
         'A lector priest of Thoth: shaven head, the broad sash of the lector priest across the chest over the white '
         'robe, an open papyrus roll in the left hand and the ibis staff in the right.')),
     dict(id='priest-3', faction='egypt', kind='figure', name='Elite Priest of Thoth', subject=(
-        'The high priest of Thoth at Hermopolis: shaven head, a leopard-skin mantle with the head over the shoulder, a '
-        'gold broad collar, the white robe, and a staff topped with a gilded ibis and a moon disc.')),
+        'The high priest of Thoth at Hermopolis: shaven head, a mantle of a single leopard skin, its one head lying over '
+        'the left shoulder and the hide hanging down the back to the tail (no second head), a gold broad collar, the '
+        'white robe, and a staff topped with a gilded ibis and a moon disc.')),
     dict(id='anubite-1', faction='egypt', kind='figure', name='Anubite Warden', subject=(
         'A jackal-headed guardian of the underworld, about 2.1 m tall: a lean muscular man\'s body with black skin as '
         'Anubis is painted in tombs, the head of a black jackal with tall pointed ears, a white pleated kilt, a broad '
-        'bead collar, and a bronze khopesh in the right hand.')),
+        'bead collar, and a single bronze khopesh in the right hand; the left hand empty and open.')),
     dict(id='anubite-2', faction='egypt', kind='figure', name='Veteran Anubite Warden', subject=(
         'The same jackal-headed guardian in a corselet of overlapping feather-shaped scales, gold armlets, a cowhide '
-        'shield on the left arm and a long khopesh.')),
+        'shield on the left arm and a single long bronze khopesh in the right hand; nothing else in the hands.')),
     dict(id='anubite-3', faction='egypt', kind='figure', name='Elite Anubite Warden', subject=(
         'The jackal-headed guardian at its grandest: a gilded scale corselet, a broad collar of gold and lapis lazuli, '
-        'a golden khopesh in the right hand and a was-sceptre in the left.')),
+        'a single khopesh with a gilded blade in the right hand and a was-sceptre in the left; nothing else in the hands.')),
     dict(id='bennu-1', faction='egypt', kind='flyer', name='Bennu Firebird', subject=(
         'The Bennu bird of Heliopolis, a giant heron about 2 m tall as tomb paintings show it: long legs and neck, a '
         'two-feathered crest, grey plumage that shades to fiery red and orange at the wing tips (colour only, no flames).')),
@@ -189,10 +190,12 @@ ROSTER = [
     dict(id='bennu-3', faction='egypt', kind='flyer', name='Elite Bennu Firebird', subject=(
         'The greatest Bennu heron: the atef crown edged in gold, gold and crimson plumage, a long trailing crest.')),
     dict(id='sphinx-1', faction='egypt', kind='beast', name='Sphinx', subject=(
-        'A living Egyptian sphinx about 3.5 m long: a tawny lion\'s body and the head of a man wearing the striped '
-        'nemes headcloth and a false beard, as the Great Sphinx of Giza; standing on all fours, a calm face.')),
+        'A living Egyptian sphinx about 3.5 m long: a tawny lion\'s body and the head of a man wearing the nemes '
+        'headcloth striped in plain ochre and cream like the Great Sphinx of Giza, with no cobra on the brow, and a '
+        'false beard; standing on all fours, a calm face.')),
     dict(id='sphinx-2', faction='egypt', kind='beast', name='Veteran Sphinx', subject=(
-        'A larger sphinx with a broad collar of gold and lapis lazuli and gilded claws.')),
+        'A larger sphinx, the same plain ochre and cream nemes with no cobra, with a broad collar of gold and lapis '
+        'lazuli and gilded claws.')),
     dict(id='sphinx-3', faction='egypt', kind='beast', name='Elite Sphinx', subject=(
         'A royal sphinx: the nemes striped blue and gold, a rearing cobra on the brow, a gold collar and pectoral, and '
         'gold-sheathed claws.')),
