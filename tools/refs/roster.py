@@ -132,16 +132,43 @@ ROSTER = [
         'ichor vein to the nail at the right ankle, fists clenched.')),
 
     # ── Kemet ─────────────────────────────────────────────────────────────────
-    dict(id='medjay-1', faction='egypt', kind='figure', name='Medjay', subject=(
+    # The Medjay were put together from chosen sheets kept in refs/medjay/sources: the first tier as he was
+    # with a new shield, the second in the archer's armour with the spear and sword of one elite sample, the
+    # third in the royal guard's armour with a new shield and spear.
+    dict(id='medjay-1', faction='egypt', kind='figure', name='Medjay', ref=['medjay/sources/medjay-1-base.png'],
+         note=('The attached sheet shows this same Medjay: keep the man exactly as he is there (face, build, skin, hair '
+               'and feather, necklace, kilt, belt and dagger, sandals, the spear in his right hand) in the same pose '
+               'and rendering. Replace his shield completely: remove the tall round-topped shield on the wooden frame '
+               'and give him the new small oval shield this prompt describes, a different shape and size.'), subject=(
         'A Medjay desert scout and policeman, c. 1300 BC: a man of Arab appearance with medium olive-brown skin, short '
-        'cropped dark hair with an ostrich feather, a white linen kilt with a leather belt, sandals; a spear about 2 m '
-        'long with a bronze leaf blade and a small cowhide shield.')),
-    dict(id='medjay-2', faction='egypt', kind='figure', name='Veteran Medjay', subject=(
-        'A veteran Medjay: a leather corselet sewn with bronze scales over the kilt, a cowhide shield with a rounded '
-        'top, a bronze khopesh at the belt, and the spear.')),
-    dict(id='medjay-3', faction='egypt', kind='figure', name='Elite Medjay', subject=(
-        'A Medjay officer: a pleated linen kilt with a triangular apron, a broad bead collar, a bronze scale corselet, '
-        'gold armlets, a cowhide shield, a khopesh at the belt and the spear.')),
+        'cropped dark hair with an ostrich feather, a white linen kilt with a leather belt, sandals, no shirt and no '
+        'armour; a spear about 2 m long with a bronze leaf blade in the right hand, and in the left hand a small oval '
+        'shield only about 60 cm tall and 40 cm wide, an egg-shaped oval with no corners, of black-and-white cowhide '
+        'laced round its rim with a rawhide thong, held by a grip at its centre.')),
+    dict(id='medjay-2', faction='egypt', kind='figure', name='Veteran Medjay',
+         ref=['medjay/sources/elite-desert-archer.png', 'medjay/sources/elite-same-prompt.png'],
+         note=('Attached sheets, in order: the first shows an elite Medjay archer: copy his armour exactly, the tan '
+               'leather corselet with its plain leather yoke and edging and its straight rows of small flat bronze '
+               'plates, and take none of his bow, quiver, feathers, armlets or apron. The second '
+               'shows an elite Medjay: take only how he holds his spear upright in his right hand and the khopesh in '
+               'its sheath at his hip, and none of his feathers, collar, armlets, armour or shield.'), subject=(
+        'A veteran Medjay: the same man as the first tier, his single ostrich feather, white kilt, belt and sandals, '
+        'wearing a sleeveless corselet of tan leather with a plain leather yoke over the shoulders and a leather band '
+        'round its lower edge, sewn between them with straight horizontal rows of small flat rectangular bronze plates '
+        'with slightly rounded lower ends (not round fish scales); the spear upright in his right hand, a bronze khopesh in '
+        'its sheath at his left hip, and in his left hand a new shield, not the small oval shield of the first tier: '
+        'a cowhide shield about 90 cm tall and 50 cm wide with a rounded top and a straight bottom edge, dappled '
+        'brown and white hide on a wooden frame with a leather edging, held by its grip. Bare arms with no armlets; '
+        'no bow and no quiver.')),
+    dict(id='medjay-3', faction='egypt', kind='figure', name='Elite Medjay', ref=['medjay/sources/elite-royal-guard.png'],
+         note=('The first attached sheet shows a Medjay of the royal guard: take only his armour and dress as this '
+               'prompt lists them, not his shield, his spear or his khopesh.'), subject=(
+        'An elite Medjay of the royal guard: the same man as the first tier, his single ostrich feather, wearing a '
+        'long coat of bronze scales to mid-thigh with short sleeves, a broad bead collar, gold armlets and wristlets, '
+        'and a pleated kilt with a triangular apron below the coat; in his right hand a new spear about 2.2 m long with '
+        'a broad leaf-shaped bronze blade, a gilded socket and a bronze butt-spike, and on his left arm a new shield: '
+        'a tall cowhide shield about 1.1 m with a rounded top, dappled black and white hide edged with a gilded bronze '
+        'rim, and a gilded bronze boss in the shape of a sun disc. No sword in the hands.')),
     dict(id='scorpion-1', faction='egypt', kind='beast', name='Serket Scorpion', subject=(
         'A giant desert scorpion sacred to Serket, about 2.5 m long with the tail: sand-yellow chitin like a deathstalker, '
         'pincers held forward, the segmented tail arched over the back with the sting.')),
