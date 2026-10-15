@@ -245,10 +245,10 @@ const UNITS = {
     mount: { name: 'Hippos', gk: 'ἵππος · the mount of every tier', kit: ['Small Greek horse, about 13½ hands', 'Dark brown coat, black points', 'Cropped upright mane', 'Unshod hooves', 'Sheepskin with a braided girth and breast strap', 'Leather bridle, bronze bit rings'] },
     tiers: [
       { name: 'Prodromos', gk: 'πρόδρομος', s: [15, 10, '12–20', 55, 8, 5], kit: ['Bronze Boeotian helmet', 'Madder chiton, cord belt', 'Blue chlamys pinned at the right shoulder', 'Open-toed endromides', 'Bareback, no stirrups', '2 cornel-wood javelins'] },
-      { lvl: 2, name: 'Hippeus', gk: 'ἱππεύς', branch: 'Spear', pending: true, s: [21, 15, '15–24', 66, 9, 10], kit: ['Attic helmet', 'Linothorax over a short chiton', 'Chlamys', 'High riding boots', 'Cornel-wood spear, bronze butt-spike'], note: 'Range 1. Keeps Charge.' },
-      { lvl: 2, name: 'Hippakontistes', gk: 'ἱππακοντιστής', branch: 'Javelin', pending: true, s: [17, 11, '11–18', 56, 10, 10], kit: ['Felt petasos', 'Short chiton', 'Chlamys', 'Soft boots', '3 javelins'], note: 'Range 1–3. Hit and run instead of Charge.' },
-      { lvl: 3, name: 'Hetairos', gk: 'ἑταῖρος', branch: 'Spear', pending: true, s: [26, 18, '18–28', 76, 10, 15], kit: ['Boeotian helmet, white plume', 'Linothorax with bronze scales', 'Purple chlamys, yellow border', 'High boots', 'Xyston lance', 'Kopis on a baldric'], note: 'Range 1. Keeps Charge.' },
-      { lvl: 3, name: 'Tarantine', gk: 'Ταραντῖνος', branch: 'Javelin', pending: true, s: [21, 14, '13–21', 62, 11, 15], kit: ['Laurel wreath', 'Short chiton', 'Chlamys', 'Soft boots', 'Small round shield', '3 javelins'], note: 'Range 1–3. Hit and run instead of Charge.' },
+      { lvl: 2, tag: 2, name: 'Hippeus', gk: 'ἱππεύς', branch: 'Spear', s: [21, 15, '15–24', 66, 9, 10], kit: ['Attic helmet with cheek pieces', 'Linothorax over a short chiton', 'Olive chlamys', 'High riding boots', 'Cornel-wood spear, bronze butt-spike'], note: 'Range 1. Keeps Charge.' },
+      { lvl: 3, tag: 3, name: 'Hetairos', gk: 'ἑταῖρος', branch: 'Spear', s: [26, 18, '18–28', 76, 10, 15], kit: ['Boeotian helmet, white plume', 'Linothorax with bronze scales', 'Purple chlamys, yellow border', 'High boots', 'Xyston lance, a blade at each end', 'Kopis on a baldric'], note: 'Range 1. Keeps Charge.' },
+      { lvl: 2, tag: 4, name: 'Hippakontistes', gk: 'ἱππακοντιστής', branch: 'Javelin', s: [17, 11, '11–18', 56, 10, 10], kit: ['Felt petasos', 'Brown chiton and chlamys', 'Soft boots', '3 javelins, two held with the reins'], note: 'Range 1–3. Hit and run instead of Charge.' },
+      { lvl: 3, tag: 5, name: 'Tarantine', gk: 'Ταραντῖνος', branch: 'Javelin', s: [21, 14, '13–21', 62, 11, 15], kit: ['Laurel wreath', 'Pale chiton', 'Blue chlamys', 'Soft boots', 'Small round bronze shield', '3 javelins'], note: 'Range 1–3. Hit and run instead of Charge.' },
     ],
   },
   talos: {
@@ -273,7 +273,7 @@ const LAYOUTS = {
   foot:    { gap: 1.8, plinth: .6, base: .12, plate: [.7, .085], face: .45, centre: 0, cy: 1.0, halfW: .7, near: 4.6, rowCy: .95, rowHalfW: 2.85, rowMin: 5.4, far: 15, pickR: .5, pickH: 2 },
   tall:    { gap: 2.4, plinth: .75, base: .13, plate: [.85, .09], face: .45, centre: 0, cy: 1.25, halfW: .95, near: 4.6, rowCy: 1.3, rowHalfW: 4.1, rowMin: 8.8, far: 20, pickR: .65, pickH: 2.7, shadow: 6 },
   giant:   { gap: 3.4, plinth: 1.05, base: .16, plate: [1.05, .1], face: .45, centre: 0, cy: 1.35, halfW: .95, near: 5.4, rowCy: 2.1, rowHalfW: 4.6, rowMin: 11, far: 30, pickR: .9, pickH: 4.4, shadow: 8 },
-  mounted: { gap: 2.6, plinth: 1.1, base: .14, plate: [1.05, .1], face: 1.15, centre: .22, cy: 1.45, halfW: 1.25, near: 7.2, rowCy: 1.3, rowHalfW: 2.8, rowMin: 7.4, far: 20, pickR: .95, pickH: 2.8 },
+  mounted: { gap: 2.6, plinth: 1.1, base: .14, plate: [1.05, .1], face: 1.15, centre: .22, cy: 1.45, halfW: 1.25, near: 7.2, rowCy: 1.3, rowHalfW: 2.8, rowMin: 7.4, far: 30, pickR: .95, pickH: 2.8 },
 };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -283,12 +283,14 @@ const U = UNITS[KEY];
 const LY = LAYOUTS[U.layout || 'foot'], TOP = LY.base + .08;
 // The catalogue lists the mount (cavalry) and every tier; the stands are the entries with a
 // model to show, each on its own plinth. Tiers still waiting for their model have no stand.
+// A tier's tag is the level its nodes are tagged with (L<tags>_), where a line branches.
 const NUM = ['', 'I', 'II', 'III'];
 const ENTRIES = [...(U.mount ? [{ ...U.mount, mount: true, level: 0 }] : []),
-  ...U.tiers.map((t, i) => ({ ...t, lvl: t.lvl || i + 1, level: t.pending ? null : t.lvl || i + 1 }))];
+  ...U.tiers.map((t, i) => ({ ...t, lvl: t.lvl || i + 1, level: t.pending ? null : t.tag || t.lvl || i + 1 }))];
 const STANDS = ENTRIES.filter(e => e.level != null);
 STANDS.forEach((e, i) => { e.stand = i + 1; });
 const XS = STANDS.map((_, i) => (i - (STANDS.length - 1) / 2) * LY.gap);
+const ROW_HALF = Math.max(LY.rowHalfW, (STANDS.length - 1) / 2 * LY.gap + LY.plinth + .3);   // a long row of plinths needs a wider view
 if (!CONFIG.lockUnit) addEventListener('hashchange', () => { if (UNITS[location.hash.slice(1)] && location.hash.slice(1) !== KEY) location.reload(); });
 
 // ── Catalogue ───────────────────────────────────────────────────────────────
@@ -334,7 +336,7 @@ const cards = ENTRIES.map(t => {
 { // the viewing help names this page's keys
   const p = $('howto'); p.textContent = 'Drag to orbit, scroll or pinch to zoom. Pick ' + (U.mount ? 'the horse or a tier' : 'a tier') + ', or press ';
   STANDS.forEach((s, j) => { if (j) p.append(' '); p.append(el('kbd', null, String(s.stand))); });
-  p.append(', to step up to it; ', el('kbd', null, '0'), ` shows ${STANDS.length === 2 ? 'both' : 'all ' + ['', 'one', 'two', 'three', 'four', 'five'][STANDS.length]}. `, el('kbd', null, 'Space'), ' pauses.');
+  p.append(', to step up to it; ', el('kbd', null, '0'), ` shows ${STANDS.length === 2 ? 'both' : 'all ' + ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'][STANDS.length]}. `, el('kbd', null, 'Space'), ' pauses.');
 }
 
 // ── Renderer and scene ──────────────────────────────────────────────────────
@@ -357,7 +359,7 @@ controls.target.set(0, 1, 0);
 const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, .6); scene.add(hemi);
 const key = new THREE.DirectionalLight(0xffffff, 2.5);
 key.position.set(-4.5, 8, 6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
-const SH = LY.shadow || 4.5;
+const SH = Math.max(LY.shadow || 4.5, ROW_HALF + .5);
 Object.assign(key.shadow.camera, { left: -SH, right: SH, top: SH, bottom: -SH, near: .5, far: 25 + SH });
 key.shadow.bias = -.0004; key.shadow.normalBias = .02; scene.add(key);
 const rim = new THREE.DirectionalLight(0xffffff, 0); rim.position.set(5, 4, -6); scene.add(rim);
@@ -445,7 +447,7 @@ function frameFor(i) {
   const aspect = Math.max(.4, canvas.clientWidth / Math.max(1, canvas.clientHeight));
   const t16 = Math.tan(THREE.MathUtils.degToRad(16));
   const k = i ? STANDS[i - 1].scale || 1 : 1;   // a tier modelled larger than the first is framed larger too
-  const r = i ? k * Math.max(LY.near, LY.halfW / (t16 * aspect)) : Math.min(LY.far, Math.max(LY.rowMin, LY.rowHalfW / (t16 * aspect)));   // a whole figure clear of the controls, or the row of plinths
+  const r = i ? k * Math.max(LY.near, LY.halfW / (t16 * aspect)) : Math.min(LY.far, Math.max(LY.rowMin, ROW_HALF / (t16 * aspect)));   // a whole figure clear of the controls, or the row of plinths
   return { target: new THREE.Vector3(i ? XS[i - 1] : 0, i ? LY.cy * k : LY.rowCy, 0), r };
 }
 function focusTier(i) {

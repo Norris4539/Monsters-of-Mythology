@@ -68,7 +68,7 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 
 ## 3D models (Blender)
 
-The Hoplite, Peltast, Hamippoi, Minotaur and Talos lines, the horse and the first Hippeis tier are modelled, rigged and animated by Blender scripts in a realistic style.
+The Hoplite, Peltast, Hamippoi, Minotaur, Hippeis and Talos lines and the horse are modelled, rigged and animated by Blender scripts in a realistic style.
 
 - `tools/blender/fetch_makehuman.py` downloads the MakeHuman base mesh and shape targets (CC0 1.0, public domain) into `third_party/makehuman`.
 - `tools/blender/hoplite.py` runs with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`:
@@ -99,7 +99,9 @@ The Hoplite, Peltast, Hamippoi, Minotaur and Talos lines, the horse and the firs
 - `tools/blender/hippeis.py` seats the rider on the horse and exports `assets/models/hippeis.glb`:
   - one armature for horse and rider: the rider's root hangs from the horse's saddle bone, so he rides every gait, gripping with his thighs and without stirrups;
   - `L1_` Prodromos: bronze Boeotian helmet, madder chiton with a cord belt, blue chlamys pinned at the right shoulder, open-toed endromides, two cornel-wood javelins (one to throw, one kept for close fighting);
-  - the horse and its tack are untagged and the rider is `L123_`, so level 0 shows the horse alone. It then wears `L0_Reins` lying over its withers instead of the reins that run to the rider's left fist, which hang from their own bone: keyed to the fist in every clip, it lets go when he falls;
+  - the spear branch: `L2_` Hippeus, an Attic helmet with cheek pieces, a linothorax over a short chiton, an olive chlamys, high riding boots and a cornel-wood spear with a bronze butt-spike; `L3_` Hetairos, a Boeotian helmet with a white horsehair plume, a linothorax faced with bronze scales, a purple chlamys with a woven yellow border, high boots, the xyston with a blade at each end and a kopis on a baldric;
+  - the javelin branch: `L4_` Hippakontistes, a felt petasos, a brown chiton and chlamys, soft boots and three javelins, two held upright with the reins; `L5_` Tarantine, a laurel wreath, a pale chiton, a blue chlamys, soft boots, a small round bronze shield on the left forearm and three javelins;
+  - the horse and its tack are untagged and the rider is `L12345_`, so level 0 shows the horse alone. It then wears `L0_Reins` lying over its withers instead of the reins that run to the rider's left fist, which hang from their own bone: keyed to the fist in every clip, it lets go when he falls. The throwing javelin is `L145_`, so only the javelin tiers throw one;
   - animations: Idle, Walk, Gallop, Throw, Thrust, Rear, Hit and Death. Throw and Thrust are made at the gallop, with `ThrowJavelin` released at frame 12; in Death the horse stumbles, kneels and rolls onto its left side while the rider is thrown clear to the right.
 - `tools/blender/minotaur.py` builds the Minotaur line and exports `assets/models/minotaur.glb`:
   - the MakeHuman man made massive (widened through the shoulders and deepened through the chest, his muscles deepened as for Talos), his head replaced by a bull's head and neck traced from the side view of the sheet, inflated as for the horse and sized to the front view's widths, its base laid onto the shoulders; built at the infantry's scale and exported at 2.3 m to the poll, with Asterion a little larger;
@@ -131,7 +133,7 @@ It uses Google's Gemini (`GEMINI_API_KEY`) by default, or xAI's Grok with `--pro
 
 The game still draws units as emoji. The models are shown by two preview pages while the art direction is settled. Both load the `.glb` files from `assets/models`, so serve the repository over HTTP to open them (for example `python -m http.server`):
 
-- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi`, `#minotaur`, `#hippeis` or `#talos`). The Hippeis page puts the horse alone on the first plinth and lists the tiers whose models are still to come, with both branches; the Talos page stands each tier at its own height.
+- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi`, `#minotaur`, `#hippeis` or `#talos`). The Hippeis page puts the horse alone on the first plinth and both branches after the Prodromos (a tier's `tag` is the level its nodes are tagged with); the Talos page stands each tier at its own height.
 - `preview/pantheon-3d.html` covers the adventure map and battle looks, the unit roster, a scripted Greek-vs-Greek battle with switchable effect styles, and the Blender Hoplite and Peltast lines.
 
 ## Code layout
