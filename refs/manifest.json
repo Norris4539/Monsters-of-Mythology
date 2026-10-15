@@ -58,12 +58,12 @@
    "views_found": 3
   },
   "file": "bennu/bennu-1.png",
-  "made": "2026-10-15T16:16:28+00:00",
+  "made": "2026-10-15T16:20:26+00:00",
   "model": "gemini-3.1-flash-image",
   "name": "Bennu Firebird",
   "ok": true,
-  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The Bennu bird of Heliopolis as the vignettes of the Book of the Dead paint it, made real: a giant grey heron about 2 m tall, slender, with blue-grey plumage, a long neck held in an S, long legs, and a crest of two long thin plumes streaming back from the head; dark flight feathers, no other colours.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
-  "prompt_sha": "70f8e7e7b0e67621",
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The Bennu bird of Heliopolis, a giant heron about 2 m tall as tomb paintings show it: long legs and neck, a two-feathered crest, grey plumage that shades to fiery red and orange at the wing tips (colour only, no flames).\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "392445c85be8e6c8",
   "provider": "gemini",
   "references": []
  },
@@ -74,12 +74,12 @@
    "views_found": 3
   },
   "file": "bennu/bennu-2.png",
-  "made": "2026-10-15T16:16:28+00:00",
+  "made": "2026-10-15T16:20:26+00:00",
   "model": "gemini-3.1-flash-image",
   "name": "Veteran Bennu Firebird",
   "ok": true,
-  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The Bennu bird of Heliopolis, a giant heron about 2 m tall as tomb paintings show it: long legs and neck, a two-feathered crest, grey plumage that shades to fiery red and orange at the wing tips (colour only, no flames).\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
-  "prompt_sha": "392445c85be8e6c8",
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The Bennu bird of Heliopolis as the vignettes of the Book of the Dead paint it, made real: a giant grey heron about 2 m tall, slender, with blue-grey plumage, a long neck held in an S, long legs, and a crest of two long thin plumes streaming back from the head; dark flight feathers, no other colours.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "70f8e7e7b0e67621",
   "provider": "gemini",
   "references": []
  },
@@ -90,7 +90,7 @@
    "views_found": 3
   },
   "file": "bennu/bennu-3.png",
-  "made": "2026-10-15T16:16:28+00:00",
+  "made": "2026-10-15T16:20:26+00:00",
   "model": "gemini-3.1-flash-image",
   "name": "Elite Bennu Firebird",
   "ok": true,

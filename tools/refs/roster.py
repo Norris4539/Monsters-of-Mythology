@@ -182,15 +182,15 @@ ROSTER = [
     dict(id='anubite-3', faction='egypt', kind='figure', name='Elite Anubite Warden', subject=(
         'The jackal-headed guardian at its grandest: a gilded scale corselet, a broad collar of gold and lapis lazuli, '
         'a single khopesh with a gilded blade in the right hand and a was-sceptre in the left; nothing else in the hands.')),
-    # The Bennu's tiers were chosen from separate samples, so each describes the whole bird: the heron of the
-    # tomb paintings, the heron with fire-coloured wing tips, and the firebird with burning feathers.
+    # The Bennu's tiers were chosen from separate samples, so each describes the whole bird: the heron with
+    # fire-coloured wing tips, the heron of the tomb paintings, and the firebird with burning feathers.
     dict(id='bennu-1', faction='egypt', kind='flyer', name='Bennu Firebird', subject=(
+        'The Bennu bird of Heliopolis, a giant heron about 2 m tall as tomb paintings show it: long legs and neck, a '
+        'two-feathered crest, grey plumage that shades to fiery red and orange at the wing tips (colour only, no flames).')),
+    dict(id='bennu-2', faction='egypt', kind='flyer', name='Veteran Bennu Firebird', tier1=False, subject=(
         'The Bennu bird of Heliopolis as the vignettes of the Book of the Dead paint it, made real: a giant grey '
         'heron about 2 m tall, slender, with blue-grey plumage, a long neck held in an S, long legs, and a crest of two long '
         'thin plumes streaming back from the head; dark flight feathers, no other colours.')),
-    dict(id='bennu-2', faction='egypt', kind='flyer', name='Veteran Bennu Firebird', tier1=False, subject=(
-        'The Bennu bird of Heliopolis, a giant heron about 2 m tall as tomb paintings show it: long legs and neck, a '
-        'two-feathered crest, grey plumage that shades to fiery red and orange at the wing tips (colour only, no flames).')),
     dict(id='bennu-3', faction='egypt', kind='flyer', name='Elite Bennu Firebird', tier1=False, subject=(
         'The Bennu firebird of Heliopolis: a giant heron about 2 m tall with long legs and neck and a two-feathered '
         'crest, grey on the head and neck, its body and wings glowing ember-red and orange like coals, with small flames '
