@@ -68,7 +68,7 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 
 ## 3D models (Blender)
 
-The Hoplite, Peltast, Hamippoi, Minotaur, Hippeis and Talos lines and the horse are modelled, rigged and animated by Blender scripts in a realistic style.
+Every Greek line (Peltast, Hoplite, Hamippoi, Minotaur, Hippeis, Hydra and Talos) and the horse are modelled, rigged and animated by Blender scripts in a realistic style.
 
 - `tools/blender/fetch_makehuman.py` downloads the MakeHuman base mesh and shape targets (CC0 1.0, public domain) into `third_party/makehuman`.
 - `tools/blender/hoplite.py` runs with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`:
@@ -109,6 +109,11 @@ The Hoplite, Peltast, Hamippoi, Minotaur, Hippeis and Talos lines and the horse 
   - eyes, ears, a curly forelock between the horns, shaggy hair on the hump and a tufted tail;
   - the fists are bent into the mesh as for Talos, the right one round the haft;
   - animations: Idle, Walk, Cleave (an overhead chop), Gore (head down, a lunge on the horns and a toss), Hit and Death.
+- `tools/blender/hydra.py` builds the Hydra line and exports `assets/models/hydra.glb`:
+  - a heavy, low body on four splayed legs like a giant monitor lizard, with five-toed clawed feet, a long tail and two rows of osteoderms down the back, laid as ellipsoids and fused by a voxel remesh; about 6 m long, and the gallery scales the second and third tiers up;
+  - the necks rise in a fan from the shoulders, each a tube lofted along an S-curve on its own chain of five bones; each serpent's head is lofted from sections, with a lower jaw on its own bone, teeth and slit-pupilled eyes;
+  - `L1_` Marsh Hydra: five necks, olive and mud-brown scales; `L2_` Lernaean Hydra: seven necks, green-black scales with a bronze sheen and a ridge of spines; `L3_` Hydra Matriarch: nine necks, the middle one longer and thicker with a larger head, scarred black-green hide and pale gold eyes. The scales are Voronoi cells with dark seams, paler on the belly and throat (a colour attribute baked into the texture) in transverse plates;
+  - animations: Idle, Walk (a trot with the body swinging), Strike (every head draws back and strikes, a frame or two apart, its jaws gaping), Hit and Death (the body sinks and the necks topple out flat).
 - `tools/blender/talos.py` builds the Talos line on the same pipeline and exports `assets/models/talos.glb`:
   - the MakeHuman man made heavier and more muscled, his muscle forms deepened by unsharp masking the mesh (each vertex moved away from a volume-preserving smooth of it); built at 1.76 m and exported at the automaton's 2.6 m, and the gallery scales Talos (3 m) and the Colossus (4 m) up from that;
   - each tier has its own body in its own bronze, on one skeleton: `L1_` Bronze Automaton, dark with green patina in the recesses; `L2_` Talos, polished with a darker patina, a cast beard and a boulder in his right hand; `L3_` Colossus, gleaming, with a radiate crown and a cloak of hammered bronze hung from the trunk;
@@ -133,7 +138,7 @@ It uses Google's Gemini (`GEMINI_API_KEY`) by default, or xAI's Grok with `--pro
 
 The game still draws units as emoji. The models are shown by two preview pages while the art direction is settled. Both load the `.glb` files from `assets/models`, so serve the repository over HTTP to open them (for example `python -m http.server`):
 
-- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi`, `#minotaur`, `#hippeis` or `#talos`). The Hippeis page puts the horse alone on the first plinth and both branches after the Prodromos (a tier's `tag` is the level its nodes are tagged with); the Talos page stands each tier at its own height.
+- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi`, `#minotaur`, `#hippeis`, `#hydra` or `#talos`). The Hippeis page puts the horse alone on the first plinth and both branches after the Prodromos (a tier's `tag` is the level its nodes are tagged with); the Talos page stands each tier at its own height.
 - `preview/pantheon-3d.html` covers the adventure map and battle looks, the unit roster, a scripted Greek-vs-Greek battle with switchable effect styles, and the Blender Hoplite and Peltast lines.
 
 ## Code layout

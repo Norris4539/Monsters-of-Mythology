@@ -177,7 +177,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 // Which unit this page shows and where its model lives. Published copies set these.
-const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', talos: '#talos' } };
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos' } };
 
 // Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
 const ABIL = {
@@ -251,6 +251,17 @@ const UNITS = {
       { lvl: 3, tag: 5, name: 'Tarantine', gk: 'Ταραντῖνος', branch: 'Javelin', s: [21, 14, '13–21', 62, 11, 15], kit: ['Laurel wreath', 'Pale chiton', 'Blue chlamys', 'Soft boots', 'Small round bronze shield', '3 javelins'], note: 'Range 1–3. Hit and run instead of Charge.' },
     ],
   },
+  hydra: {
+    name: 'Hydra', greek: 'Ὕδρα', period: 'the Lernaean swamp', eyebrow: 'Hellenes · dwelling VI · heavy · 2×2',
+    blurb: 'The many-headed serpent of the swamp of Lerna, which Heracles fought as his second labour: cut one head off and two grow back.',
+    facts: [['Weapon', 'Fangs'], ['Range', 'Melee'], ['Growth', '2 / wk'], ['Cost', '1800 gold, 1 ichor']], abil: ['large', 'manyHeads', 'regrow'],
+    layout: 'beast',
+    tiers: [
+      { name: 'Marsh Hydra', gk: 'ὕδρα', s: [18, 18, '25–45', 180, 5, 25], kit: ['About 6 m long', 'Five necks', 'Olive green and mud-brown scales', 'A ridge of osteoderms down the back and tail', 'Slit-pupilled amber eyes'] },
+      { name: 'Lernaean Hydra', gk: 'Λερναία Ὕδρα', scale: 1.12, s: [23, 23, '30–50', 210, 5, 30], kit: ['Larger', 'Seven necks', 'Green-black scales with a bronze sheen', 'A ridge of spines along the back and tail'] },
+      { name: 'Hydra Matriarch', gk: 'μήτηρ', scale: 1.25, s: [28, 28, '35–60', 250, 6, 40], kit: ['Largest', 'Nine necks', 'The immortal head: the middle one, longer and thicker', 'Scarred black-green hide', 'Pale gold eyes'] },
+    ],
+  },
   talos: {
     name: 'Talos', greek: 'Τάλως', period: 'Talos vase, c. 400 BC', eyebrow: 'Hellenes · dwelling VII · bronze giant',
     blurb: 'The bronze giant Hephaestus made to guard Crete: he strode round the island three times a day and stoned the ships that came near. A single vein of ichor ran from his neck to his ankle, closed by a bronze nail.',
@@ -263,7 +274,7 @@ const UNITS = {
     ],
   },
 };
-const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Throw', 'Thrust', 'Cleave', 'Gore', 'Smash', 'Block', 'Rear', 'Hit', 'Death'];
+const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Throw', 'Thrust', 'Cleave', 'Gore', 'Strike', 'Smash', 'Block', 'Rear', 'Hit', 'Death'];
 const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop']);
 const RELEASE = 11 / 24;   // the Throw clip lets go of the javelin at frame 12
 // Stage layouts: plinth spacing, radius and base height, name plate size, the figures' facing,
@@ -272,6 +283,7 @@ const RELEASE = 11 / 24;   // the Throw clip lets go of the javelin at frame 12
 const LAYOUTS = {
   foot:    { gap: 1.8, plinth: .6, base: .12, plate: [.7, .085], face: .45, centre: 0, cy: 1.0, halfW: .7, near: 4.6, rowCy: .95, rowHalfW: 2.85, rowMin: 5.4, far: 15, pickR: .5, pickH: 2 },
   tall:    { gap: 2.4, plinth: .75, base: .13, plate: [.85, .09], face: .45, centre: 0, cy: 1.25, halfW: .95, near: 4.6, rowCy: 1.3, rowHalfW: 4.1, rowMin: 8.8, far: 20, pickR: .65, pickH: 2.7, shadow: 6 },
+  beast:   { gap: 6.4, plinth: 2.3, base: .18, plate: [1.3, .12], face: .55, centre: -1.4, cy: 2.0, halfW: 3.0, near: 9, rowCy: 2.2, rowHalfW: 11, rowMin: 14, far: 44, pickR: 2.2, pickH: 4.5, shadow: 10 },
   giant:   { gap: 3.4, plinth: 1.05, base: .16, plate: [1.05, .1], face: .45, centre: 0, cy: 1.35, halfW: .95, near: 5.4, rowCy: 2.1, rowHalfW: 4.6, rowMin: 11, far: 30, pickR: .9, pickH: 4.4, shadow: 8 },
   mounted: { gap: 2.6, plinth: 1.1, base: .14, plate: [1.05, .1], face: 1.15, centre: .22, cy: 1.45, halfW: 1.25, near: 7.2, rowCy: 1.3, rowHalfW: 2.8, rowMin: 7.4, far: 30, pickR: .95, pickH: 2.8 },
 };
