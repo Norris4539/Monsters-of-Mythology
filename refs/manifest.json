@@ -457,14 +457,16 @@
    "views_found": 3
   },
   "file": "scorpion/scorpion-2.png",
-  "made": "2026-10-15T19:39:00+00:00",
+  "made": "2026-10-16T12:24:23+00:00",
   "model": "gemini-3.1-flash-image",
   "name": "Veteran Serket Scorpion",
   "ok": true,
-  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A larger black fat-tailed temple scorpion of Serket: glossy black chitin, a thick heavy arched tail, a band of hammered gold round one tail segment and red carnelian beads strung across its back.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
-  "prompt_sha": "62345b2d86d536a3",
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A larger black fat-tailed temple scorpion of Serket: glossy black chitin, a thick heavy arched tail with a band of hammered gold round one tail segment; no beads.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe attached sheet shows this scorpion: keep it exactly as it is there (body, pose, glossy black chitin, the thick tail and the hammered gold band round it) in the same views and rendering, and take off the strings of red carnelian beads entirely, leaving its back and tail bare black chitin.",
+  "prompt_sha": "7c93abadaa6f3a27",
   "provider": "gemini",
-  "references": []
+  "references": [
+   "scorpion/sources/tier2-with-carnelian.png"
+  ]
  },
  "scorpion-3": {
   "checks": {
@@ -473,15 +475,15 @@
    "views_found": 3
   },
   "file": "scorpion/scorpion-3.png",
-  "made": "2026-10-15T14:08:54+00:00",
+  "made": "2026-10-16T12:24:56+00:00",
   "model": "gemini-3.1-flash-image",
   "name": "Elite Serket Scorpion",
   "ok": true,
-  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The largest temple scorpion: black-brown chitin with a bronze sheen, the tail and pincers banded with gold and inlaid lapis lazuli plaques bearing the scorpion emblem of Serket.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (scorpion-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
-  "prompt_sha": "3498e4da727b64a5",
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The largest war scorpion of Serket: the black fat-tailed scorpion in fitted armour of gilded bronze plates inlaid with lapis lazuli on the carapace, every tail segment and the pincers, a gold-sheathed sting, and the hammered gold band of the second tier on its tail; no beads.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe attached sheet shows this scorpion: keep it exactly as it is there (body, pose, its armour and the hammered gold band on its tail) in the same views and rendering, and take off the strings of red carnelian beads entirely, showing the armour plates beneath them.",
+  "prompt_sha": "d184b383b8dbb97f",
   "provider": "gemini",
   "references": [
-   "scorpion/scorpion-1.png"
+   "scorpion/sources/tier3-armour-with-carnelian.png"
   ]
  },
  "sphinx-1": {

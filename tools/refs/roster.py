@@ -169,18 +169,28 @@ ROSTER = [
         'a broad leaf-shaped bronze blade, a gilded socket and a bronze butt-spike, and on his left arm a new shield: '
         'a tall cowhide shield about 1.1 m with a rounded top, dappled black and white hide edged with a gilded bronze '
         'rim, and a gilded bronze boss in the shape of a sun disc. No sword in the hands.')),
-    # The scorpion's first two tiers were chosen from separate samples (the black fat-tailed direction), so
-    # each describes the whole creature.
+    # The scorpion's tiers were chosen from samples (the black fat-tailed direction): the first describes the whole
+    # creature; the second and third are the chosen sheets kept in refs/scorpion/sources with their carnelian beads
+    # taken off.
     dict(id='scorpion-1', faction='egypt', kind='beast', name='Serket Scorpion', subject=(
         'A giant black fat-tailed scorpion of the Egyptian desert, sacred to Serket, about 2.5 m long with the tail: '
         'glossy black chitin like Androctonus, a thick heavy tail of swollen segments arched over the back with the '
         'sting, smaller pincers held forward.')),
-    dict(id='scorpion-2', faction='egypt', kind='beast', name='Veteran Serket Scorpion', tier1=False, subject=(
-        'A larger black fat-tailed temple scorpion of Serket: glossy black chitin, a thick heavy arched tail, a band '
-        'of hammered gold round one tail segment and red carnelian beads strung across its back.')),
-    dict(id='scorpion-3', faction='egypt', kind='beast', name='Elite Serket Scorpion', subject=(
-        'The largest temple scorpion: black-brown chitin with a bronze sheen, the tail and pincers banded with gold and '
-        'inlaid lapis lazuli plaques bearing the scorpion emblem of Serket.')),
+    dict(id='scorpion-2', faction='egypt', kind='beast', name='Veteran Serket Scorpion', tier1=False,
+         ref=['scorpion/sources/tier2-with-carnelian.png'],
+         note=('The attached sheet shows this scorpion: keep it exactly as it is there (body, pose, glossy black chitin, '
+               'the thick tail and the hammered gold band round it) in the same views and rendering, and take off the '
+               'strings of red carnelian beads entirely, leaving its back and tail bare black chitin.'), subject=(
+        'A larger black fat-tailed temple scorpion of Serket: glossy black chitin, a thick heavy arched tail with a '
+        'band of hammered gold round one tail segment; no beads.')),
+    dict(id='scorpion-3', faction='egypt', kind='beast', name='Elite Serket Scorpion', tier1=False,
+         ref=['scorpion/sources/tier3-armour-with-carnelian.png'],
+         note=('The attached sheet shows this scorpion: keep it exactly as it is there (body, pose, its armour and the '
+               'hammered gold band on its tail) in the same views and rendering, and take off the strings of red '
+               'carnelian beads entirely, showing the armour plates beneath them.'), subject=(
+        'The largest war scorpion of Serket: the black fat-tailed scorpion in fitted armour of gilded bronze plates '
+        'inlaid with lapis lazuli on the carapace, every tail segment and the pincers, a gold-sheathed sting, and the '
+        'hammered gold band of the second tier on its tail; no beads.')),
     dict(id='chariot-1', faction='egypt', kind='chariot', name='Chariot Archer', subject=(
         'A New Kingdom war chariot c. 1300 BC, as in the reliefs of Ramesses II and the chariots of Tutankhamun: a '
         'light wooden car with a floor of woven leather straps and six-spoked wheels set at the back of the car, drawn '
