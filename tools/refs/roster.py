@@ -196,12 +196,30 @@ ROSTER = [
         'light wooden car with a floor of woven leather straps and six-spoked wheels set at the back of the car, drawn '
         'by two small horses with tall plumes; a crew of two in linen kilts: a driver holding the reins and a shield, '
         'and an archer holding a composite bow at his side, with a bow case and quiver on the side of the car.')),
+    # From tier 2 the line splits like the Hippeis: archers who shoot from the car (2, 3) and a melee crew who fight
+    # with the spear from it (2r, 3r).
     dict(id='chariot-2', faction='egypt', kind='chariot', name='Veteran Chariot Archer', subject=(
         'The same chariot with a veteran crew in bronze scale corselets, the horses in red and blue painted trappings '
-        'with tall ostrich plumes, and gilded fittings on the car.')),
+        'with tall ostrich plumes, and gilded fittings on the car. The archer holds his composite bow up in his left '
+        'hand with an arrow nocked, ready to shoot, and a full quiver of arrows hangs on the side of the car.')),
     dict(id='chariot-3', faction='egypt', kind='chariot', name='Elite Chariot Archer', subject=(
         'A chariot of the royal guard: the car sheathed in gold with relief decoration like Tutankhamun\'s state '
-        'chariot, the horses in gilded harness with tall plumes, the crew in bronze scale corselets with broad collars.')),
+        'chariot, the horses in gilded harness with tall plumes, the crew in bronze scale corselets with broad collars. '
+        'The archer holds a large gilded composite bow up in his left hand with an arrow nocked, ready to shoot, with '
+        'two full quivers and a bow case on the sides of the car.')),
+    dict(id='chariot-2r', faction='egypt', kind='chariot', name='Chariot Spearman', subject=(
+        'The same chariot and team, now a melee crew: the driver holds the reins and a cowhide shield, and the warrior '
+        'beside him holds a long spear about 2.5 m long upright in his right hand and a cowhide shield on his left arm, '
+        'with a bronze khopesh sickle-sword at his belt; both wear padded linen corselets over their kilts. There is no '
+        'bow anywhere: take away the bow, the bow case and the quiver, and put a rack of three spare spears on the side '
+        'of the car in their place. The horses wear red and blue painted trappings with tall ostrich plumes.')),
+    dict(id='chariot-3r', faction='egypt', kind='chariot', name='Royal Chariot Guard', subject=(
+        'A melee chariot of the royal guard: the car sheathed in gold with relief decoration like Tutankhamun\'s state '
+        'chariot; the horses wear coats of bronze scale armour over their backs and necks, gilded harness and tall '
+        'plumes. The crew wear bronze scale corselets with broad collars: the driver holds the reins and a gold-rimmed '
+        'shield, and the warrior holds a long bronze-headed spear upright in his right hand and a gold-rimmed shield on '
+        'his left arm, with a gilded khopesh at his belt. There is no bow anywhere: take away the bow, the bow case and '
+        'the quiver, and put a rack of three spare spears on the side of the car in their place.')),
     dict(id='priest-1', faction='egypt', kind='figure', name='Priest of Thoth', subject=(
         'A priest of Thoth: shaven head, a long white pleated linen robe, sandals, a scribal palette at the belt, a '
         'papyrus scroll in the left hand and a wooden staff topped with a carved ibis head in the right.')),

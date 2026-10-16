@@ -179,12 +179,30 @@
    "views_found": 3
   },
   "file": "chariot/chariot-2.png",
-  "made": "2026-10-15T14:09:38+00:00",
-  "model": "gemini-3.1-flash-image",
+  "made": "2026-10-16T19:33:30+00:00",
+  "model": "gemini-3-pro-image",
   "name": "Veteran Chariot Archer",
   "ok": true,
-  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The same chariot with a veteran crew in bronze scale corselets, the horses in red and blue painted trappings with tall ostrich plumes, and gilded fittings on the car.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (chariot-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
-  "prompt_sha": "e146cda74181e58d",
+  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The same chariot with a veteran crew in bronze scale corselets, the horses in red and blue painted trappings with tall ostrich plumes, and gilded fittings on the car. The archer holds his composite bow up in his left hand with an arrow nocked, ready to shoot, and a full quiver of arrows hangs on the side of the car.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (chariot-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "13349e45ea08c403",
+  "provider": "gemini",
+  "references": [
+   "chariot/chariot-1.png"
+  ]
+ },
+ "chariot-2r": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 4
+  },
+  "file": "chariot/chariot-2r.png",
+  "made": "2026-10-16T19:33:30+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Chariot Spearman",
+  "ok": false,
+  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The same chariot and team, now a melee crew: the driver holds the reins and a cowhide shield, and the warrior beside him holds a long spear about 2.5 m long upright in his right hand and a cowhide shield on his left arm, with a bronze khopesh sickle-sword at his belt; both wear padded linen corselets over their kilts. There is no bow anywhere: take away the bow, the bow case and the quiver, and put a rack of three spare spears on the side of the car in their place. The horses wear red and blue painted trappings with tall ostrich plumes.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (chariot-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "46608712d92570a3",
   "provider": "gemini",
   "references": [
    "chariot/chariot-1.png"
@@ -194,15 +212,33 @@
   "checks": {
    "cut_off": false,
    "plain_background": true,
-   "views_found": 3
+   "views_found": 2
   },
   "file": "chariot/chariot-3.png",
-  "made": "2026-10-15T14:09:51+00:00",
-  "model": "gemini-3.1-flash-image",
+  "made": "2026-10-16T19:33:30+00:00",
+  "model": "gemini-3-pro-image",
   "name": "Elite Chariot Archer",
+  "ok": false,
+  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A chariot of the royal guard: the car sheathed in gold with relief decoration like Tutankhamun's state chariot, the horses in gilded harness with tall plumes, the crew in bronze scale corselets with broad collars. The archer holds a large gilded composite bow up in his left hand with an arrow nocked, ready to shoot, with two full quivers and a bow case on the sides of the car.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (chariot-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "194ad6ff8f25cf40",
+  "provider": "gemini",
+  "references": [
+   "chariot/chariot-1.png"
+  ]
+ },
+ "chariot-3r": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "chariot/chariot-3r.png",
+  "made": "2026-10-16T19:33:31+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Royal Chariot Guard",
   "ok": true,
-  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A chariot of the royal guard: the car sheathed in gold with relief decoration like Tutankhamun's state chariot, the horses in gilded harness with tall plumes, the crew in bronze scale corselets with broad collars.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (chariot-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
-  "prompt_sha": "9dadbac7242c0aae",
+  "prompt": "A turnaround sheet of the chariot, its team and crew together: three full views side by side, left to right: front view, side view facing right, back view. The horses stand square with all legs visible; the crew stand upright in the car, weapons held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A melee chariot of the royal guard: the car sheathed in gold with relief decoration like Tutankhamun's state chariot; the horses wear coats of bronze scale armour over their backs and necks, gilded harness and tall plumes. The crew wear bronze scale corselets with broad collars: the driver holds the reins and a gold-rimmed shield, and the warrior holds a long bronze-headed spear upright in his right hand and a gold-rimmed shield on his left arm, with a gilded khopesh at his belt. There is no bow anywhere: take away the bow, the bow case and the quiver, and put a rack of three spare spears on the side of the car in their place.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (chariot-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "5c5f2793f7a74b12",
   "provider": "gemini",
   "references": [
    "chariot/chariot-1.png"

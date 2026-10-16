@@ -108,14 +108,22 @@ function autoLine(id, faction, tier, name, icon, weapon, move, cls, opts = {}) {
   const att = T.att + (h ? -1 : 1) + (opts.att || 0), def = T.def + (h ? 2 : -1) + (opts.def || 0);
   const mov = T.mov + (h ? -1 : 0) + (move === 'horse' || move === 'fly' ? 2 : 0) + (opts.mov || 0);
   const names = opts.names || [name, `Veteran ${name}`, `Elite ${name}`];
+  const A = opts.alt;
   const lv = [0, 1, 2].map(i => ({
     name: names[i],
     att: Math.round(att * [1, 1.25, 1.5][i]), def: Math.round(def * [1, 1.25, 1.5][i]),
     dmg: T.dmg.map(d => Math.round(d * [1, 1.12, 1.25][i] * (opts.dmgMul || 1))),
     hp: Math.round(T.hp * [1, 1.12, 1.25][i] * (opts.hpMul || 1)),
     mov: mov + (h ? (i === 2 ? 1 : 0) : i), res: T.res + [0, 5, 10][i] + (opts.res || 0),
+    branch: A && i ? opts.branch : null,
   }));
-  defLine(id, faction, tier, cls, { icon, weapon, move, range: opts.range, size: opts.size, abil: opts.abil }, lv, opts.desc || '');
+  // alt: a second branch for levels 2 and 3, made from the first one's levels with
+  // { names, branch, weapon, range, abil (replaces the line's), att, def, hpMul, desc: [two] }.
+  const alt = A && [1, 2].map(i => ({
+    ...lv[i], name: A.names[i - 1], branch: A.branch, weapon: A.weapon, range: A.range, only: A.abil || [],
+    att: lv[i].att + (A.att || 0), def: lv[i].def + (A.def || 0), hp: Math.round(lv[i].hp * (A.hpMul || 1)), desc: A.desc[i - 1],
+  }));
+  defLine(id, faction, tier, cls, { icon, weapon, move, range: opts.range, size: opts.size, abil: opts.abil }, lv, opts.desc || '', alt);
 }
 
 // ── Hellenes (hand-tuned) ───────────────────────────────────────────────────
@@ -163,7 +171,12 @@ defLine('talos', 'greek', 7, 'heavy', { icon: '🗿', weapon: 'fist', move: 'arm
 // ── Kemet (Egyptians) ───────────────────────────────────────────────────────
 autoLine('medjay', 'egypt', 1, 'Medjay', '🔱', 'lance', 'foot', 'light', { desc: 'Desert guardians of the Pharaoh\'s cities.' });
 autoLine('scorpion', 'egypt', 2, 'Serket Scorpion', '🦂', 'claw', 'foot', 'heavy', { abil: ['pierce'], desc: 'Giant scorpions sacred to Serket.' });
-autoLine('chariot', 'egypt', 3, 'Chariot Archer', '🏇', 'bow', 'horse', 'light', { range: [2, 4], desc: 'Swift war-chariots raining arrows.' });
+// From level 2 the chariots split into archers who shoot from the car and a spear crew who ride in and fight.
+autoLine('chariot', 'egypt', 3, 'Chariot Archer', '🏇', 'bow', 'horse', 'light', {
+  range: [2, 4], branch: 'ranged', desc: 'Swift war-chariots raining arrows.',
+  alt: { names: ['Chariot Spearman', 'Royal Chariot Guard'], branch: 'melee', weapon: 'lance', range: [1, 1], abil: ['charge'], att: 2, def: 2, hpMul: 1.15,
+    desc: ['A chariot crew who drive into the enemy and fight with the long spear.', 'The Pharaoh\'s own chariot guard: gilded cars, horses in scale armour, spear and khopesh.'] },
+});
 autoLine('priest', 'egypt', 4, 'Priest of Thoth', '☥', 'staff', 'foot', 'light', { abil: ['heal'], dmgMul: .4, desc: 'Scholars who know the words of healing.' });
 autoLine('anubite', 'egypt', 5, 'Anubite Warden', '🐕', 'sword', 'foot', 'heavy', { abil: ['lifesteal'], desc: 'Jackal-headed guardians of the Duat.' });
 autoLine('bennu', 'egypt', 6, 'Bennu Firebird', '🔥', 'tome', 'fly', 'light', { range: [1, 3], abil: ['regrow'], desc: 'The undying heron of Heliopolis.' });
