@@ -1,4 +1,61 @@
 {
+ "akhekh-1": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "composed_from": [
+   "akhekh/sources/side.png",
+   "akhekh/sources/front.png",
+   "akhekh/sources/back.png"
+  ],
+  "file": "akhekh/akhekh-1.png",
+  "made": "2026-10-16T18:59:46+00:00",
+  "model": "gemini-2.5-flash-image",
+  "name": "Akhekh Griffin",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: Akhekh, the griffin of the Egyptian desert, made real: a pale sandy lion's body about 3 m long with a long tufted tail, and the head of a lanner falcon, cream with a rufous crown and a dark moustache stripe below the eye. The falcon head is huge, twice the size it would be on a normal griffin: about half as long as the lion's body from chest to rump and as wide as its chest, with a heavy hooked beak, large fierce dark eyes and a thick cream feathered neck. Enormous falcon wings in pale sandy brown barred with darker brown, spanning about 9 m, three times the length of the body; folded, the closed wing covers the flank and back and its long primary feathers reach past the base of the tail nearly to the ground.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
+  "prompt_sha": "cfb64635b944e5f1",
+  "provider": "gemini",
+  "references": []
+ },
+ "akhekh-2": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "akhekh/akhekh-2.png",
+  "made": "2026-10-16T19:06:09+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Veteran Akhekh Griffin",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The same Akhekh griffin with the same huge falcon head and enormous wings, wearing a wide plain band of hammered gold around the base of its neck. Nothing else is added.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (akhekh-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "160ec197679ae17d",
+  "provider": "gemini",
+  "references": [
+   "akhekh/akhekh-1.png"
+  ]
+ },
+ "akhekh-3": {
+  "checks": {
+   "cut_off": false,
+   "plain_background": true,
+   "views_found": 3
+  },
+  "file": "akhekh/akhekh-3.png",
+  "made": "2026-10-16T19:06:09+00:00",
+  "model": "gemini-3-pro-image",
+  "name": "Elite Akhekh Griffin",
+  "ok": true,
+  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right with the wings folded, front view with the wings spread wide, back view with the wings spread wide. Standing on the ground, every leg visible, tail held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: The same Akhekh griffin with the same huge falcon head and enormous wings, armoured for war: a fitted cover of gilded bronze plates inlaid with lapis lazuli over its shoulders, back and hips (the wings stay bare feathers), a broad collar of gold and lapis lazuli across the chest, a wide plain band of hammered gold around the base of the neck, and gold-sheathed claws.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (akhekh-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
+  "prompt_sha": "07c9809db877500a",
+  "provider": "gemini",
+  "references": [
+   "akhekh/akhekh-1.png"
+  ]
+ },
  "anubite-1": {
   "checks": {
    "cut_off": false,
@@ -484,58 +541,6 @@
   "provider": "gemini",
   "references": [
    "scorpion/sources/tier3-armour-with-carnelian.png"
-  ]
- },
- "sphinx-1": {
-  "checks": {
-   "cut_off": false,
-   "plain_background": true,
-   "views_found": 3
-  },
-  "file": "sphinx/sphinx-1.png",
-  "made": "2026-10-15T14:16:14+00:00",
-  "model": "gemini-3.1-flash-image",
-  "name": "Sphinx",
-  "ok": true,
-  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A living Egyptian sphinx about 3.5 m long: a tawny lion's body and the head of a man wearing the nemes headcloth striped in plain ochre and cream like the Great Sphinx of Giza, with no cobra on the brow, and a false beard; standing on all fours, a calm face.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.",
-  "prompt_sha": "6eb5a443116fd39c",
-  "provider": "gemini",
-  "references": []
- },
- "sphinx-2": {
-  "checks": {
-   "cut_off": false,
-   "plain_background": true,
-   "views_found": 3
-  },
-  "file": "sphinx/sphinx-2.png",
-  "made": "2026-10-15T14:16:28+00:00",
-  "model": "gemini-3.1-flash-image",
-  "name": "Veteran Sphinx",
-  "ok": true,
-  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A larger sphinx, the same plain ochre and cream nemes with no cobra, with a broad collar of gold and lapis lazuli and gilded claws.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (sphinx-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
-  "prompt_sha": "4672f78e72831710",
-  "provider": "gemini",
-  "references": [
-   "sphinx/sphinx-1.png"
-  ]
- },
- "sphinx-3": {
-  "checks": {
-   "cut_off": false,
-   "plain_background": true,
-   "views_found": 3
-  },
-  "file": "sphinx/sphinx-3.png",
-  "made": "2026-10-15T14:16:41+00:00",
-  "model": "gemini-3.1-flash-image",
-  "name": "Elite Sphinx",
-  "ok": true,
-  "prompt": "A creature turnaround sheet: three full views of the same creature side by side, left to right: side view facing right, front view, back view. Standing square on all its legs, every leg visible, tail and any necks held clear of the body.\n\nPhotorealistic. Plain light grey seamless background, even soft studio lighting, sharp detail. Orthographic views with no perspective. All three views at the same scale, standing on one flat ground line, each whole subject in frame with clear space between and around them.\n\nRealistic and historically accurate for New Kingdom Egypt, c. 1550-1070 BC, based on tomb paintings, temple reliefs and finds such as the objects from Tutankhamun's tomb; sacred creatures as Egyptian art shows them, made believably real.\n\nThe subject: A royal sphinx: the nemes striped blue and gold, a rearing cobra on the brow, a gold collar and pectoral, and gold-sheathed claws.\n\nDo not include: Hollywood costume, fantasy armour, gold-plated armour on common soldiers, Greek or Roman items, horned helmets, text, labels, numbers, borders, watermark, extra figures, props on the ground, motion blur, modern items.\n\nThe last attached sheet is the first tier of this line (sphinx-1): keep the same build, proportions, skin and rendering style, and change only what this prompt describes. Where this prompt differs from that sheet (number of heads or limbs, size, colours, clothing, armour, weapons), follow this prompt.",
-  "prompt_sha": "d4ef6b2e430506c9",
-  "provider": "gemini",
-  "references": [
-   "sphinx/sphinx-1.png"
   ]
  },
  "talos-1": {

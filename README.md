@@ -9,7 +9,7 @@ No build step and no dependencies: it's plain HTML, CSS and JavaScript. Open `in
 | Faction | Hero | God power | Roster (tier 1 → 7) |
 |---|---|---|---|
 | **Hellenes** (Greek) | Perseus | Zeus: *Thunderbolt* strikes one stack | Peltast, Ephebe/Hoplite, Hamippoi, Minotaur, Prodromoi/Hippeis, Hydra, Bronze Automaton/Talos |
-| **Kemet** (Egyptian) | Ramesses | Ra: *Solar Flare* scorches every enemy | Medjay, Serket Scorpion, Chariot Archer, Priest of Thoth, Anubite Warden, Bennu Firebird, Sphinx |
+| **Kemet** (Egyptian) | Ramesses | Ra: *Solar Flare* scorches every enemy | Medjay, Serket Scorpion, Chariot Archer, Priest of Thoth, Anubite Warden, Bennu Firebird, Akhekh Griffin |
 | **Norsemen** (Scandinavian) | Ragnar | Thor: *Mjölnir* hits one stack and splashes its neighbours | Huskarl, Shieldmaiden, Völva, Úlfheðinn, Valkyrie, Mountain Troll, Frost Jötunn |
 | **Yamato** (Japanese) | Raikō | Amaterasu: *Dawn* heals and raises allies | Ashigaru, Yumi Archer, Samurai, Miko, Kitsune, Tengu, Oni |
 
@@ -135,6 +135,8 @@ python3 tools/refs/generate.py --contact sheets.jpg
 ```
 
 It uses Google's Gemini (`GEMINI_API_KEY`) by default, or xAI's Grok with `--provider xai` (`XAI_API_KEY`; text prompts only, and `api.x.ai` must be allowed by the network policy). `--models` lists the image models a provider offers and `--model` picks one. Gemini's image models need billing enabled on the key's project; the free tier allows none. The Greek sheets were made with `--model gemini-3-pro-image`, which follows the prompts far better than the default `gemini-2.5-flash-image` (the nine-headed hydra took `gemini-3.1-flash-image`, the only one that counted the heads). The Kemet sheets were made with `gemini-3.1-flash-image` while the Pro model was overloaded, and kept up well. When a line's first tier fails, its later tiers are skipped rather than made without it.
+
+When no model holds a design across a whole sheet, the views can be made one at a time and put together with `tools/refs/compose.py`, which scales them to one size and ground line and evens out their backgrounds. The Akhekh Griffin's first tier was made that way (whole sheets kept shrinking its doubled head); its views are in `refs/akhekh/sources` and the command is in the script.
 
 The game still draws units as emoji. The models are shown by two preview pages while the art direction is settled. Both load the `.glb` files from `assets/models`, so serve the repository over HTTP to open them (for example `python -m http.server`):
 

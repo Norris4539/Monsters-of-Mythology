@@ -303,6 +303,7 @@ function loadGame(key = 'pantheon_save') {
   let data = null;
   try { data = localStorage.getItem(key); } catch (e) { /* storage blocked */ }
   if (!data) { toast('No saved game found.'); return; }
+  data = data.replace(/"sphinx(_[23])?"/g, '"akhekh$1"');   // the Sphinx line became the Akhekh Griffin
   G = JSON.parse(data);
   G.busy = false; G.path = null;
   let max = 0;

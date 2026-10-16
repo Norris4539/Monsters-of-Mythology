@@ -167,7 +167,7 @@ autoLine('chariot', 'egypt', 3, 'Chariot Archer', '🏇', 'bow', 'horse', 'light
 autoLine('priest', 'egypt', 4, 'Priest of Thoth', '☥', 'staff', 'foot', 'light', { abil: ['heal'], dmgMul: .4, desc: 'Scholars who know the words of healing.' });
 autoLine('anubite', 'egypt', 5, 'Anubite Warden', '🐕', 'sword', 'foot', 'heavy', { abil: ['lifesteal'], desc: 'Jackal-headed guardians of the Duat.' });
 autoLine('bennu', 'egypt', 6, 'Bennu Firebird', '🔥', 'tome', 'fly', 'light', { range: [1, 3], abil: ['regrow'], desc: 'The undying heron of Heliopolis.' });
-autoLine('sphinx', 'egypt', 7, 'Sphinx', '🦁', 'claw', 'foot', 'heavy', { size: 2, abil: ['large', 'luck'], desc: 'Riddle-keeper of Giza.' });
+autoLine('akhekh', 'egypt', 7, 'Akhekh Griffin', '🦅', 'claw', 'fly', 'heavy', { size: 2, abil: ['large', 'charge'], desc: 'The falcon-headed griffin of the desert edge, painted in the tombs of Beni Hasan. It drops on its prey from on high.' });
 // ── Norsemen ────────────────────────────────────────────────────────────────
 autoLine('huskarl', 'norse', 1, 'Huskarl', '🪓', 'axe', 'foot', 'heavy', { desc: 'Sworn axemen of a jarl\'s household.' });
 autoLine('shieldm', 'norse', 2, 'Shieldmaiden', '⚔️', 'sword', 'foot', 'light', { desc: 'Warrior women of the shield-wall.' });
@@ -218,8 +218,8 @@ const FACTIONS = {
   egypt: {
     name: 'Kemet', adj: 'Egyptian', color: '#d6a21b', biome: 'sand', hero: 'hero_egypt',
     town: 'Thebes', townIcon: '🔺', god: 'Ra', temple: 'Temple of Karnak',
-    units: ['medjay', 'scorpion', 'chariot', 'priest', 'anubite', 'bennu', 'sphinx'],
-    dwellings: ['Medjay Barracks', 'Scorpion Pit', 'Chariot Yard', 'House of Thoth', 'Hall of the Duat', 'Heliopolis Spire', 'Giza Plateau'],
+    units: ['medjay', 'scorpion', 'chariot', 'priest', 'anubite', 'bennu', 'akhekh'],
+    dwellings: ['Medjay Barracks', 'Scorpion Pit', 'Chariot Yard', 'House of Thoth', 'Hall of the Duat', 'Heliopolis Spire', 'Cliffs of Beni Hasan'],
     power: { name: 'Solar Flare', kind: 'flare', desc: 'Ra scorches every enemy stack on the field.' },
     blurb: 'Chariots, scorpions and the undying servants of the sun god.',
   },

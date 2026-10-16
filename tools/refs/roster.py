@@ -235,16 +235,25 @@ ROSTER = [
         'The Bennu firebird of Heliopolis: a giant heron about 2 m tall with long legs and neck and a two-feathered '
         'crest, grey on the head and neck, its body and wings glowing ember-red and orange like coals, with small flames '
         'licking from the tips of the wing and tail feathers.')),
-    dict(id='sphinx-1', faction='egypt', kind='beast', name='Sphinx', subject=(
-        'A living Egyptian sphinx about 3.5 m long: a tawny lion\'s body and the head of a man wearing the nemes '
-        'headcloth striped in plain ochre and cream like the Great Sphinx of Giza, with no cobra on the brow, and a '
-        'false beard; standing on all fours, a calm face.')),
-    dict(id='sphinx-2', faction='egypt', kind='beast', name='Veteran Sphinx', subject=(
-        'A larger sphinx, the same plain ochre and cream nemes with no cobra, with a broad collar of gold and lapis '
-        'lazuli and gilded claws.')),
-    dict(id='sphinx-3', faction='egypt', kind='beast', name='Elite Sphinx', subject=(
-        'A royal sphinx: the nemes striped blue and gold, a rearing cobra on the brow, a gold collar and pectoral, and '
-        'gold-sheathed claws.')),
+    # Akhekh, the falcon-headed griffin of the Beni Hasan tomb paintings, takes the Sphinx's place. Its first tier
+    # was put together from views generated one at a time (whole sheets kept shrinking the doubled head and lost
+    # views); the views are kept in refs/akhekh/sources. The later tiers are edits of it.
+    dict(id='akhekh-1', faction='egypt', kind='flyer', name='Akhekh Griffin', subject=(
+        'Akhekh, the griffin of the Egyptian desert, made real: a pale sandy lion\'s body about 3 m long with a long '
+        'tufted tail, and the head of a lanner falcon, cream with a rufous crown and a dark moustache stripe below the '
+        'eye. The falcon head is huge, twice the size it would be on a normal griffin: about half as long as the lion\'s '
+        'body from chest to rump and as wide as its chest, with a heavy hooked beak, large fierce dark eyes and a thick '
+        'cream feathered neck. Enormous falcon wings in pale sandy brown barred with darker brown, spanning about 9 m, '
+        'three times the length of the body; folded, the closed wing covers the flank and back and its long primary '
+        'feathers reach past the base of the tail nearly to the ground.')),
+    dict(id='akhekh-2', faction='egypt', kind='flyer', name='Veteran Akhekh Griffin', subject=(
+        'The same Akhekh griffin with the same huge falcon head and enormous wings, wearing a wide plain band of hammered '
+        'gold around the base of its neck. Nothing else is added.')),
+    dict(id='akhekh-3', faction='egypt', kind='flyer', name='Elite Akhekh Griffin', subject=(
+        'The same Akhekh griffin with the same huge falcon head and enormous wings, armoured for war: a fitted cover of '
+        'gilded bronze plates inlaid with lapis lazuli over its shoulders, back and hips (the wings stay bare feathers), '
+        'a broad collar of gold and lapis lazuli across the chest, a wide plain band of hammered gold around the base of '
+        'the neck, and gold-sheathed claws.')),
 
     # ── Norsemen ──────────────────────────────────────────────────────────────
     dict(id='huskarl-1', faction='norse', kind='figure', name='Huskarl', subject=(
