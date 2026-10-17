@@ -68,7 +68,7 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 
 ## 3D models (Blender)
 
-Every Greek line (Peltast, Hoplite, Hamippoi, Minotaur, Hippeis, Hydra and Talos) and the horse are modelled, rigged and animated by Blender scripts in a realistic style.
+Every Greek line (Peltast, Hoplite, Hamippoi, Minotaur, Hippeis, Hydra and Talos), the horse and, so far, Kemet's Serket Scorpion are modelled, rigged and animated by Blender scripts in a realistic style.
 
 - `tools/blender/fetch_makehuman.py` downloads the MakeHuman base mesh and shape targets (CC0 1.0, public domain) into `third_party/makehuman`.
 - `tools/blender/hoplite.py` runs with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`:
@@ -120,6 +120,12 @@ Every Greek line (Peltast, Hoplite, Hamippoi, Minotaur, Hippeis, Hydra and Talos
   - the joints are cut in as seams in the baked normal map, the eyes are inlaid stone, and the vein of ichor runs on the skin from the neck to a bronze nail at the right ankle;
   - the fists are bent into the mesh rather than posed: each finger turns at its three joints and the thumb tucks over the first two fingers, while Talos' right hand is cupped round the boulder;
   - animations: Idle, Walk, Smash (a hammer blow of the right fist, or the boulder), Hit and Death (he sinks to his knees and topples).
+- `tools/blender/scorpion.py` builds Kemet's Serket Scorpion line and exports `assets/models/scorpion.glb`:
+  - a giant black fat-tailed scorpion (Androctonus), about 2.5 m from the chelicerae to the sting along the body and the arched tail, standing about 1.4 m to the top of the tail;
+  - its exoskeleton is the animal's own rigid plates, lofted from sections traced from the side view of the sheet and sized to its front and back views: the carapace with its median and lateral eyes, seven overlapping tergites and five sternites on the folded pleural membrane, the pectines, five swollen keeled tail segments, the bulbous telson and its curved sting, the pedipalps with their chelae, and the legs segment by segment;
+  - every plate rides rigidly on its own bone, with dark brown membranes bending at the joints; the chitin is glossy black and granular, baked to textures, and turns dark brown near the joints;
+  - `L1_` Serket Scorpion: bare black chitin and a dark red-brown telson; `L2_` Veteran Serket Scorpion: larger, with a band of hammered gold round the second tail segment; `L3_` Elite Serket Scorpion: the largest, in fitted armour of gilded bronze inlaid with lapis lazuli (lotus fans on the carapace and abdomen, feathers on the tail segments and pincers, drawn as cloisonné into one atlas), gilded fingers, a gold-sheathed sting and the band of the second tier, the legs left bare. The shared body is untagged; `L12_` are the bare fingers and telson and `L23_` the band;
+  - animations: Idle, Walk (the alternating tetrapod gait with the body level), Strike (the tail lashes forward over the head, its pose solved so the sting stabs just past the pincers), Pinch (both chelae lunge and snap shut), Hit and Death (it rolls onto its back and curls its legs). Legs are placed from foot targets and pedipalps from wrist targets, all keyed as plain rotations.
 - `tools/blender/render_views.py` renders inspection views (any clip, frame, level and camera) from the `.blend` that each build saves next to its `.glb`.
 - `tools/blender/glb2json.py` turns a `.glb` into a self-contained `.json` glTF for hosts that cannot serve binary files, quantizing skin weights and UVs to keep it small.
 
@@ -140,7 +146,7 @@ When no model holds a design across a whole sheet, the views can be made one at 
 
 The game still draws units as emoji. The models are shown by two preview pages while the art direction is settled. Both load the `.glb` files from `assets/models`, so serve the repository over HTTP to open them (for example `python -m http.server`):
 
-- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi`, `#minotaur`, `#hippeis`, `#hydra` or `#talos`). The Hippeis page puts the horse alone on the first plinth and both branches after the Prodromos (a tier's `tag` is the level its nodes are tagged with); the Talos page stands each tier at its own height.
+- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi`, `#minotaur`, `#hippeis`, `#hydra`, `#talos` or `#scorpion`). The Hippeis page puts the horse alone on the first plinth and both branches after the Prodromos (a tier's `tag` is the level its nodes are tagged with); the Talos page stands each tier at its own height.
 - `preview/pantheon-3d.html` covers the adventure map and battle looks, the unit roster, a scripted Greek-vs-Greek battle with switchable effect styles, and the Blender Hoplite and Peltast lines.
 
 ## Code layout
