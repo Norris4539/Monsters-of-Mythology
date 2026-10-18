@@ -177,7 +177,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 // Which unit this page shows and where its model lives. Published copies set these.
-const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', scorpion: '#scorpion' } };
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion' } };
 
 // Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
 const ABIL = {
@@ -274,6 +274,16 @@ const UNITS = {
       { name: 'Colossus', gk: 'Κολοσσός', scale: 4 / 2.6, s: [40, 46, '60–80', 520, 5, 65], kit: ['About 4 m tall', 'Gleaming polished bronze', 'Radiate crown of the sun', 'Cloak of hammered bronze', 'The vein of ichor and its nail'] },
     ],
   },
+  medjay: {
+    name: 'Medjay', greek: 'mḏꜣy', period: 'New Kingdom, c. 1300 BC', eyebrow: 'Kemet · dwelling I · light infantry',
+    blurb: 'Desert scouts and police of New Kingdom Egypt, who kept watch over the Pharaoh’s cities, the frontier forts and the royal tombs of Thebes. They go lightly armed with spear and cowhide shield, quick on the desert tracks and first into a fight.',
+    facts: [['Weapon', 'Spear'], ['Range', 'Melee'], ['Growth', '14 / wk'], ['Cost', '70 gold']], abil: [],
+    tiers: [
+      { name: 'Medjay', gk: 'mḏꜣy', s: [5, 3, '1–3', 7, 5, 0], kit: ['Cropped hair, a single ostrich feather', 'Bead necklace and stone amulet', 'White linen kilt, wrapped with a tab and a knot', 'Tooled leather belt', 'Bronze dagger at the left hip', 'Strapped sandals', 'Spear with a bronze leaf blade', 'Small oval cowhide shield, laced with rawhide'] },
+      { name: 'Veteran Medjay', gk: 'mḏꜣy ꜥḥꜣwty', s: [6, 4, '1–3', 8, 6, 5], kit: ['Tan leather corselet sewn with rows of bronze plates', 'Plain leather yoke and edging', 'Bronze khopesh in its sheath', 'Round-topped cowhide shield on a wooden frame', 'The kilt, belt, feather and sandals of the first tier'] },
+      { name: 'Elite Medjay', gk: 'mḏꜣy n pr-ꜥꜣ', s: [8, 5, '1–4', 9, 7, 10], kit: ['Coat of bronze scales to mid-thigh, short sleeves', 'Broad collar of turquoise, lapis and gold beads', 'Gold armlets and ribbed wristlets', 'Pleated kilt with a beaded apron', 'Spear with a broad blade, gilded socket and bronze butt-spike', 'Tall cowhide shield, gilded rim and sun-disc boss', 'Bronze dagger'] },
+    ],
+  },
   scorpion: {
     name: 'Serket Scorpion', greek: 'Srqt', period: 'sacred to Serket', eyebrow: 'Kemet · dwelling II · heavy · beast',
     blurb: 'Giant black fat-tailed scorpions of the desert, kept in the temples of Serket, the scorpion goddess who guards against venom. They seize with their pincers and drive the sting home over their heads.',
@@ -326,6 +336,7 @@ $('eyebrow').textContent = U.eyebrow; $('unitName').textContent = U.name; $('uni
 $('blurb').textContent = U.blurb;
 for (const [k, v] of U.facts) { const d = el('div'); d.append(el('dt', null, k), el('dd', null, v)); $('facts').append(d); }
 for (const k of U.abil) { $('abil').append(el('dt', null, ABIL[k][0]), el('dd', null, ABIL[k][1])); }
+if (!U.abil.length) $('abil').append(el('dd', null, 'None.'));
 for (const k of Object.keys(UNITS)) {
   const li = el('li');
   if (k === KEY) li.append(el('span', 'here', UNITS[k].name));

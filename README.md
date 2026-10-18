@@ -68,7 +68,7 @@ Neutral creatures roam the wilds: dire wolves, skeletons, harpies, draugr, giant
 
 ## 3D models (Blender)
 
-Every Greek line (Peltast, Hoplite, Hamippoi, Minotaur, Hippeis, Hydra and Talos), the horse and, so far, Kemet's Serket Scorpion are modelled, rigged and animated by Blender scripts in a realistic style.
+Every Greek line (Peltast, Hoplite, Hamippoi, Minotaur, Hippeis, Hydra and Talos), the horse and, so far, Kemet's Medjay and Serket Scorpion are modelled, rigged and animated by Blender scripts in a realistic style.
 
 - `tools/blender/fetch_makehuman.py` downloads the MakeHuman base mesh and shape targets (CC0 1.0, public domain) into `third_party/makehuman`.
 - `tools/blender/hoplite.py` runs with Blender's Python module (`pip install bpy pillow`) and exports `assets/models/hoplite.glb`:
@@ -120,6 +120,13 @@ Every Greek line (Peltast, Hoplite, Hamippoi, Minotaur, Hippeis, Hydra and Talos
   - the joints are cut in as seams in the baked normal map, the eyes are inlaid stone, and the vein of ichor runs on the skin from the neck to a bronze nail at the right ankle;
   - the fists are bent into the mesh rather than posed: each finger turns at its three joints and the thumb tucks over the first two fingers, while Talos' right hand is cupped round the boulder;
   - animations: Idle, Walk, Smash (a hammer blow of the right fist, or the boulder), Hit and Death (he sinks to his knees and topples).
+- `tools/blender/medjay.py` builds Kemet's Medjay line on the infantry pipeline and exports `assets/models/medjay.glb`:
+  - the MakeHuman man at 1.75 m, lean and athletic (the shoulders broadened a little and the muscles deepened as for Talos), olive-brown, his hair cropped to a few millimetres with a single ostrich feather at the crown; both fists are bent into the mesh as for Talos, closed round the spear and the shield's grip;
+  - `L1_` Medjay: a bead necklace and a stone amulet on a cord, a white linen kilt draped with the cloth simulator (its outer turn rounded up at the front, a tab hanging from the tooled leather belt and a knot at the back), a bronze dagger at the left hip, a 1.9 m spear with a bronze leaf blade, and a small oval cowhide shield laced round its rim with rawhide;
+  - `L2_` Veteran Medjay: a tan leather corselet grown from the body with a plain yoke and edging, sewn with rows of small bronze plates with rounded lower ends (each modelled, lying over the top of the row below), a khopesh in a sheath cut to its crescent, and a round-topped dappled cowhide shield on a wooden frame, strapped round the forearm;
+  - `L3_` Elite Medjay: a coat of about two thousand bronze scales to mid-thigh with short sleeves, its skirt open at the front over a beaded apron; a broad collar of turquoise, lapis and gold beads, gold armlets and ribbed wristlets, a pleated kilt, a 2 m spear with a broad blade, gilded socket and bronze butt-spike, and a tall cowhide shield with a gilded rim and a sun-disc boss. `L12_` nodes are the plain kilt, belt, necklace and spear the first two share;
+  - the kilts and the coat's skirt hang from the hips and take the thighs' weights only towards the hem, so they stretch between the legs; the spear rides on its own bone, `spear.R`, so a clip slides it through the fist and lets it fall;
+  - animations: Idle, Walk, Run, Thrust (an underhand thrust from the hip, the spear slid forward through the fist), Block (the shield brought round in front), Hit and Death (he falls backwards and the spear drops beside him).
 - `tools/blender/scorpion.py` builds Kemet's Serket Scorpion line and exports `assets/models/scorpion.glb`:
   - a giant black fat-tailed scorpion (Androctonus), about 2.5 m from the chelicerae to the sting along the body and the arched tail, standing about 1.4 m to the top of the tail;
   - its exoskeleton is the animal's own rigid plates, lofted from sections traced from the side view of the sheet and sized to its front and back views: the carapace with its median and lateral eyes, seven overlapping tergites and five sternites on the folded pleural membrane, the pectines, five swollen keeled tail segments, the bulbous telson and its curved sting, the pedipalps with their chelae, and the legs segment by segment;
@@ -146,7 +153,7 @@ When no model holds a design across a whole sheet, the views can be made one at 
 
 The game still draws units as emoji. The models are shown by two preview pages while the art direction is settled. Both load the `.glb` files from `assets/models`, so serve the repository over HTTP to open them (for example `python -m http.server`):
 
-- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi`, `#minotaur`, `#hippeis`, `#hydra`, `#talos` or `#scorpion`). The Hippeis page puts the horse alone on the first plinth and both branches after the Prodromos (a tier's `tag` is the level its nodes are tagged with); the Talos page stands each tier at its own height.
+- `preview/unit.html` is a gallery for one unit line: the three tiers on plinths with their game stats and kit, buttons for every clip the model has, speed, pause, loop and turntable controls, a close-up per tier, and javelins that fly and stick in the ground on Throw. Pick the line with the link (`/preview/unit.html#hoplite`, `#peltast`, `#hamippoi`, `#minotaur`, `#hippeis`, `#hydra`, `#talos`, `#medjay` or `#scorpion`). The Hippeis page puts the horse alone on the first plinth and both branches after the Prodromos (a tier's `tag` is the level its nodes are tagged with); the Talos page stands each tier at its own height.
 - `preview/pantheon-3d.html` covers the adventure map and battle looks, the unit roster, a scripted Greek-vs-Greek battle with switchable effect styles, and the Blender Hoplite and Peltast lines.
 
 ## Code layout
