@@ -177,7 +177,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 // Which unit this page shows and where its model lives. Published copies set these.
-const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion', anubite: '#anubite', chariot: '#chariot' } };
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion', anubite: '#anubite', chariot: '#chariot', bennu: '#bennu' } };
 
 // Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
 const ABIL = {
@@ -321,9 +321,20 @@ const UNITS = {
       { lvl: 3, tag: 5, name: 'Royal Chariot Guard', gk: 'snny n pr-ꜥꜣ', branch: 'Spear', s: [16, 11, '4–8', 26, 10, 15], kit: ['Scale corselets with broad collars', 'Gilded shields with a boss', 'Long bronze spear, gilded khopesh', 'The gold car', 'Horses in coats of bronze scales, gilded harness and face plates'], note: 'Range 1. Charge instead of the bow.' },
     ],
   },
+  bennu: {
+    name: 'Bennu Firebird', greek: 'bnw', period: 'Heliopolis', eyebrow: 'Kemet · dwelling VI · flyer',
+    blurb: 'The heron of Heliopolis that stood on the benben stone at the first sunrise, the soul of Ra, painted in the tombs and in the vignettes of the Book of the Dead. It renews itself as the sun does, and it fights on the wing with fire.',
+    facts: [['Weapon', 'Fire'], ['Range', '1–3'], ['Movement', 'Flies'], ['Growth', '2 / wk'], ['Cost', '1800 gold, 1 ichor']], abil: ['regrow'],
+    layout: 'flyer',
+    tiers: [
+      { name: 'Bennu Firebird', gk: 'bnw', s: [19, 16, '25–40', 170, 8, 25], kit: ['A giant grey heron about 2 m tall, wings spanning 3.5 m', 'Long legs, heron feet with three toes forward and one behind', 'Long neck held in an S, a dagger bill', 'A crest of two lanceolate feathers', 'Grey plumage, the flight feathers shading to fiery red and orange at their tips'] },
+      { name: 'Veteran Bennu Firebird', gk: 'bnw ꜥꜣ', scale: 1.04, s: [24, 20, '28–45', 190, 9, 30], kit: ['Slender, blue-grey plumage', 'White foreneck streaked black, a black stripe to the nape', 'Two long thin plumes streaming back from the head', 'Long plumes hanging over the breast', 'Dark flight feathers'] },
+      { name: 'Elite Bennu Firebird', gk: 'bnw n Rꜥ', scale: 1.08, s: [29, 24, '31–50', 213, 10, 35], kit: ['Grey-blue head and neck', 'Body and wings glowing ember-red and orange like coals', 'Small flames licking from the tips of the flight feathers, the tail and the crest', 'Flames rising from the bend of each wing'] },
+    ],
+  },
 };
-const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Throw', 'Shoot', 'Thrust', 'Cleave', 'Gore', 'Strike', 'Pinch', 'Smash', 'Block', 'Rear', 'Hit', 'Death'];
-const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop']);
+const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Fly', 'Throw', 'Shoot', 'Thrust', 'Cleave', 'Gore', 'Strike', 'Pinch', 'Smash', 'Cast', 'Block', 'Rear', 'Hit', 'Death'];
+const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop', 'Fly']);
 // Clips that let a missile go: the node that carries it, when it leaves the hand (Throw lets go
 // of the javelin at frame 12, Shoot looses the arrow at frame 15), and how it flies: thrown along
 // the figure's facing and lofted, or shot along its own axis.
@@ -337,6 +348,7 @@ const LAYOUTS = {
   beast:   { gap: 6.4, plinth: 2.3, base: .18, plate: [1.3, .12], face: .55, centre: -1.4, cy: 2.0, halfW: 3.0, near: 9, rowCy: 2.2, rowHalfW: 11, rowMin: 14, far: 44, pickR: 2.2, pickH: 4.5, shadow: 10 },
   giant:   { gap: 3.4, plinth: 1.05, base: .16, plate: [1.05, .1], face: .45, centre: 0, cy: 1.35, halfW: .95, near: 5.4, rowCy: 2.1, rowHalfW: 4.6, rowMin: 11, far: 30, pickR: .9, pickH: 4.4, shadow: 8 },
   crawler: { gap: 2.7, plinth: 1.05, base: .14, plate: [1.0, .1], face: .6, centre: 0, cy: .62, halfW: .95, near: 3.3, rowCy: .8, rowHalfW: 3.9, rowMin: 7.6, far: 22, pickR: 1.0, pickH: 1.9, shadow: 6 },
+  flyer:   { gap: 4.0, plinth: .8, base: .13, plate: [.9, .09], face: .45, centre: 0, cy: 1.45, halfW: 1.8, near: 5.6, rowCy: 1.5, rowHalfW: 6.4, rowMin: 13, far: 36, pickR: .85, pickH: 2.8, shadow: 9 },
   mounted: { gap: 2.6, plinth: 1.1, base: .14, plate: [1.05, .1], face: 1.15, centre: .22, cy: 1.45, halfW: 1.25, near: 7.2, rowCy: 1.3, rowHalfW: 2.8, rowMin: 7.4, far: 30, pickR: .95, pickH: 2.8 },
   chariot: { gap: 4.0, plinth: 1.85, base: .16, plate: [1.35, .11], face: .62, centre: 0, cy: 1.1, halfW: 2.0, near: 7.6, rowCy: 1.3, rowHalfW: 6, rowMin: 12, far: 42, pickR: 1.8, pickH: 3, shadow: 13 },
 };
