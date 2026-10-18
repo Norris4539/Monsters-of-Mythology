@@ -177,7 +177,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 // Which unit this page shows and where its model lives. Published copies set these.
-const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion', anubite: '#anubite', chariot: '#chariot', bennu: '#bennu', akhekh: '#akhekh' } };
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion', anubite: '#anubite', chariot: '#chariot', priest: '#priest', bennu: '#bennu', akhekh: '#akhekh' } };
 
 // Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
 const ABIL = {
@@ -196,6 +196,7 @@ const ABIL = {
   ichor: ['Bleeding ichor', 'Below half strength, loses 2 Defence each turn.'],
   pierce: ['Pierce', 'Ignores half of the target\'s Defence.'],
   lifesteal: ['Lifesteal', 'Heals for half the damage dealt and can raise its own fallen.'],
+  heal: ['Heal', 'Instead of attacking, restores an adjacent ally and can raise its fallen.'],
 };
 const UNITS = {
   hoplite: {
@@ -296,6 +297,16 @@ const UNITS = {
       { name: 'Elite Serket Scorpion', gk: 'ḏꜣrt nt nbw', scale: 1.25, s: [8, 12, '3–5', 16, 5, 15], kit: ['Largest', 'Gilded bronze plates inlaid with lapis lazuli', 'Lotus fans on the carapace and abdomen, feathers on the tail and pincers', 'Gilded fingers, a gold-sheathed sting', 'The hammered gold band of the second tier', 'Bare black legs'] },
     ],
   },
+  priest: {
+    name: 'Priest of Thoth', greek: 'ḥm-nṯr n Ḏḥwty', period: 'Hermopolis, New Kingdom', eyebrow: 'Kemet · dwelling IV · priest',
+    blurb: 'Priests of Thoth, the ibis-headed god of writing, wisdom and the moon, who kept his sacred books and their spells at Hermopolis. They go to war with the ibis staff and the written word, and the words of healing raise the wounded where they fall.',
+    facts: [['Weapon', 'Staff'], ['Range', 'Melee'], ['Growth', '4 / wk'], ['Cost', '550 gold']], abil: ['heal'],
+    tiers: [
+      { name: 'Priest of Thoth', gk: 'ḥm-nṯr n Ḏḥwty', s: [13, 10, '3–6', 38, 6, 15], kit: ['Shaven head', 'Long robe of white pleated linen, wide sleeves to the elbow, wrapped over at the front', 'Woven sash knotted at the front', 'Scribe’s palette with its ink wells and reed pens at the left hip', 'Papyrus scroll in the left hand', 'Staff carved at the top into an ibis head, banded in turquoise and gold', 'Sandals of woven papyrus', 'Magic: the ibis’s eyes glow faintly'] },
+      { name: 'Veteran Priest of Thoth', gk: 'ẖry-ḥꜣb.t · lector priest', s: [16, 13, '4–6', 43, 7, 20], kit: ['The lector’s broad woven bands, crossed over the chest and the back', 'Open papyrus roll written in hieroglyphs', 'The robe, sash, ibis staff and sandals of the first tier', 'Magic: the writing on the roll lights up gold'] },
+      { name: 'Elite Priest of Thoth', gk: 'wr dỉw · greatest of the five', s: [20, 15, '4–7', 48, 8, 25], kit: ['Mantle of a single leopard skin, its head over the left shoulder, the tail down the back', 'Broad collar of gold and turquoise', 'Staff topped by a gilded ibis on a crescent moon, under the moon’s disc', 'The pleated robe, woven sash and sandals', 'Magic: the moon disc shines, light gathers at his hands'] },
+    ],
+  },
   anubite: {
     name: 'Anubite Warden', greek: 'Inpw', period: 'guardians of the Duat', eyebrow: 'Kemet · dwelling V · heavy infantry',
     blurb: 'Jackal-headed guardians of the Duat, made in the image of Anubis as the tombs paint him, black as the Nile silt of rebirth. They keep the gates of the underworld with the sickle-sword (khopesh), and what they cut down feeds their strength.',
@@ -344,7 +355,7 @@ const UNITS = {
     ],
   },
 };
-const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Fly', 'Throw', 'Shoot', 'Thrust', 'Cleave', 'Gore', 'Strike', 'Pinch', 'Smash', 'Cast', 'Block', 'Rear', 'Hit', 'Death'];
+const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Fly', 'Throw', 'Shoot', 'Thrust', 'Cleave', 'Gore', 'Strike', 'Pinch', 'Smash', 'Cast', 'Heal', 'Block', 'Rear', 'Hit', 'Death'];
 const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop', 'Fly']);
 // Clips that let a missile go: the node that carries it, when it leaves the hand (Throw lets go
 // of the javelin at frame 12, Shoot looses the arrow at frame 15), and how it flies: thrown along
@@ -574,7 +585,7 @@ new THREE.GLTFLoader().load(CONFIG.modelBase + KEY + CONFIG.modelExt, gltf => {
       const m = /^L(\d+)_/.exec(o.name);
       if (m) o.visible = m[1].includes(level);
       if (o.isMesh) {
-        o.castShadow = true; o.receiveShadow = true; if (o.isSkinnedMesh) o.frustumCulled = false;
+        o.castShadow = o.receiveShadow = !/Magic/.test(o.name);   // magic light casts no shadow if (o.isSkinnedMesh) o.frustumCulled = false;
         if (o.material.metalness > .5) o.material.envMapIntensity = 1.8;
       }
     });
