@@ -177,7 +177,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 // Which unit this page shows and where its model lives. Published copies set these.
-const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion', anubite: '#anubite' } };
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion', anubite: '#anubite', chariot: '#chariot' } };
 
 // Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
 const ABIL = {
@@ -307,10 +307,27 @@ const UNITS = {
       { name: 'Elite Anubite Warden', gk: 'nb tꜣ-ḏsr · lord of the sacred land', s: [21, 21, '15–25', 69, 7, 20], kit: ['Gilded scale corselet', 'Broad collar of gold and lapis lazuli', 'Gold armlets and wristguards', 'A gilded khopesh in each hand'] },
     ],
   },
+  chariot: {
+    name: 'Chariot', greek: 'wrrt', period: 'New Kingdom, c. 1300 BC', eyebrow: 'Kemet · dwelling III · chariots',
+    blurb: 'Light war-chariots of the New Kingdom, a driver and an archer in a car of bent wood behind two small horses under ostrich plumes, that sweep along the enemy line raining arrows. From the second tier the line splits into archers who shoot from the car and a spear crew who drive into the enemy and fight hand to hand.',
+    facts: [['Weapon', 'Bow'], ['Range', '2–4'], ['Growth', '8 / wk'], ['Cost', '250 gold']], abil: ['charge'],
+    layout: 'chariot',
+    mount: { name: 'Wrrt', gk: 'wrrt · the car and team of every tier', kit: ['Car of bent wood, open at the back, a D-shaped floor of woven leather straps', 'Two six-spoked wheels on an axle under the back of the car', 'Pole and bowed yoke, yoke saddles on the withers', 'Two small bay horses, white socks and blazes', 'Tall ostrich plumes, leather harness'] },
+    tiers: [
+      { name: 'Chariot Archer', gk: 'snny', s: [9, 6, '3–6', 18, 8, 5], kit: ['Driver and archer, shaven heads', 'Linen kilts, bare chests', 'Composite bow, an arrow on the string', 'Cowhide shield for the driver', 'Bow case and two quivers on the car'], note: 'Range 2–4.' },
+      { lvl: 2, tag: 2, name: 'Veteran Chariot Archer', gk: 'snny', branch: 'Bow', s: [11, 8, '3–7', 20, 9, 10], kit: ['Bronze scale corselets', 'Red and blue striped saddle cloths and breast bands, tassels', 'Gilded fittings on the car'], note: 'Range 2–4.' },
+      { lvl: 3, tag: 3, name: 'Elite Chariot Archer', gk: 'snny n pr-ꜥꜣ', branch: 'Bow', s: [14, 9, '4–8', 23, 10, 15], kit: ['Scale corselets with broad collars', 'Car sheathed in gold with reliefs', 'Gilded harness and yoke saddles', 'Large gilded composite bow'], note: 'Range 2–4.' },
+      { lvl: 2, tag: 4, name: 'Chariot Spearman', gk: 'snny', branch: 'Spear', s: [13, 10, '3–7', 23, 9, 10], kit: ['Padded linen corselets', 'Cowhide shields', 'Spear about 2.5 m, bronze khopesh', 'Red and blue trappings', 'Rack of three spare spears on the car'], note: 'Range 1. Charge instead of the bow.' },
+      { lvl: 3, tag: 5, name: 'Royal Chariot Guard', gk: 'snny n pr-ꜥꜣ', branch: 'Spear', s: [16, 11, '4–8', 26, 10, 15], kit: ['Scale corselets with broad collars', 'Gilded shields with a boss', 'Long bronze spear, gilded khopesh', 'The gold car', 'Horses in coats of bronze scales, gilded harness and face plates'], note: 'Range 1. Charge instead of the bow.' },
+    ],
+  },
 };
-const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Throw', 'Thrust', 'Cleave', 'Gore', 'Strike', 'Pinch', 'Smash', 'Block', 'Rear', 'Hit', 'Death'];
+const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Throw', 'Shoot', 'Thrust', 'Cleave', 'Gore', 'Strike', 'Pinch', 'Smash', 'Block', 'Rear', 'Hit', 'Death'];
 const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop']);
-const RELEASE = 11 / 24;   // the Throw clip lets go of the javelin at frame 12
+// Clips that let a missile go: the node that carries it, when it leaves the hand (Throw lets go
+// of the javelin at frame 12, Shoot looses the arrow at frame 15), and how it flies: thrown along
+// the figure's facing and lofted, or shot along its own axis.
+const MISSILES = { Throw: { node: 'ThrowJavelin', at: 11 / 24, speed: 4.6, lift: 2.6 }, Shoot: { node: 'ShootArrow', at: 14 / 24, speed: 24, lift: .6, along: true } };
 // Stage layouts: plinth spacing, radius and base height, name plate size, the figures' facing,
 // the model's middle (a horse's origin is under the saddle, not its middle), and the camera
 // for one figure or the whole row.
@@ -321,6 +338,7 @@ const LAYOUTS = {
   giant:   { gap: 3.4, plinth: 1.05, base: .16, plate: [1.05, .1], face: .45, centre: 0, cy: 1.35, halfW: .95, near: 5.4, rowCy: 2.1, rowHalfW: 4.6, rowMin: 11, far: 30, pickR: .9, pickH: 4.4, shadow: 8 },
   crawler: { gap: 2.7, plinth: 1.05, base: .14, plate: [1.0, .1], face: .6, centre: 0, cy: .62, halfW: .95, near: 3.3, rowCy: .8, rowHalfW: 3.9, rowMin: 7.6, far: 22, pickR: 1.0, pickH: 1.9, shadow: 6 },
   mounted: { gap: 2.6, plinth: 1.1, base: .14, plate: [1.05, .1], face: 1.15, centre: .22, cy: 1.45, halfW: 1.25, near: 7.2, rowCy: 1.3, rowHalfW: 2.8, rowMin: 7.4, far: 30, pickR: .95, pickH: 2.8 },
+  chariot: { gap: 4.0, plinth: 1.85, base: .16, plate: [1.35, .11], face: .62, centre: 0, cy: 1.1, halfW: 2.0, near: 7.6, rowCy: 1.3, rowHalfW: 6, rowMin: 12, far: 42, pickR: 1.8, pickH: 3, shadow: 13 },
 };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -540,23 +558,24 @@ new THREE.GLTFLoader().load(CONFIG.modelBase + KEY + CONFIG.modelExt, gltf => {
     const root = new THREE.Group(); root.position.set(x, TOP, 0); root.rotation.y = LY.face; root.scale.setScalar(s.scale || 1); root.add(model); scene.add(root);
     const mixer = new THREE.AnimationMixer(model), clips = {};
     for (const c of gltf.animations) clips[c.name] = c;
-    let jav = model.getObjectByName('ThrowJavelin'), shown = false;   // the horse alone has no javelin to throw
-    if (jav) jav.traverse(o => { if (o.isMesh && o.visible) shown = true; });
-    const u = { root, mixer, clips, cur: null, prevT: 0, jav: shown ? jav : null };
-    if (u.jav) {   // the javelin's own axis (grip to point), from its head, in the node's frame
-      const head = u.jav.getObjectByProperty('isMesh', true) && u.jav.children.find(o => /Head/.test(o.name));
-      const box = new THREE.Box3();
-      u.jav.updateWorldMatrix(true, true);
-      const inv = new THREE.Matrix4().copy(u.jav.matrixWorld).invert();
+    const u = { root, mixer, clips, cur: null, prevT: 0, missiles: {} };
+    for (const [clip, ms] of Object.entries(MISSILES)) {   // the horse alone has no javelin to throw, the spear crews no arrow
+      const node = model.getObjectByName(ms.node); let shown = false;
+      if (node) node.traverse(o => { if (o.isMesh && o.visible) shown = true; });
+      if (!shown) continue;
+      // the missile's own axis (grip or nock to point), from its head, in the node's frame
+      const head = node.children.find(o => /Head/.test(o.name)), box = new THREE.Box3();
+      node.updateWorldMatrix(true, true);
+      const inv = new THREE.Matrix4().copy(node.matrixWorld).invert();
       if (head) { head.geometry.computeBoundingBox(); box.copy(head.geometry.boundingBox).applyMatrix4(head.matrixWorld).applyMatrix4(inv); }
       const c = head ? box.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 1, 0);
-      u.tipLen = c.length() + .07; u.axis = c.normalize();
+      u.missiles[clip] = { ...ms, node, tipLen: c.length() + .07, axis: c.normalize() };
     }
     tiers.push(u);
   });
   tiers[0].mixer.addEventListener('finished', () => {   // a one-shot move ends: a fresh javelin in hand, then back to Idle
     if (looping || clipName === 'Death') return;
-    for (const u of tiers) if (u.jav) u.jav.visible = true;
+    for (const u of tiers) for (const m of Object.values(u.missiles)) m.node.visible = true;
     const was = clipName;
     setTimeout(() => { if (!looping && clipName === was) play('Idle', false, true); }, 350);
   });
@@ -589,20 +608,23 @@ function play(name, instant, auto) {
     a.play();
     if (u.cur && u.cur !== a) { if (instant) u.cur.stop(); else u.cur.crossFadeTo(a, .2, false); }
     u.cur = a; u.prevT = 0;
-    if (u.jav) u.jav.visible = true;
+    for (const m of Object.values(u.missiles)) m.node.visible = true;
   }
   const d = tiers[0] && tiers[0].clips[name] ? tiers[0].clips[name].duration : 0;
-  $('status').textContent = `${name} · ${d.toFixed(2)} s` + (name === 'Throw' && tiers.some(u => u.jav) ? ` · the javelin leaves the hand at ${RELEASE.toFixed(2)} s` : '') + (looping || LOOPING.has(name) ? ' · looping' : '');
+  const ms = MISSILES[name] && tiers.some(u => u.missiles[name]) ? MISSILES[name] : null;
+  $('status').textContent = `${name} · ${d.toFixed(2)} s` + (ms ? ` · the ${name === 'Shoot' ? 'arrow is loosed' : 'javelin leaves the hand'} at ${ms.at.toFixed(2)} s` : '') + (looping || LOOPING.has(name) ? ' · looping' : '');
 }
-// The thrown javelin: a copy of the one in the hand flies along the figure's facing and sticks in the ground.
+// A missile let go: a copy of the one in the hand flies (a javelin along the figure's facing,
+// an arrow along its own axis) and sticks in the ground.
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
-function launch(u) {
-  const src = u.jav; src.updateWorldMatrix(true, true);
+function launch(u, m) {
+  const src = m.node; src.updateWorldMatrix(true, true);
   const obj = src.clone(true); obj.visible = true;
   src.matrixWorld.decompose(obj.position, obj.quaternion, obj.scale);
   scene.add(obj); src.visible = false;
-  const fwd = V3(0, 0, 1).applyQuaternion(u.root.getWorldQuaternion(new THREE.Quaternion())).setY(0).normalize();
-  shots.push({ obj, u, v: fwd.multiplyScalar(4.6).add(V3(0, 2.6, 0)), stuck: false });
+  const dir = m.along ? m.axis.clone().applyQuaternion(obj.quaternion).normalize()
+    : V3(0, 0, 1).applyQuaternion(u.root.getWorldQuaternion(new THREE.Quaternion())).setY(0).normalize();
+  shots.push({ obj, u, m, v: dir.multiplyScalar(m.speed).add(V3(0, m.lift, 0)), stuck: false });
   const mine = shots.filter(s => s.u === u);
   if (mine.length > 2) { const old = mine[0]; scene.remove(old.obj); shots.splice(shots.indexOf(old), 1); }
 }
@@ -611,8 +633,8 @@ function stepShots(dt) {
     if (s.stuck) continue;
     s.v.y -= 9.81 * dt; s.obj.position.addScaledVector(s.v, dt);
     const dir = s.v.clone().normalize();
-    s.obj.quaternion.setFromUnitVectors(s.u.axis, dir);
-    const tip = s.obj.position.clone().addScaledVector(dir, s.u.tipLen);
+    s.obj.quaternion.setFromUnitVectors(s.m.axis, dir);
+    const tip = s.obj.position.clone().addScaledVector(dir, s.m.tipLen);
     if (tip.y <= 0) { s.obj.position.y -= tip.y; s.obj.position.addScaledVector(dir, .1); s.stuck = true; }
   }
 }
@@ -653,10 +675,11 @@ function frame() {
   for (const u of tiers) {
     u.mixer.update(dt);
     if (spinning) u.root.rotation.y += raw * .5;
-    if (u.jav && clipName === 'Throw' && u.cur) {
+    const m = u.missiles[clipName];
+    if (m && u.cur) {
       const t = u.cur.time;
-      if (t < u.prevT - .01) u.jav.visible = true;               // the loop started over: a fresh javelin
-      if (u.prevT < RELEASE && t >= RELEASE && u.jav.visible) launch(u);
+      if (t < u.prevT - .01) m.node.visible = true;              // the loop started over: a fresh javelin or arrow
+      if (u.prevT < m.at && t >= m.at && m.node.visible) launch(u, m);
       u.prevT = t;
     }
   }
