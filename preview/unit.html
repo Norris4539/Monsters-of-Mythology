@@ -177,7 +177,7 @@ kbd { font: 500 .8rem var(--mono); padding: 1px 5px; border: 1px solid var(--lin
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 // Which unit this page shows and where its model lives. Published copies set these.
-const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion', anubite: '#anubite', chariot: '#chariot', bennu: '#bennu' } };
+const CONFIG = { defaultUnit: 'hamippoi', lockUnit: false, modelBase: '../assets/models/', modelExt: '.glb', siblings: { hoplite: '#hoplite', peltast: '#peltast', hamippoi: '#hamippoi', minotaur: '#minotaur', hippeis: '#hippeis', hydra: '#hydra', talos: '#talos', medjay: '#medjay', scorpion: '#scorpion', anubite: '#anubite', chariot: '#chariot', bennu: '#bennu', akhekh: '#akhekh' } };
 
 // Game data, from js/data.js. Stats: Attack, Defence, Damage, Health, Move, Resist (% of god powers).
 const ABIL = {
@@ -332,6 +332,17 @@ const UNITS = {
       { name: 'Elite Bennu Firebird', gk: 'bnw n Rꜥ', scale: 1.08, s: [29, 24, '31–50', 213, 10, 35], kit: ['Grey-blue head and neck', 'Body and wings glowing ember-red and orange like coals', 'Small flames licking from the tips of the flight feathers, the tail and the crest', 'Flames rising from the bend of each wing'] },
     ],
   },
+  akhekh: {
+    name: 'Akhekh Griffin', greek: 'ꜥḫḫ', period: 'Beni Hasan, c. 1900 BC', eyebrow: 'Kemet · dwelling VII · flyer · 2×2',
+    blurb: 'Akhekh, the griffin of the desert edge painted in the Middle Kingdom tombs of Beni Hasan: a lion with the head and wings of a falcon, its head made twice the size of an ordinary griffin’s. It hangs over the battlefield on its great wings and drops on its prey with fore claws and hooked beak.',
+    facts: [['Weapon', 'Claws and beak'], ['Range', 'Melee'], ['Movement', 'Flies'], ['Growth', '1 / wk'], ['Cost', '3500 gold, 3 ichor']], abil: ['large', 'charge'],
+    layout: 'griffin',
+    tiers: [
+      { name: 'Akhekh Griffin', gk: 'ꜥḫḫ', s: [24, 28, '40–60', 380, 7, 40], kit: ['A pale sandy lion’s body 3 m from chest to rump, a long tufted tail', 'The head of a lanner falcon, half as long as the body and as wide as the chest', 'Cream face and neck, rufous crown, dark moustache stripe', 'Heavy hooked beak, large dark eyes', 'Falcon wings of barred sandy brown spanning about 9 m', 'Folded, the primaries reach past the root of the tail'] },
+      { name: 'Veteran Akhekh Griffin', gk: 'ꜥḫḫ ꜥꜣ', s: [30, 35, '45–67', 426, 7, 45], kit: ['A wide plain band of hammered gold round the base of the neck'] },
+      { name: 'Elite Akhekh Griffin', gk: 'ꜥḫḫ n nbw', s: [36, 42, '50–75', 475, 8, 50], kit: ['A fitted cover of gilded bronze plates inlaid with lapis lazuli over the shoulders, back and hips', 'Broad collar of gold and lapis lazuli across the chest', 'The gold neck band', 'Gilded claws, gold cuffs at the wrists and hocks', 'Bare feathered wings'] },
+    ],
+  },
 };
 const CLIP_ORDER = ['Idle', 'Walk', 'Run', 'Gallop', 'Fly', 'Throw', 'Shoot', 'Thrust', 'Cleave', 'Gore', 'Strike', 'Pinch', 'Smash', 'Cast', 'Block', 'Rear', 'Hit', 'Death'];
 const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop', 'Fly']);
@@ -349,6 +360,7 @@ const LAYOUTS = {
   giant:   { gap: 3.4, plinth: 1.05, base: .16, plate: [1.05, .1], face: .45, centre: 0, cy: 1.35, halfW: .95, near: 5.4, rowCy: 2.1, rowHalfW: 4.6, rowMin: 11, far: 30, pickR: .9, pickH: 4.4, shadow: 8 },
   crawler: { gap: 2.7, plinth: 1.05, base: .14, plate: [1.0, .1], face: .6, centre: 0, cy: .62, halfW: .95, near: 3.3, rowCy: .8, rowHalfW: 3.9, rowMin: 7.6, far: 22, pickR: 1.0, pickH: 1.9, shadow: 6 },
   flyer:   { gap: 4.0, plinth: .8, base: .13, plate: [.9, .09], face: .45, centre: 0, cy: 1.45, halfW: 1.8, near: 5.6, rowCy: 1.5, rowHalfW: 6.4, rowMin: 13, far: 36, pickR: .85, pickH: 2.8, shadow: 9 },
+  griffin: { gap: 8.6, plinth: 2.5, base: .2, plate: [1.6, .14], face: .55, centre: 0, cy: 2.5, halfW: 4.6, near: 13, rowCy: 3.2, rowHalfW: 12, rowMin: 18, far: 70, pickR: 2.4, pickH: 5.5, shadow: 16 },
   mounted: { gap: 2.6, plinth: 1.1, base: .14, plate: [1.05, .1], face: 1.15, centre: .22, cy: 1.45, halfW: 1.25, near: 7.2, rowCy: 1.3, rowHalfW: 2.8, rowMin: 7.4, far: 30, pickR: .95, pickH: 2.8 },
   chariot: { gap: 4.0, plinth: 1.85, base: .16, plate: [1.35, .11], face: .62, centre: 0, cy: 1.1, halfW: 2.0, near: 7.6, rowCy: 1.3, rowHalfW: 6, rowMin: 12, far: 42, pickR: 1.8, pickH: 3, shadow: 13 },
 };
