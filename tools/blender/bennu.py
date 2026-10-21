@@ -9,26 +9,30 @@ about 2 m tall to the crown, on long legs with heron feet (three toes forward an
 its long neck held in an S on a chain of six bones and its dagger bill's lower mandible on a
 bone of its own. The torso is lofted from sections traced from the side view of the sheet and
 sized to its front view; the neck is lofted along the sheet's S and fused into it by a voxel
-remesh. The wings are layered feather cards: ten primaries, fourteen secondaries and four
-tertials with their greater, median and lesser coverts, every pair of flight feathers and
-their coverts on a bone of its own, so that each wing folds against the flank in a bird's
-Z (humerus back, forearm forward, hand back) and spreads to about 3.5 m. The feathers are thin
-cambered meshes mapped into a painted atlas per tier; the body, head and legs are baked from
-procedural materials.
+remesh, and clad in contour feathers laid ring by ring on it, with long plumes hanging over the
+breast and scapulars over the back. The wings are layered feather cards: ten primaries, fourteen
+secondaries and four tertials with their greater, median and lesser coverts, each primary and each
+pair of secondaries with their coverts on a bone of its own, so that each wing folds against the
+flank in a bird's Z (humerus back, forearm forward, hand back), wrapped to the body with the
+primaries stacked over the tail, and spreads to about 3.5 m. The feathers are thin cambered meshes
+mapped into a painted atlas per tier; the body, head and legs are baked from procedural materials.
   L1 Bennu Firebird          grey plumage, the flight feathers shading to fiery red and orange
                              towards their tips; a crest of two lanceolate feathers
   L2 Veteran Bennu Firebird  slender and blue-grey, a white foreneck streaked black, a black
                              stripe to the nape, two long thin plumes streaming back from the
                              head, dark flight feathers
   L3 Elite Bennu Firebird    grey-blue head and neck, the body and wings glowing ember-red and
-                             orange like coals, small flames licking from the tips of the
-                             flight feathers, the tail and the crest
+                             orange like coals (each feather dark, glowing at its margins and
+                             base), small flickering flames licking from the tips of the flight
+                             feathers, the tail and the crest
 One skeleton holds the line. The untagged meshes (legs, lower mandible, eyes) are shared; each
-tier has its own body, head and feathers (L1_, L2_, L3_), and L3_Flames are emissive cards.
+tier has its own body, head and feathers (L1_, L2_, L3_), and L3_Flames are emissive cards, each on
+a bone of its own keyed to flicker. CastFire, the fireball, rides a 'fire' bone at the bill tip that
+keeps it hidden (scale) until it gathers in the open bill during Cast; the gallery throws a copy.
 Moves: Idle, Walk (the heron's stately walk), Fly (hovering on beating wings, the neck drawn in
 and the legs trailing), Strike (the bill stabs forward), Cast (wings half-spread, the neck drawn
 back and thrust forward as it throws fire), Hit and Death (it sinks onto its legs and topples
-onto its side).
+onto its side, the neck and the upper wing slumping to the ground).
 """
 import bpy, bmesh, math, os, sys, random, json, struct
 import numpy as np
@@ -117,14 +121,15 @@ def leg_pts(sx):
 
 # ── The wing (spread, in the rest pose) ──────────────────────────────────────
 HUM, FORE, HAND = .25, .33, .27
-SHOULDER = (320, 36, 318)
+SHOULDER = (320, 32, 318)
 PRIM_L = (.53, .57, .61, .66, .71, .76, .80, .82, .82, .77)     # P1 to P10
 LIFT = .0014                                                    # the stacking of feather over feather
 CURVE = .12                                                     # every feather bends down towards its tip
-# The folded wing lies in a plane against the flank (tilted 10 degrees in at the top and 5 degrees
-# in towards the tail); its bones and feathers turn into it at these angles below the back.
-TILT, TOE = math.radians(10), math.radians(5)
-ARM_FOLD = (28, 160, 31)
+# The folded wing lies against the flank: its arm in a plane tilted 14 degrees in at the top and 5
+# degrees in towards the tail, and each feather bone in a plane tilted further in the higher it lies,
+# so that the wing wraps the body; they lie at these angles below the back.
+TILT, TOE = math.radians(14), math.radians(5)
+ARM_FOLD = (28, 160, 25)
 # Raised as on the sheet's front view (the display of Cast): the humerus up and out, the forearm on
 # up to the wrist, the hand hanging, the upper side of the wing turned to the back.
 ARM_SHOW = ((.62, -.1, .78), (.7, -.3, .62), (.22, .05, -.97))
@@ -147,7 +152,7 @@ def wing_columns(sx, s):
     for i in range(10, 0, -1):          # primaries, fanned from the hand
         k = (i - 1) / 9
         cols.append(dict(root=W.lerp(T, .05 + .9 * k) + back * .012, d=dirn(80 - 66 * k ** .85), L=PRIM_L[i - 1], W=.088 - .01 * k,
-                         kind='outer' if i >= 7 else 'remex', slot=f'rem{i - 1}', bone=f'pri{(i + 1) // 2}.{s}', span=.62 + .38 * k, prim=True))
+                         kind='outer' if i >= 7 else 'remex', slot=f'rem{i - 1}', bone=f'pri{i}.{s}', span=.62 + .38 * k, prim=True))
     for j in range(1, 15):              # secondaries along the forearm, S1 at the wrist
         k = (j - 1) / 13
         cols.append(dict(root=W.lerp(E, (j - .5) / 14) + back * .012, d=dirn(82 + 12 * k), L=.5 - .02 * k, W=.09, kind='remex',
@@ -168,13 +173,16 @@ def wing_groups(sx, s):
     return {g: (sum((c['root'] for c in cs), V()) / len(cs), (sum((c['d'] for c in cs), V())).normalized(), par[g[:3]])
             for g, cs in out.items()}
 
-GROUP_FOLD = {'pri': 31, 'sec': (35, 31), 'ter': 30}   # the angle each group lies at below the back when folded
+GROUP_FOLD = {'pri': 25, 'sec': (33, 28), 'ter': 27}   # the angle each feather bone lies at below the back when folded
 
 def group_fold_angle(g):
-    k = int(g[3]) - 1
-    if g.startswith('pri'): return GROUP_FOLD['pri'] + .5 * k
-    if g.startswith('sec'): a, b = GROUP_FOLD['sec']; return a + (b - a) * k / 6
-    return GROUP_FOLD['ter'] - 2 * k
+    """How far below the back a feather bone lies when folded, how far its plane tilts in at the top
+    and how far it turns in towards the tail (degrees): the primaries in one neat stack over the
+    tail, the secondaries and tertials tilting further in the higher they lie."""
+    k = int(g.split('.')[0][3:]) - 1
+    if g.startswith('pri'): return GROUP_FOLD['pri'], 12, 9
+    if g.startswith('sec'): a, b = GROUP_FOLD['sec']; return a + (b - a) * k / 6, 15 + 10 * k / 6, 5
+    return GROUP_FOLD['ter'] - 2 * k, 27, 5
 
 def wing_specs(sx, s):
     """Every feather of a wing: the flight feathers and, over each, a greater, median and lesser
@@ -187,9 +195,9 @@ def wing_specs(sx, s):
                         span=c['span'], tip=True))
         g = 'pc' if c['prim'] else 'gc'
         out.append(dict(base, root=c['root'] - d * .007, L=(.3 if c['prim'] else .44) * c['L'], W=c['W'] * .95, kind='covert',
-                        slot=f'{g}{r % (3 if c["prim"] else 4)}', lift=(r + 5) * LIFT, ov=.42, nv=5))
-        out.append(dict(base, root=c['root'] - d * .03, L=.11 + .01 * (r % 2), W=.07, kind='covert', slot=f'mc{r % 4}', lift=(r + 9) * LIFT, ov=.45, nv=4))
-        out.append(dict(base, root=c['root'] - d * .052, L=.075, W=.055, kind='covert', slot=f'lc{r % 4}', lift=(r + 12) * LIFT, ov=.45, nv=4))
+                        slot=f'{g}{r % (3 if c["prim"] else 4)}', lift=(r + 5) * LIFT, ov=.42, nv=7))
+        out.append(dict(base, root=c['root'] - d * .03, L=.11 + .01 * (r % 2), W=.07, kind='covert', slot=f'mc{r % 4}', lift=(r + 9) * LIFT, ov=.45, nv=6))
+        out.append(dict(base, root=c['root'] - d * .052, L=.075, W=.055, kind='covert', slot=f'lc{r % 4}', lift=(r + 12) * LIFT, ov=.45, nv=6))
     return out
 
 def tail_specs():
@@ -213,28 +221,53 @@ def torso_pt(X, a, off=0.0, slim=1.0):
     return p + nrm * off, nrm
 
 def scapular_specs():
-    """Long plumes over the back, lying out over the top of the folded wings."""
+    """Long narrow plumes over the back, lying out over the top of the folded wings."""
     out = []
     for s, sx in SIDES:
-        for i in range(9):
-            X = 316 - 8.5 * i; a = math.pi / 2 - (.28 + .09 * (i % 3)) * sx
-            root, nrm = torso_pt(X, a, .022 + .002 * i)
-            d = V((sx * .42, math.cos(math.radians(26)), -math.sin(math.radians(26)))).normalized()
-            out.append(dict(root=root, d=d, n=V((sx * .45, 0, 1)), L=.3 + .016 * i, W=.06, kind='plume', slot=f'sp{i % 4}', bone='body',
-                            lift=.0015 * (8 - i), ov=.5, nv=6, outer=1, curve=.35, tip=True))
+        for i in range(12):
+            X = 318 - 7 * i; a = math.pi / 2 - (.22 + .08 * (i % 3)) * sx
+            root, nrm = torso_pt(X, a, .02 + .0015 * i)
+            d = V((sx * .4, math.cos(math.radians(28)), -math.sin(math.radians(28)))).normalized()
+            out.append(dict(root=root, d=d, n=V((sx * .45, 0, 1)), L=.34 + .014 * i, W=.045, kind='plume', slot=f'sp{i % 4}', bone='body',
+                            lift=.0015 * (11 - i), ov=.5, nv=7, outer=1, curve=.35, tip=True))
     return out
 
 def plume_specs(t):
-    """The long plumes that hang from the base of the foreneck over the breast."""
-    out = []; Lk = 1.35 if t == 2 else 1.0
-    for i in range(12):
-        p = path_at(NJ_ARC[1] + .45 * (i % 4) / 3 * (NJ_ARC[3] - NJ_ARC[1]))
-        hw, fr, bk = neck_r(p); ang = (-.9 + 1.8 * (i // 4) / 2) + .15 * (i % 2)
+    """The heron's long thin plumes that hang from the base of the foreneck over the breast."""
+    out = []; Lk = 1.3 if t == 2 else 1.0
+    for i in range(18):
+        p = path_at(NJ_ARC[1] + .5 * (i % 6) / 5 * (NJ_ARC[3] - NJ_ARC[1]))
+        hw, fr, bk = neck_r(p); ang = (-.85 + 1.7 * (i // 6) / 2) + .12 * (i % 2)
         dirf = FWD * math.cos(ang) + SIDE * math.sin(ang)
         root = p + FWD * (fr * .8 * math.cos(ang)) + SIDE * (hw * .85 * math.sin(ang))
         d = (V((0, 0, -1)) + dirf * .3).normalized()
-        out.append(dict(root=root, d=d, n=dirf, L=(.2 + .03 * (i % 3)) * Lk, W=.032, kind='plume', slot=f'bp{i % 4}',
-                        bone='neck2', lift=.004 * (3 - i % 4), ov=.5, nv=6, outer=1, curve=-.25, tip=True))
+        out.append(dict(root=root, d=d, n=dirf, L=(.26 + .05 * (i % 3)) * Lk, W=.026, kind='plume', slot=f'bp{i % 4}',
+                        bone='neck2', lift=.003 * (5 - i % 6), ov=.5, nv=7, outer=1, curve=-.25, tip=True))
+    return out
+
+def contour_specs(t, body):
+    """The contour feathers of the torso: rings of rounded feathers from the rump to the breast, each
+    slipping out from under the one before it and lying back and down with the plumage, paler on the
+    breast and belly; none where the neck rises."""
+    from mathutils.bvhtree import BVHTree
+    me = body.data; bvh = BVHTree.FromPolygons([v.co for v in me.vertices], [p.vertices for p in me.polygons])
+    slim = .94 if t == 2 else 1.0; out = []; flow = V((0, .9, -.45)); rng = random.Random(5)
+    npts = [(p, max(neck_r(p)[:2])) for p in NPATH[::4]]
+    for ri, X in enumerate(np.arange(156, 372, 12.5)):
+        hw, top, bot = TOR(X); a_, b_ = hw * S * slim, (bot - top) / 2 * S
+        n = max(6, int(math.pi * (3 * (a_ + b_) - math.sqrt((3 * a_ + b_) * (a_ + 3 * b_))) / .048))
+        for q in range(n):
+            a = 2 * math.pi * (q + .5 * (ri % 2)) / n
+            root, nrm = torso_pt(X, a, 0.0, slim)
+            if any((root - p).length < 1.25 * r + .02 for p, r in npts): continue
+            loc, nrm, _, _ = bvh.find_nearest(root); root = loc - nrm * .004   # on the body as it was remeshed
+            d = flow - nrm * flow.dot(nrm)
+            if d.length < .15: d = V((0, 0, -1)) + nrm * nrm.z
+            d = (d.normalized() + nrm * .14).normalized()
+            front = nrm.y < -.35 or nrm.z < -.3
+            out.append(dict(root=root, d=d, n=nrm, L=(.075 if X > 340 else .088) * (.92 + .16 * rng.random()), W=.068, kind='covert',
+                            slot=f"{'kf' if front else 'kb'}{rng.randrange(3)}", bone='body', lift=.0015 * (q % 2), ov=.5, nv=4, outer=1,
+                            curve=0, camber=.06))
     return out
 
 def crest_specs(t):
@@ -265,6 +298,33 @@ def feather_specs(t):
     for s, sx in SIDES: out += wing_specs(sx, s)
     return out + tail_specs() + scapular_specs() + plume_specs(t) + crest_specs(t)
 
+def card_tip(f):
+    """The midline point, direction and normal at the tip of a feather card as card() lays it."""
+    d = f['d'].normalized(); n = (f['n'] - d * f['n'].dot(d)).normalized(); k = f.get('curve', CURVE); bend = f.get('bend', -n); L = f['L']
+    return f['root'] + d * L + n * f.get('lift', 0) + bend * (k * L * L), (d + bend * (2 * k * L)).normalized(), n
+
+_FLAMES = []
+def flame_specs():
+    """Where L3's flames burn, as (feather bone, base, direction, normal, length, width): at the
+    tips of the outer primaries, every fourth secondary, every third tail feather and the crest,
+    and rising from the bend of each wing."""
+    if _FLAMES: return _FLAMES
+    rng = random.Random(7)
+    for f in feather_specs(3):
+        if not f.get('tip') or f['kind'] == 'covert': continue
+        sl = f['slot']; i = int(sl[3:]) if sl.startswith('rem') else -1
+        if sl.startswith('rem') and not (3 <= i <= 9 or i in (11, 15, 19, 23)): continue
+        if sl.startswith('tail') and int(sl[4:]) % 3: continue
+        if sl.startswith(('sp', 'bp')) or (f['bone'] == 'crest' and not f.get('flame')): continue
+        tip, d, n = card_tip(f)
+        L = (.21 if 5 <= i <= 9 else .15 if i >= 0 else .2 if sl.startswith('tail') else .17) * (.85 + .3 * rng.random())
+        _FLAMES.append((f['bone'], tip - d * .04, (d * .9 + n * .2).normalized(), n, L, L * .62))
+    for s, sx in SIDES:
+        S0, E, W, T = wing_rest(sx)
+        for p, bone in ((W.lerp(T, .15), f'hand.{s}'), (W.lerp(E, .25), f'forearm.{s}')):
+            _FLAMES.append((bone, p + V((0, -.02, .03)), V((sx * .1, .6, 1)).normalized(), FWD, .14 * (.85 + .3 * rng.random()), .09))
+    return _FLAMES
+
 
 # ── Mesh building ───────────────────────────────────────────────────────────
 def bones():
@@ -282,7 +342,8 @@ def bones():
         S0, E, W, T = wing_rest(sx)
         B += [(f'humerus.{s}', S0, E, 'body', True), (f'forearm.{s}', E, W, f'humerus.{s}', True), (f'hand.{s}', W, T, f'forearm.{s}', True)]
         B += [(g, h, h + d * .2, par, True) for g, (h, d, par) in wing_groups(sx, s).items()]
-    return B
+    B += [(f'flame{k}', base, base + d * L, bone, True) for k, (bone, base, d, n, L, W) in enumerate(flame_specs())]
+    return B + [('fire', BILL_TIP + FWD * .1, BILL_TIP + FWD * .2, 'head', False)]
 BONE_NAMES = [b[0] for b in bones()]
 SP.BONE_NAMES = BONE_NAMES   # scorpion's Mesh tags vertices by name from this list
 Mesh = SP.Mesh
@@ -432,9 +493,9 @@ def shape(kind, v):
         if v > .78: w *= .2 + .8 * math.sqrt(max(0.0, 1 - ((v - .78) / .22) ** 2))
         if kind == 'outer': w *= 1 - .38 * smooth(.42, .62, v)
         return max(w, .05)
-    if kind == 'covert':
-        w = .62 + .38 * smooth(0, .4, v)
-        return max(.06, w * (.15 + .85 * math.sqrt(max(0.0, 1 - ((v - .5) / .5) ** 2))) if v > .5 else w)
+    if kind == 'covert':   # broad, with a rounded tip
+        w = .7 + .3 * smooth(0, .3, v)
+        return max(.08, w * math.sqrt(max(0.0, 1 - ((v - .42) / .58) ** 2))) if v > .42 else w
     if kind == 'plume': return max(.05, math.sin(math.pi * min(1.0, .1 + .9 * v ** .8)) ** .7)
     if kind == 'crest': return max(.05, math.sin(math.pi * min(1.0, .05 + .95 * v ** 1.25)) ** .8)
     return 1.0 if v < .85 else max(.1, (1 - v) / .15)   # ribbon
@@ -466,39 +527,46 @@ def build_patagia(M):
             sheet(M, rows, caps=(True, True), uv=lambda i, kk, face: slot_uv('down0', min(kk, K) / K if face >= 0 else .5, i / 5))
             M.tag(b)
 
-def build_feathers(t):
-    M = Mesh(f'L{t}_Feathers', uv=True); specs = feather_specs(t)
+def build_feathers(t, body):
+    M = Mesh(f'L{t}_Feathers', uv=True); specs = feather_specs(t) + contour_specs(t, body)
     for f in specs: f['rows'] = card(M, f)
     build_patagia(M)
     return M.finish(), specs
 
-def build_flames(specs):
-    """Small flames licking from the tips of the flight feathers, the tail and the crest, and
-    rising from the wrists: crossed emissive cards on the feathers' bones."""
-    M = Mesh('L3_Flames', uv=True); rng = random.Random(7); k = 0
-    def flame(base, d, n, L, W, bone):
-        nonlocal k
-        d = d.normalized(); n = (n - d * n.dot(d)).normalized()
-        for side in (n, n.cross(d)):
-            s = side.cross(d).normalized(); var = k % 3; k += 1
+def build_flames():
+    """Small flames licking from the feathers: crossed emissive cards, each on a bone of its own
+    that flickers."""
+    M = Mesh('L3_Flames', uv=True)
+    for k, (bone, base, d, n, L, W) in enumerate(flame_specs()):
+        n = (n - d * n.dot(d)).normalized()
+        for j, side in enumerate((n, n.cross(d))):
+            s = side.cross(d).normalized(); var = (k + j) % 3
             rows = [[base + d * (v * L) - s * ((u - .5) * W) for u in (0, 1)] for v in (0, 1)]
             sheet(M, rows, closed=False, uv=lambda i, kk, face, var=var: ((var + (kk if kk < 2 else 1)) / 3, i * .98 + .01))
-        M.tag(bone)
-    for f in specs:
-        if not f.get('tip') or f['kind'] == 'covert': continue
-        sl = f['slot']; i = int(sl[3:]) if sl.startswith('rem') else -1
-        if sl.startswith('rem') and not (3 <= i <= 9 or i in (11, 15, 19, 23)): continue
-        if sl.startswith('tail') and int(sl[4:]) % 3: continue
-        if sl.startswith(('sp', 'bp')): continue
-        if f['bone'] == 'crest' and not f.get('flame'): continue
-        row = f['rows'][-1]; tipc = row[2]; d = (row[2] - f['rows'][-2][2]).normalized(); n = f['n']
-        L = (.13 if sl.startswith('rem') else .11) * (.8 + .4 * rng.random()); W = L * .6
-        flame(tipc - d * .03, (d * .75 + n.normalized() * .45), n, L, W, f['bone'])
-    for s, sx in SIDES:   # rising from the leading edge at the wrist
-        S0, E, W_, T = wing_rest(sx)
-        for p, bone in ((W_.lerp(T, .15), f'hand.{s}'), (W_.lerp(E, .25), f'forearm.{s}')):
-            flame(p + V((0, -.03, .03)), V((sx * .15, .1, 1)), FWD, .16 * (.85 + .3 * rng.random()), .1, bone)
+        M.tag(f'flame{k}')
     return M.finish()
+
+def build_fire(rig, flame_mat):
+    """Cast's fireball: a white-hot core trailing crossed tongues of flame, on the 'fire' bone at the
+    bill tip, its local +Y the way it flies. The bone's scale keeps it hidden except as it gathers in
+    the open bill; the gallery throws a copy of it."""
+    M = Mesh('CastFire'); ball(M, V((0, 0, 0)), .075, (16, 10)); M.tag('head'); core = M.finish()
+    for g in list(core.vertex_groups): core.vertex_groups.remove(g)
+    m = bpy.data.materials.new('FireCore'); m.use_nodes = True; b = m.node_tree.nodes['Principled BSDF']
+    b.inputs['Base Color'].default_value = (.05, .02, .01, 1); b.inputs['Emission Color'].default_value = (*srgb('#ffd98a'), 1)
+    b.inputs['Emission Strength'].default_value = 1.0; core.data.materials.append(m)
+    M = Mesh('CastFireTrail', uv=True)
+    for j in range(3):
+        a = math.pi * j / 3; s = V((math.cos(a), 0, math.sin(a)))
+        rows = [[V((0, .04 - v * .42, 0)) - s * ((u - .5) * (.2 - .04 * v)) for u in (0, 1)] for v in (0, 1)]
+        sheet(M, rows, closed=False, uv=lambda i, kk, face, j=j: ((j + (kk if kk < 2 else 1)) / 3, i * .98 + .01))
+    M.tag('head'); trail = M.finish()
+    for g in list(trail.vertex_groups): trail.vertex_groups.remove(g)
+    trail.data.materials.append(flame_mat); trail.parent = core
+    head = rig.data.bones['fire'].head_local
+    core.matrix_world = Matrix.Translation(head) @ Matrix.Rotation(math.pi, 4, 'Z')   # local +Y forward
+    H.bind_rigid(core, rig, 'fire')
+    return core
 
 
 # ── Textures ────────────────────────────────────────────────────────────────
@@ -507,9 +575,11 @@ def make_slots():
     d = {}
     for i in range(40): d[f'rem{i}' if i < 28 else f'tail{i - 28}'] = (8 + 48 * i, 0, 48, 512)
     names = ([f'gc{i}' for i in range(4)] + [f'mc{i}' for i in range(4)] + [f'lc{i}' for i in range(4)] + [f'pc{i}' for i in range(3)] +
-             [f'sp{i}' for i in range(4)] + [f'bp{i}' for i in range(4)] + ['cr0', 'rib0', 'down0', 'tuft0'])
-    for i, nm in enumerate(names): d[nm] = (8 + 64 * i, 512, 64, 512)
+             [f'sp{i}' for i in range(4)] + [f'bp{i}' for i in range(4)] + ['cr0', 'rib0', 'down0', 'tuft0'] +
+             [f'kb{i}' for i in range(3)] + [f'kf{i}' for i in range(3)])
+    for i, nm in enumerate(names): d[nm] = (8 + 56 * i, 512, 56, 512)
     return d
+
 SLOTS = make_slots()
 
 def slot_uv(name, u, v, pad=3):
@@ -533,6 +603,8 @@ def stops(t, name, span=0.0, tert=False):
         if name.startswith('pc'): return [(0, '#73777d'), (1, '#666a70')]
         if name.startswith(('gc', 'mc', 'lc', 'down')): return [(0, '#868a90'), (1, '#91959b')]
         if name.startswith('sp'): return [(0, '#8f9399'), (1, '#a6a9ae')]
+        if name.startswith('kb'): return [(0, '#5d6168'), (1, '#6e7279')]
+        if name.startswith('kf'): return [(0, '#8f9398'), (1, '#a6a9ad')]
         if name.startswith('bp'): return [(0, '#b2b5b9'), (1, '#d2d4d7')]
         if name.startswith('cr'): return [(0, '#6f7379'), (1, '#9a9ea3')]
         return [(0, '#2c2e32'), (1, '#1e1f22')]
@@ -544,12 +616,13 @@ def stops(t, name, span=0.0, tert=False):
         if name.startswith('pc'): return [(0, '#3f4754'), (1, '#323843')]
         if name.startswith(('gc', 'mc', 'lc', 'down')): return [(0, '#7387a0'), (1, '#8597ae')]
         if name.startswith('sp'): return [(0, '#93a4b9'), (1, '#b9c4d1')]
+        if name.startswith('kb'): return [(0, '#4c5c71'), (1, '#5b6b81')]
+        if name.startswith('kf'): return [(0, '#bcc3cb'), (1, '#d5dadf')]
         if name.startswith('bp'): return [(0, '#cbd2da'), (1, '#e6eaee')]
         return [(0, '#202429'), (1, '#16181c')]
     if name.startswith('bp'): return [(0, '#6e8196'), (1, '#91a1b2')]
     if name.startswith('cr') or name.startswith('rib'): return [(0, '#5d7084'), (.75, '#6f8296'), (1, '#e8862e')]
-    if name.startswith(('rem', 'tail')): return [(0, '#3e1006'), (.35, '#7a1d09'), (.7, '#b8400f'), (1, '#ec7a22')]
-    return [(0, '#4a1207'), (.6, '#8c2a0b'), (1, '#b84a12')]
+    return [(0, '#2c0904'), (.55, '#3d0e05'), (1, '#4f1407')]   # ember: dark red-brown, lit at the margins and the base
 
 def atlas_pattern(name, w, h, pad=3):
     """The pattern of one slot: u across the vane, v along it, the barbs, the rachis and the edge."""
@@ -578,12 +651,20 @@ def paint_atlas(t, rng):
         c = c * (1 - .6 * rachis[..., None]) + light * (.6 * rachis[..., None])
         if t == 2 and name.startswith(('gc', 'mc', 'lc')): c = c * (1 - .3 * edge[..., None]) + hexa('#b3c0cf') * (.3 * edge[..., None])
         if name.startswith('bp') and t != 3: c = c * (1 - .25 * (rachis[..., None])) + hexa('#2a2d32') * (.12 * barb[..., None] * (v[..., None] > .5))
-        col[y:y + h, x:x + w] = c * (.62 if t == 3 else .8)
-        if emit is not None and not name.startswith('bp'):
-            glow = hexa('#ff7a1c'); hot = hexa('#ffc45a')
-            k = (.06 + .45 * barb + .55 * rachis + .8 * edge) * (.25 + .75 * v ** 1.5)
-            if name.startswith(('cr', 'rib')): k = k * np.clip((v - .7) / .3, 0, 1)
-            emit[y:y + h, x:x + w] = glow * k[..., None] * .9 + hot * (np.clip(k - .7, 0, 1)[..., None])
+        if t != 3 and name.startswith(('gc', 'mc', 'lc', 'pc', 'kb', 'kf')):   # a pale fringe round the rounded tip, a darker shaft streak
+            fr = np.clip((v - .74) / .26, 0, 1) * .4; c = c * (1 - fr[..., None]) + np.clip(base * 1.45 + .06, 0, 1) * fr[..., None]
+            c = c * (1 - .16 * (np.exp(-(q / .22) ** 2) * (v > .12))[..., None])
+        if t != 3 and name.startswith('kf'): c = c * (1 - .4 * (np.exp(-(q / .12) ** 2) * (v > .3) * (v < .9))[..., None])   # breast streaks
+        ember = t == 3 and not name.startswith(('bp', 'cr', 'rib'))
+        if ember:   # each feather dark, glowing orange to yellow along its margins and at its base, like a coal
+            rim = np.clip((q - .8) / .2, 0, 1) ** 1.5 * (.3 + .7 * v) + np.clip((v - .9) / .1, 0, 1) * (1 - q) ** .5
+            k = np.clip(.95 * rim + .8 * np.clip((.2 - v) / .2, 0, 1) ** 1.2 + .22 * rachis * (1 - v) + .08 * barb, 0, 1.2)
+            c = c * (1 - .55 * np.clip(k, 0, 1)[..., None]) + hexa('#c8501a') * (.55 * np.clip(k, 0, 1)[..., None])
+        col[y:y + h, x:x + w] = c * (1.0 if t == 3 else .8)
+        if ember: emit[y:y + h, x:x + w] = grad([(0, '#000000'), (.25, '#6a1604'), (.55, '#ff5a10'), (.85, '#ffa630'), (1.1, '#ffe08a')], k)
+        elif emit is not None and name.startswith(('cr', 'rib')):
+            k = np.clip((v - .7) / .3, 0, 1) * (.4 + .6 * edge + .4 * rachis)
+            emit[y:y + h, x:x + w] = grad([(0, '#000000'), (.5, '#ff6a14'), (1, '#ffc45a')], k)
     return col, emit
 
 def atlas_normal():
@@ -614,7 +695,7 @@ def flame_texture():
             prof = np.sin(np.pi * np.clip(t, .001, 1) ** .5) * (1 - t) ** .5 * (Vv < hgt)
             inside = np.abs(uu) < prof
             a = np.maximum(a, inside); heat = np.maximum(heat, inside * np.clip(1 - np.abs(uu) / np.maximum(prof, 1e-3), 0, 1) * (1 - t) ** .5)
-        c = grad([(0, '#b8260a'), (.3, '#ff5a10'), (.6, '#ffa52e'), (1, '#fff0b0')], heat)
+        c = grad([(0, '#a01a05'), (.22, '#e23c0a'), (.45, '#ff7a16'), (.7, '#ffbe3c'), (1, '#fff6d2')], heat)
         cols.append(c); alps.append(a)
     return save_img(np.concatenate(cols, 1), 'flame', 'sRGB', np.concatenate(alps, 1))
 
@@ -646,6 +727,10 @@ def m_plumage(name, t, res, head=False):
         if t == 3: col = m.mix(col, srgb('#4e1607'), edge)
         col = m.mix(col, srgb(p['neck']), A('neck'))
         col = m.mix(col, m.mix(srgb(p['fore']), srgb(p['streak']), streak), A('fore'))
+        mp2 = m.node('ShaderNodeMapping'); mp2.inputs['Scale'].default_value = (1.0, 1.0, .3); m.L.new(m.coord.outputs['Object'], mp2.inputs['Vector'])
+        nf = m.node('ShaderNodeTexVoronoi', Scale=95.0); m.L.new(mp2.outputs['Vector'], nf.inputs['Vector'])   # fine feathers, long down the neck
+        nfe = m.ramp(nf.outputs['Distance'], [(.2, (0, 0, 0)), (.6, (.24, .24, .24))]).outputs['Color']
+        col = m.mix(col, (0, 0, 0), m.mix((0, 0, 0), nfe, A('neck')))
     col = m.mix(col, (0, 0, 0), m.ramp(edge, [(0, (0, 0, 0)), (1, (.22, .22, .22))]).outputs['Color'])
     col = m.mix(col, (0, 0, 0), m.ramp(wav.outputs['Fac'], [(0, (.08, .08, .08)), (1, (0, 0, 0))]).outputs['Color'])
     bump = m.mix(m.mix((0, 0, 0), (1, 1, 1), m.ramp(edge, [(0, (1, 1, 1)), (1, (0, 0, 0))]).outputs['Color']), wav.outputs['Fac'], .25)
@@ -659,12 +744,10 @@ def m_plumage(name, t, res, head=False):
         bump = m.mix(bump, (.5, .5, .5), A('bill'))
         rough = m.ramp(A('bill'), [(0, (.82, .82, .82)), (1, (.38, .38, .38))]).outputs['Color']
     m.set(col, rough, bump, .3, .003)
-    if t == 3 and not head:   # coals: the seams between the feathers glow through, the neck stays grey
-        glow = m.mix(srgb('#ff6a12'), srgb('#ffb040'), m.noise(14, 3, .5).outputs['Fac'])
-        ve = m.node('ShaderNodeTexVoronoi', Scale=52.0, feature='DISTANCE_TO_EDGE'); m.L.new(m.coord.outputs['Object'], ve.inputs['Vector'])
-        seam = m.ramp(ve.outputs['Distance'], [(0, (1, 1, 1)), (.07, (0, 0, 0))]).outputs['Color']
-        k = m.mix(m.mix(seam, (1, 1, 1), m.ramp(edge, [(0, (0, 0, 0)), (1, (.12, .12, .12))]).outputs['Color']), (0, 0, 0), A('neck'))
-        e = m.mix((0, 0, 0), glow, m.ramp(k, [(0, (0, 0, 0)), (1, (.75, .75, .75))]).outputs['Color'])
+    if t == 3 and not head:   # coals: the body glows through the seams between its contour feathers, the neck stays grey
+        glow = m.mix(srgb('#ff5a10'), srgb('#ffae3a'), m.noise(14, 3, .5).outputs['Fac'])
+        k = m.mix(m.ramp(m.noise(6, 3, .5).outputs['Fac'], [(.3, (.3, .3, .3)), (.7, (.62, .62, .62))]).outputs['Color'], (0, 0, 0), A('neck'))
+        e = m.mix((0, 0, 0), glow, k)
         m.L.new(e, m.bsdf.inputs['Emission Color']); m.bsdf.inputs['Emission Strength'].default_value = 1.0
     return m
 
@@ -693,6 +776,8 @@ def m_feathers(t, col, nrm, emit):
     return m
 
 def m_flame(img):
+    """Fire: the image as colour (so that it keeps its alpha in the export, which darkens it there to let
+    the light come from the emission alone), as emission, and its alpha cut."""
     m = bpy.data.materials.new('Flame'); m.use_nodes = True; m.use_backface_culling = False
     N = m.node_tree.nodes; L = m.node_tree.links; b = N['Principled BSDF']
     tc = N.new('ShaderNodeTexImage'); tc.image = img; L.new(tc.outputs['Color'], b.inputs['Base Color']); L.new(tc.outputs['Color'], b.inputs['Emission Color'])
@@ -704,6 +789,7 @@ def bake(items):
     """scorpion.bake, also baking an emission map where the material glows."""
     SC = H.SC; SC.cycles.samples = 4; SC.render.bake.use_selected_to_active = False; SC.render.bake.margin = 6
     for name, (ob, mt) in items.items():
+        if os.environ.get('BENNU_QUICK'): ob.data.materials.append(mt.m); continue   # a quick look, unbaked
         if not ob.data.uv_layers: H.smart_uv(ob, .01)
         bs = mt.bsdf; imgs = {}
         kinds = ['color'] + (['rough'] if bs.inputs['Roughness'].links else []) + ['normal'] + (['emit'] if bs.inputs['Emission Color'].links else [])
@@ -745,15 +831,22 @@ class Poser(SP.Poser):
         if ang: self.q[n] = Quaternion((self.rest[n].to_3x3().inverted() @ V(axis)).normalized(), ang) @ self.q[n]; self.M = {}
     def orient(self, n, R):
         B = self.base(n).to_3x3(); self.q[n] = (B.inverted() @ R @ self.rest[n].to_3x3()).to_quaternion(); self.M = {}
+    def clear(self):
+        super().clear(); self.scl = {}
+    def key(self, f):
+        """The rotations and locations, and the scale of the bones that grow and shrink (the flames)."""
+        super().key(f)
+        for n, sc in self.scl.items():
+            pb = self.rig.pose.bones[n]; pb.scale = sc; pb.keyframe_insert('scale', frame=f)
 
 def frame(d, n):
     """The rotation whose columns are the side, d and the normal n made square to d."""
     d = d.normalized(); s = d.cross(n).normalized(); n = s.cross(d)
     return Matrix((s, d, n)).transposed()
 
-def fold_plane(sx):
-    """The folded wing's plane: its outward normal and its directions back and down."""
-    Rz = Matrix.Rotation(sx * TOE, 3, 'Z'); N = Rz @ V((sx * math.cos(TILT), 0, math.sin(TILT)))
+def fold_plane(sx, tilt=TILT, toe=TOE):
+    """A plane of the folded wing: its outward normal and its directions back and down."""
+    Rz = Matrix.Rotation(sx * toe, 3, 'Z'); N = Rz @ V((sx * math.cos(tilt), 0, math.sin(tilt)))
     eb = Rz @ V((0, 1, 0)); return N, eb, eb.cross(N).normalized() * sx
 
 FOLD, SHOW, WING_BONES, LEG_REST, SAMPLES = {}, {}, {}, {}, {}
@@ -768,7 +861,8 @@ def solve_fold(po):
         for b, d0, a in ((f'humerus.{s}', E - S0, ARM_FOLD[0]), (f'forearm.{s}', W - E, ARM_FOLD[1]), (f'hand.{s}', T - W, ARM_FOLD[2])):
             po.orient(b, frame(fd(a), N) @ frame(d0, UP).inverted()); names.append(b)
         for g, (h, d0, par) in wing_groups(sx, s).items():
-            po.orient(g, frame(fd(group_fold_angle(g)), N) @ frame(d0, UP).inverted()); names.append(g)
+            a, tl, to = group_fold_angle(g); Ng, ebg, edg = fold_plane(sx, math.radians(tl), math.radians(to))
+            po.orient(g, frame(ebg * math.cos(math.radians(a)) + edg * math.sin(math.radians(a)), Ng) @ frame(d0, UP).inverted()); names.append(g)
         WING_BONES[s] = names
         for n in names: q = po.q[n].copy(); FOLD[n] = q if q.w >= 0 else -q
         po.clear()
@@ -856,10 +950,19 @@ def actions(rig):
     rot = lambda v: np.array([v[0] * c_ - v[1] * s_, v[0] * s_ + v[1] * c_])
     A_FLY = solve_neck(j0 + rot(np.array([-.5, .2])), rot(np.array([-1.0, -.05])), 5)
     print('neck poses', {k: [round(float(x), 2) for x in v] for k, v in (('draw', A_DRAW), ('stab', A_STAB), ('coil', A_COIL), ('thrust', A_THRUST), ('fly', A_FLY))})
+    FPH = [random.Random(k).random() * 6.3 for k in range(len(flame_specs()))]
+    def flicker(f, length):
+        """Every flame licks: longer and thinner and back, a little turned, about three and a half
+        times a second, a whole number of times in each clip so that the loops close."""
+        base = max(1, round(length / 24 * 3.5))
+        for k in range(len(FPH)):
+            w = 2 * math.pi * (base + k % 3) * (f - 1) / length + FPH[k]; n = f'flame{k}'
+            po.scl[n] = (1 - .12 * math.sin(w + 1.3), 1 + .24 * math.sin(w) + .08 * math.sin(2 * w + .7), 1 - .12 * math.sin(w + 1.3))
+            po.bend(n, po.rest[n].to_3x3().col[0], .14 * math.sin(w + 2.1)); po.bend(n, po.rest[n].to_3x3().col[2], .1 * math.sin(2 * w + .4))
     def clip(name, length, fn, step=1):
         rig.animation_data_create(); act = bpy.data.actions.new(name); act.use_fake_user = True; rig.animation_data.action = act
         po.prev = {}
-        for fr in sorted(set(range(1, length + 1, step)) | {length}): po.clear(); fn(fr); po.key(fr)
+        for fr in sorted(set(range(1, length + 1, step)) | {length}): po.clear(); po.scl['fire'] = (.001,) * 3; fn(fr); flicker(fr, length); po.key(fr)
         A.append(act)
     def idle(f):
         w = 2 * math.pi * (f - 1) / 96
@@ -916,6 +1019,7 @@ def actions(rig):
         ang = (A_COIL * a * (1 - b) + A_THRUST * b) * k
         po.place(Matrix.Rotation((-.06 * a * (1 - b) + .14 * b) * k, 3, 'X'), (0, 0, -.02 * a * k), FEET)
         neck(po, list(ang)); po.bend('jaw', X, .6 * smooth(18, 21, f) * (1 - smooth(30, 36, f)))
+        g = smooth(12, 19, f) * (f <= 22); po.scl['fire'] = (max(g, .001),) * 3   # the fire gathers in the bill and is thrown at frame 21
         po.bend('crest', X, (.3 * a * (1 - b) - .25 * b) * k); po.bend('tail', X, .15 * a * k)
         for s in ('L', 'R'): wing(po, s, 1.0, (-.25 * b + .1 * math.sin(math.pi * smooth(17, 30, f))) * k, (.35 * b) * k, a * k)
         plant(po)
@@ -928,7 +1032,7 @@ def actions(rig):
         for s in ('L', 'R'): wing(po, s, 1.0, 0, 0, .4 * e)
         plant(po)
     clip('Hit', 20, hit)
-    A_DEAD = np.array([.45, .4, .35, .3, .25, .2, -.2])
+    A_DEAD = np.array([.25, .2, .15, .1, .05, 0, -.1])
     def death(f):
         jerk = math.sin(math.pi * smooth(1, 8, f)); sink = smooth(5, 26, f); roll = smooth(22, 42, f); limp = smooth(8, 34, f)
         R0 = Matrix.Rotation(-.12 * jerk + .22 * sink, 3, 'X'); t0 = V((0, .04 * jerk, -.48 * sink))
@@ -936,9 +1040,10 @@ def actions(rig):
         R = Matrix.Rotation(1.38 * roll, 3, 'Y') @ R0; piv = V((.12, FEET.y - .1, .1))
         po.place(R, t0, piv)                # ... then it rolls onto its left side, the legs going with it
         neck(po, list(A_DEAD * limp + np.array([-.1, -.1, .1, .15, .1, .05, .2]) * jerk))
-        for i in range(6): po.bend(f'neck{i + 1}', (0, 1, 0), (.22 if i < 4 else .1) * roll)
+        for i in range(6): po.bend(f'neck{i + 1}', (0, 1, 0), .05 * roll)   # towards the ground, the head on its cheek
+        po.bend('head', (0, 1, 0), .1 * roll)
         po.bend('jaw', X, .3 * limp); po.bend('crest', X, -.4 * limp); po.bend('tail', X, -.1 * limp)
-        wing(po, 'L', 1.0, 0, 0, .35 * jerk * (1 - roll)); wing(po, 'R', 1 - .4 * limp, -.35 * roll, 0, .4 * jerk)
+        wing(po, 'L', 1.0, 0, 0, .35 * jerk * (1 - roll)); wing(po, 'R', 1 - .45 * limp, -1.2 * roll, 0, .4 * jerk)
         if f > 6: z = lowest(po); po.place(R, t0 - V((0, 0, z * smooth(6, 14, f))), piv)
     clip('Death', 64, death)
     rig.animation_data.action = A[0]
@@ -949,16 +1054,15 @@ def actions(rig):
 def geometry():
     """Every mesh of the line, skinned by vertex groups. Returns {name: object} and the specs of
     the third tier's feathers (for its flames)."""
-    parts = {}; specs3 = None
+    parts = {}
     for t in (1, 2, 3):
         parts[f'L{t}_Body'] = build_body(t); parts[f'L{t}_Head'] = build_head(t)
-        ob, specs = build_feathers(t); parts[ob.name] = ob
-        if t == 3: specs3 = specs
+        ob, specs = build_feathers(t, parts[f'L{t}_Body']); parts[ob.name] = ob
     parts['Jaw'] = build_jaw()
     M = Mesh('Eyes'); build_eyes(M); parts['Eyes'] = M.finish()
     M = Mesh('Pupils'); build_eyes(M, True); parts['Pupils'] = M.finish()
     M = Mesh('Legs'); build_legs(M); parts['Legs'] = M.finish(); set_attrs(parts['Legs'], leg_attrs)
-    parts['L3_Flames'] = build_flames(specs3)
+    parts['L3_Flames'] = build_flames()
     for name, ob in parts.items():   # sample points per bone, for laying the dead bird on the ground
         if name.startswith(('L2', 'L3')) or name in ('Eyes', 'Pupils'): continue
         gi = {g.index: g.name for g in ob.vertex_groups}
@@ -978,15 +1082,16 @@ def build():
         items[f'L{t}_Head'] = (parts[f'L{t}_Head'], m_plumage(f'Head{t}', t, 1024, head=True))
     items['Legs'] = (parts['Legs'], m_leg())
     bake(items)
-    parts['L3_Flames'].data.materials.append(m_flame(flame))
+    fm = m_flame(flame); parts['L3_Flames'].data.materials.append(fm)
     parts['Jaw'].data.materials.append(H.m_flat('Bill', '#8f7f56', .38).m)
     parts['Eyes'].data.materials.append(H.m_flat('Iris', '#e6be1c', .15).m)
     parts['Pupils'].data.materials.append(H.m_flat('Pupil', '#050505', .05).m)
-    for ob in parts.values():
+    for ob in parts.values() if not os.environ.get('BENNU_QUICK') else ():
         for nm in ('rim', 'neck', 'fore', 'dors', 'bill', 'lore', 'stripe', 'face', 'culmen', 'feath', 'claw'):
             if nm in ob.data.attributes: ob.data.attributes.remove(ob.data.attributes[nm])
     rig = HR.build_rig('BennuRig', bones())
     for ob in parts.values(): skin(ob, rig)
+    build_fire(rig, fm)
     for ob in rig.children:
         if ob.type == 'MESH' and ob.data.validate(): print('repaired', ob.name)
     return rig, actions(rig)
@@ -997,8 +1102,9 @@ def export(rig, path):
     data = open(path, 'rb').read(); jl = struct.unpack('<I', data[12:16])[0]; js = json.loads(data[20:20 + jl]); rest = data[20 + jl:]
     for m in js.get('materials', []):
         if m['name'].startswith(('Feathers', 'Flame')): m['doubleSided'] = True
-        if m['name'].startswith('Flame'):   # pure fire: the light comes from the emissive map, not from the lamps
-            m['alphaMode'] = 'MASK'; m['alphaCutoff'] = .5; m['pbrMetallicRoughness']['baseColorFactor'] = [.08, .08, .08, 1]; m['emissiveFactor'] = [1, 1, 1]
+        if m['name'].startswith('Flame'):   # pure fire: the light comes from the emissive map, the alpha from the same image
+            m.setdefault('pbrMetallicRoughness', {})['baseColorFactor'] = [.06, .06, .06, 1]
+            m['alphaMode'] = 'MASK'; m['alphaCutoff'] = .5; m['emissiveFactor'] = [1, 1, 1]
     j = json.dumps(js, separators=(',', ':')).encode(); j += b' ' * (-len(j) % 4)
     open(path, 'wb').write(struct.pack('<III', 0x46546C67, 2, 20 + len(j) + len(rest)) + struct.pack('<II', len(j), 0x4E4F534A) + j + rest)
 

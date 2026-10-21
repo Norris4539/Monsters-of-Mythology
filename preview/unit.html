@@ -360,7 +360,8 @@ const LOOPING = new Set(['Idle', 'Walk', 'Run', 'Gallop', 'Fly']);
 // Clips that let a missile go: the node that carries it, when it leaves the hand (Throw lets go
 // of the javelin at frame 12, Shoot looses the arrow at frame 15), and how it flies: thrown along
 // the figure's facing and lofted, or shot along its own axis.
-const MISSILES = { Throw: { node: 'ThrowJavelin', at: 11 / 24, speed: 4.6, lift: 2.6 }, Shoot: { node: 'ShootArrow', at: 14 / 24, speed: 24, lift: .6, along: true } };
+const MISSILES = { Throw: { node: 'ThrowJavelin', at: 11 / 24, speed: 4.6, lift: 2.6 }, Shoot: { node: 'ShootArrow', at: 14 / 24, speed: 24, lift: .6, along: true },
+  Cast: { node: 'CastFire', at: 20 / 24, speed: 7, lift: 2.4, tip: .08, burst: true, verb: 'fire is thrown' } };   // a burst missile flares and dies away where it lands
 // Stage layouts: plinth spacing, radius and base height, name plate size, the figures' facing,
 // the model's middle (a horse's origin is under the saddle, not its middle), and the camera
 // for one figure or the whole row.
@@ -604,7 +605,7 @@ new THREE.GLTFLoader().load(CONFIG.modelBase + KEY + CONFIG.modelExt, gltf => {
       const inv = new THREE.Matrix4().copy(node.matrixWorld).invert();
       if (head) { head.geometry.computeBoundingBox(); box.copy(head.geometry.boundingBox).applyMatrix4(head.matrixWorld).applyMatrix4(inv); }
       const c = head ? box.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 1, 0);
-      u.missiles[clip] = { ...ms, node, tipLen: c.length() + .07, axis: c.normalize() };
+      u.missiles[clip] = { ...ms, node, tipLen: ms.tip != null ? ms.tip : c.length() + .07, axis: c.normalize() };
     }
     tiers.push(u);
   });
@@ -647,10 +648,10 @@ function play(name, instant, auto) {
   }
   const d = tiers[0] && tiers[0].clips[name] ? tiers[0].clips[name].duration : 0;
   const ms = MISSILES[name] && tiers.some(u => u.missiles[name]) ? MISSILES[name] : null;
-  $('status').textContent = `${name} · ${d.toFixed(2)} s` + (ms ? ` · the ${name === 'Shoot' ? 'arrow is loosed' : 'javelin leaves the hand'} at ${ms.at.toFixed(2)} s` : '') + (looping || LOOPING.has(name) ? ' · looping' : '');
+  $('status').textContent = `${name} · ${d.toFixed(2)} s` + (ms ? ` · the ${ms.verb || (name === 'Shoot' ? 'arrow is loosed' : 'javelin leaves the hand')} at ${ms.at.toFixed(2)} s` : '') + (looping || LOOPING.has(name) ? ' · looping' : '');
 }
 // A missile let go: a copy of the one in the hand flies (a javelin along the figure's facing,
-// an arrow along its own axis) and sticks in the ground.
+// an arrow along its own axis) and sticks in the ground; a fireball flares and dies away instead.
 const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 function launch(u, m) {
   const src = m.node; src.updateWorldMatrix(true, true);
@@ -664,13 +665,20 @@ function launch(u, m) {
   if (mine.length > 2) { const old = mine[0]; scene.remove(old.obj); shots.splice(shots.indexOf(old), 1); }
 }
 function stepShots(dt) {
-  for (const s of shots) {
+  for (const s of shots.slice()) {
+    if (s.burst != null) {   // a fireball flares up and shrinks away where it lands
+      s.burst += dt; const k = Math.max(0, 1 - s.burst / .4);
+      s.obj.scale.setScalar(s.s0 * (1 + 1.2 * (1 - k)) * k);
+      if (!k) { scene.remove(s.obj); shots.splice(shots.indexOf(s), 1); }
+      continue;
+    }
     if (s.stuck) continue;
     s.v.y -= 9.81 * dt; s.obj.position.addScaledVector(s.v, dt);
     const dir = s.v.clone().normalize();
     s.obj.quaternion.setFromUnitVectors(s.m.axis, dir);
     const tip = s.obj.position.clone().addScaledVector(dir, s.m.tipLen);
-    if (tip.y <= 0) { s.obj.position.y -= tip.y; s.obj.position.addScaledVector(dir, .1); s.stuck = true; }
+    if (tip.y <= 0 && s.m.burst) { s.obj.position.y -= tip.y; s.burst = 0; s.s0 = s.obj.scale.x; }
+    else if (tip.y <= 0) { s.obj.position.y -= tip.y; s.obj.position.addScaledVector(dir, .1); s.stuck = true; }
   }
 }
 
